@@ -1,0 +1,30 @@
+# IDEs y SO
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Java / Spring Boot
+usuario/backend/target/
+usuario/backend/build/
+usuario/backend/.gradle/
+*.class
+*.jar
+*.war
+
+# Web
+usuario/frontend/node_modules/
+usuario/frontend/dist/
+usuario/frontend/build/
+.env.local
+
+# Android Kotlin
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/*/build/
+mobile/android/local.properties
+mobile/android/.cxx/
+*.apk
+*.aab
+captures/
