@@ -75,7 +75,7 @@ fun RegisterScreen(
             singleLine = true
         )
 
-        // Mostrar mensaje de error si no cumple las reglas
+        // El mensaje muestra el  error si no cumple las reglas
         errorMessage?.let { error ->
             Spacer(modifier = Modifier.height(8.dp))
             Text(
