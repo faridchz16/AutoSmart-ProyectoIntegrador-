@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { login } from "../services/authService";
 import "./Login.css";
 
@@ -88,7 +89,7 @@ function Login() {
         </form>
 
         <p className="login-footer">
-          ¿No tienes cuenta? <a href="#">Regístrate</a>
+         ¿No tienes cuenta? <Link to="/registro">Regístrate</Link>
         </p>
       </div>
     </div>
