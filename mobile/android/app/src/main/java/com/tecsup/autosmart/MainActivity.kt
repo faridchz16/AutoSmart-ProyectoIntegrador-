@@ -17,6 +17,7 @@ import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
+import com.tecsup.autosmart.ui.screens.VehiculosScreen // <--- IMPORTANTE: Importar la nueva pantalla
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
 import kotlinx.coroutines.launch
 
@@ -31,49 +32,58 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        if (currentScreen == "login") {
-                            LoginScreen(
-                                onLoginClick = { correo, password ->
-                                    scope.launch {
-                                        try {
-                                            val response = RetrofitClient.authApi.login(
-                                                LoginRequest(correo, password)
-                                            )
-                                            if (response.isSuccessful) {
-                                                Toast.makeText(this@MainActivity, "Login Exitoso!", Toast.LENGTH_LONG).show()
-                                            } else {
-                                                Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
+                        when (currentScreen) {
+                            "login" -> {
+                                LoginScreen(
+                                    onLoginClick = { correo, password ->
+                                        scope.launch {
+                                            try {
+                                                val response = RetrofitClient.authApi.login(
+                                                    LoginRequest(correo, password)
+                                                )
+                                                if (response.isSuccessful) {
+                                                    Toast.makeText(this@MainActivity, "¡Login Exitoso!", Toast.LENGTH_LONG).show()
+                                                    // CAMBIO CLAVE: Cambiar la pantalla a "vehiculos"
+                                                    currentScreen = "vehiculos"
+                                                } else {
+                                                    Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("LOGIN_ERROR", "Error en login", e)
+                                                Toast.makeText(this@MainActivity, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                             }
-                                        } catch (e: Exception) {
-                                            Log.e("LOGIN_ERROR", "Error en login", e)
-                                            Toast.makeText(this@MainActivity, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                         }
-                                    }
-                                },
-                                onNavigateToRegister = { currentScreen = "register" }
-                            )
-                        } else {
-                            RegisterScreen(
-                                onRegisterClick = { nombre, correo, password ->
-                                    scope.launch {
-                                        try {
-                                            val response = RetrofitClient.authApi.register(
-                                                RegisterRequest(nombre, correo, password)
-                                            )
-                                            if (response.isSuccessful) {
-                                                Toast.makeText(this@MainActivity, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
-                                                currentScreen = "login"
-                                            } else {
-                                                Toast.makeText(this@MainActivity, "Error al registrar (${response.code()})", Toast.LENGTH_SHORT).show()
+                                    },
+                                    onNavigateToRegister = { currentScreen = "register" }
+                                )
+                            }
+                            "register" -> {
+                                RegisterScreen(
+                                    onRegisterClick = { nombre, correo, password ->
+                                        scope.launch {
+                                            try {
+                                                val response = RetrofitClient.authApi.register(
+                                                    RegisterRequest(nombre, correo, password)
+                                                )
+                                                if (response.isSuccessful) {
+                                                    Toast.makeText(this@MainActivity, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
+                                                    currentScreen = "login"
+                                                } else {
+                                                    Toast.makeText(this@MainActivity, "Error al registrar (${response.code()})", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("REGISTER_ERROR", "Excepción al registrar", e)
+                                                Toast.makeText(this@MainActivity, "Excepción: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                             }
-                                        } catch (e: Exception) {
-                                            Log.e("REGISTER_ERROR", "Excepción al registrar", e)
-                                            Toast.makeText(this@MainActivity, "Excepción: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                         }
-                                    }
-                                },
-                                onNavigateToLogin = { currentScreen = "login" }
-                            )
+                                    },
+                                    onNavigateToLogin = { currentScreen = "login" }
+                                )
+                            }
+                            "vehiculos" -> {
+                                // Se renderiza la interfaz de gestión de vehículos
+                                VehiculosScreen()
+                            }
                         }
                     }
                 }

@@ -14,4 +14,12 @@ object RetrofitClient {
             .build()
             .create(AuthApi::class.java)
     }
+
+    val vehiculoApi: VehiculoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(VehiculoApi::class.java)
+    }
 }
