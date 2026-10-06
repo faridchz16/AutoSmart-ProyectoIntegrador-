@@ -17,7 +17,7 @@ import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
-import com.tecsup.autosmart.ui.screens.VehiculosScreen // <--- IMPORTANTE: Importar la nueva pantalla
+import com.tecsup.autosmart.ui.screens.VehiculosScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
 import kotlinx.coroutines.launch
 
@@ -41,9 +41,13 @@ class MainActivity : ComponentActivity() {
                                                 val response = RetrofitClient.authApi.login(
                                                     LoginRequest(correo, password)
                                                 )
-                                                if (response.isSuccessful) {
+                                                if (response.isSuccessful && response.body() != null) {
+                                                    val loginResponseBody = response.body()!!
+
+                                                    // 🔑 AQUÍ SE GUARDA EL TOKEN JWT EN RETROFITCLIENT
+                                                    RetrofitClient.token = loginResponseBody.token
+
                                                     Toast.makeText(this@MainActivity, "¡Login Exitoso!", Toast.LENGTH_LONG).show()
-                                                    // CAMBIO CLAVE: Cambiar la pantalla a "vehiculos"
                                                     currentScreen = "vehiculos"
                                                 } else {
                                                     Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
@@ -81,7 +85,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             "vehiculos" -> {
-                                // Se renderiza la interfaz de gestión de vehículos
                                 VehiculosScreen()
                             }
                         }

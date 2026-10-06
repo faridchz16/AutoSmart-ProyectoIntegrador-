@@ -133,31 +133,31 @@ fun VehiculosScreen() {
                     OutlinedTextField(
                         value = placa,
                         onValueChange = { placa = it.uppercase() },
-                        label = { Text("Placa (Ej: ABC-123)") },
+                        label = { Text("Placa") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = marca,
                         onValueChange = { marca = it },
-                        label = { Text("Marca (Ej: Toyota)") },
+                        label = { Text("Marca") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = modelo,
                         onValueChange = { modelo = it },
-                        label = { Text("Modelo (Ej: Corolla)") },
+                        label = { Text("Modelo") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = anio,
                         onValueChange = { anio = it },
-                        label = { Text("Año (Ej: 2022)") },
+                        label = { Text("Año") },
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = kilometraje,
                         onValueChange = { kilometraje = it },
-                        label = { Text("Kilometraje (Ej: 15000)") },
+                        label = { Text("Kilometraje") },
                         singleLine = true
                     )
                 }
@@ -173,7 +173,8 @@ fun VehiculosScreen() {
                                         marca = marca.trim(),
                                         modelo = modelo.trim(),
                                         anio = anio.toIntOrNull() ?: 2020,
-                                        kilometraje = kilometraje.toIntOrNull() ?: 0
+                                        kilometraje = kilometraje.toIntOrNull() ?: 0,
+                                        idCliente = 1
                                     )
                                     val res = RetrofitClient.vehiculoApi.registrarVehiculo(req)
                                     if (res.isSuccessful) {

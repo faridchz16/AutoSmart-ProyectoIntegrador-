@@ -21,5 +21,5 @@ data class VehiculoRequest(
     @SerializedName("modelo") val modelo: String,
     @SerializedName("anio") val anio: Int,
     @SerializedName("kilometraje") val kilometraje: Int,
-    @SerializedName("idCliente") val idCliente: Int? = null
+    @SerializedName("idCliente") val idCliente: Int
 )
