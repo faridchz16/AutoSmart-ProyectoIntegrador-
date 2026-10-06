@@ -1,6 +1,7 @@
 package com.tecsup.autosmart
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,10 +42,11 @@ class MainActivity : ComponentActivity() {
                                             if (response.isSuccessful) {
                                                 Toast.makeText(this@MainActivity, "Login Exitoso!", Toast.LENGTH_LONG).show()
                                             } else {
-                                                Toast.makeText(this@MainActivity, "Credenciales incorrectas", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
                                             }
                                         } catch (e: Exception) {
-                                            Toast.makeText(this@MainActivity, "Error de conexión con Backend", Toast.LENGTH_SHORT).show()
+                                            Log.e("LOGIN_ERROR", "Error en login", e)
+                                            Toast.makeText(this@MainActivity, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 },
@@ -59,13 +61,14 @@ class MainActivity : ComponentActivity() {
                                                 RegisterRequest(nombre, correo, password)
                                             )
                                             if (response.isSuccessful) {
-                                                Toast.makeText(this@MainActivity, "Registro exitoso", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, "¡Registro exitoso!", Toast.LENGTH_SHORT).show()
                                                 currentScreen = "login"
                                             } else {
-                                                Toast.makeText(this@MainActivity, "Error al registrar", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, "Error al registrar (${response.code()})", Toast.LENGTH_SHORT).show()
                                             }
                                         } catch (e: Exception) {
-                                            Toast.makeText(this@MainActivity, "Error de conexión", Toast.LENGTH_SHORT).show()
+                                            Log.e("REGISTER_ERROR", "Excepción al registrar", e)
+                                            Toast.makeText(this@MainActivity, "Excepción: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 },
