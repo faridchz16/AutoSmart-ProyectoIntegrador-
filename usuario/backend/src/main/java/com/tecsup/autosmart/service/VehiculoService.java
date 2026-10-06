@@ -7,6 +7,7 @@ import com.tecsup.autosmart.model.Vehiculo;
 import com.tecsup.autosmart.repository.UsuarioRepository;
 import com.tecsup.autosmart.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,31 +23,38 @@ public class VehiculoService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    public VehiculoResponse registrarVehiculo(VehiculoRequest request) {
-        if (vehiculoRepository.existsByPlaca(request.getPlaca().trim().toUpperCase())) {
+    @Transactional
+    public VehiculoResponse registrarVehiculo(VehiculoRequest request, String correoCliente) {
+        String placa = request.getPlaca() == null ? "" : request.getPlaca().trim().toUpperCase();
+
+        // Criterio de aceptación HU-02: formato de placa válido (ej. ABC-123)
+        if (!placa.matches("^[A-Z0-9]{3}-[0-9]{3}$")) {
+            throw new RuntimeException("Formato de placa inválido. Usa el formato ABC-123");
+        }
+        if (vehiculoRepository.existsByPlaca(placa)) {
             throw new RuntimeException("La placa ya se encuentra registrada en el sistema");
         }
 
-        Usuario cliente = null;
-        if (request.getIdCliente() != null) {
-            cliente = usuarioRepository.findById(request.getIdCliente())
-                    .orElseThrow(() -> new RuntimeException("Usuario cliente no encontrado"));
-        }
+        Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
+                .orElseThrow(() -> new RuntimeException("Usuario cliente no encontrado"));
 
         Vehiculo vehiculo = new Vehiculo();
-        vehiculo.setPlaca(request.getPlaca().trim().toUpperCase());
+        vehiculo.setPlaca(placa);
         vehiculo.setMarca(request.getMarca());
         vehiculo.setModelo(request.getModelo());
         vehiculo.setAnio(request.getAnio());
         vehiculo.setKilometraje(request.getKilometraje() != null ? request.getKilometraje() : 0);
         vehiculo.setCliente(cliente);
 
-        Vehiculo guardado = vehiculoRepository.save(vehiculo);
-        return mapearADTO(guardado);
+        return mapearADTO(vehiculoRepository.save(vehiculo));
     }
 
-    public List<VehiculoResponse> listarTodos() {
-        return vehiculoRepository.findAll().stream()
+    @Transactional(readOnly = true)
+    public List<VehiculoResponse> listarPorCorreo(String correo) {
+        Usuario cliente = usuarioRepository.findByCorreo(correo)
+                .orElseThrow(() -> new RuntimeException("Usuario cliente no encontrado"));
+
+        return vehiculoRepository.findByCliente(cliente).stream()
                 .map(this::mapearADTO)
                 .collect(Collectors.toList());
     }
