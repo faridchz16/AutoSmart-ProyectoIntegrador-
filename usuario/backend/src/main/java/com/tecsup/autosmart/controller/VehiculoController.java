@@ -9,7 +9,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -23,13 +22,9 @@ public class VehiculoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> registrar(@RequestBody VehiculoRequest request, Authentication auth) {
-        try {
-            VehiculoResponse response = vehiculoService.registrarVehiculo(request, auth.getName());
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<VehiculoResponse> registrar(@RequestBody VehiculoRequest request, Authentication auth) {
+        VehiculoResponse response = vehiculoService.registrarVehiculo(request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
