@@ -71,6 +71,6 @@ public class AuthService {
         String rolNombre = usuario.getRol() != null ? usuario.getRol().getNombre() : "CLIENTE";
         String token = jwtUtil.generarToken(usuario.getCorreo(), rolNombre);
 
-        return new AuthResponse(token, usuario.getCorreo(), rolNombre);
+        return new AuthResponse(token, usuario.getIdUsuario(), usuario.getNombre(), usuario.getCorreo(), rolNombre);
     }
 }
