@@ -9,10 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tecsup.autosmart.data.local.TokenManager
 import com.tecsup.autosmart.data.model.VehiculoRequest
 import com.tecsup.autosmart.data.model.VehiculoResponse
 import com.tecsup.autosmart.data.network.RetrofitClient
@@ -20,9 +22,12 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun VehiculosScreen() {
+fun VehiculosScreen(
+    onLogout: () -> Unit = {}
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val tokenManager = remember { TokenManager(context) }
 
     var vehiculos by remember { mutableStateOf<List<VehiculoResponse>>(emptyList()) }
     var cargando by remember { mutableStateOf(false) }
@@ -53,7 +58,23 @@ fun VehiculosScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis Vehículos", fontWeight = FontWeight.Bold) }
+                title = { Text("Mis Vehículos", fontWeight = FontWeight.Bold) },
+                actions = {
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch {
+                                tokenManager.clearSession()
+                                onLogout()
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = "Salir",
+                            color = Color(0xFFEF4444),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -72,11 +93,15 @@ fun VehiculosScreen() {
             if (cargando && vehiculos.isEmpty()) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (vehiculos.isEmpty()) {
-                Text(
-                    text = "No tienes vehículos registrados aún.\nPresiona '+' para agregar uno.",
+                Column(
                     modifier = Modifier.align(Alignment.Center),
-                    fontSize = 16.sp
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No tienes vehículos registrados aún.\nPresiona '+' para agregar uno.",
+                        fontSize = 16.sp
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -182,7 +207,7 @@ fun VehiculosScreen() {
                                         mostrarDialogo = false
                                         cargarVehiculos()
                                     } else {
-                                        Toast.makeText(context, "Error: ${res.code()} - Placa duplicada o inválida", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Error ${res.code()}: Placa duplicada o inválida", Toast.LENGTH_LONG).show()
                                     }
                                 } catch (e: Exception) {
                                     Toast.makeText(context, "Fallo: ${e.message}", Toast.LENGTH_SHORT).show()

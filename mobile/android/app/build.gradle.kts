@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.tecsup.autosmart"
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.tecsup.autosmart"
@@ -17,13 +15,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // TAREA TEC.2: URL Base del Backend para BuildConfig
+        buildConfigField("String", "BASE_URL", "\"http://10.200.173.47:8081/\"")
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
@@ -32,6 +35,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true // Habilita BuildConfig para la variable BASE_URL (TEC.2)
     }
 }
 
@@ -44,7 +48,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    // --- LIBRERÍAS PARA AUTOSMART ---
+
+    // --- LIBRERÍAS AUTOSMART (SPRINT 1) ---
     // 1. Navegación entre pantallas en Compose
     implementation("androidx.navigation:navigation-compose:2.8.0")
 
@@ -55,6 +60,9 @@ dependencies {
 
     // 3. Gestión de estado (ViewModel)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.5")
+
+    // 4. TAREA T03.1: DataStore Preferences para la sesión persistente del JWT
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

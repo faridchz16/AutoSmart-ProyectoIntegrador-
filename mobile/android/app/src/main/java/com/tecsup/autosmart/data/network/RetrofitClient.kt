@@ -6,7 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // Apuntamos directamente a la IP física de tu interfaz Wi-Fi
-    private const val BASE_URL = "http://192.168.230.11:8081/"
+    private const val BASE_URL = "http://192.168.1.63:8081/"
 
     // Variable global para guardar el token JWT al iniciar sesión
     var token: String? = null
