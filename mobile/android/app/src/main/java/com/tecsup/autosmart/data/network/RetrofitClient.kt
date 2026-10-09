@@ -17,7 +17,7 @@ object RetrofitClient {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            // Adjunta el encabezado Authorization si el token existe
+            // Adjuntamos el encabezado Authorization si el token existe
             token?.let { jwtToken ->
                 requestBuilder.header("Authorization", "Bearer $jwtToken")
             }
