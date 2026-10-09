@@ -8,7 +8,7 @@ object RetrofitClient {
     // Apuntamos directamente a la IP física de tu interfaz Wi-Fi
     private const val BASE_URL = "http://192.168.1.63:8081/"
 
-    // Variable global para guardar el token JWT al iniciar sesión
+    // Aplicamos variable global para guardar el token JWT al iniciar sesión
     var token: String? = null
 
     // Cliente OkHttp que intercepta las peticiones y adjunta el Token de autorización
