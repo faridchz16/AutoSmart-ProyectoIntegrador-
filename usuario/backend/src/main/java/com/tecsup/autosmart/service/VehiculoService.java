@@ -1,5 +1,8 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.exception.BadRequestException;
+import com.tecsup.autosmart.exception.ConflictException;
+import com.tecsup.autosmart.exception.NotFoundException;
 import com.tecsup.autosmart.dto.VehiculoRequest;
 import com.tecsup.autosmart.dto.VehiculoResponse;
 import com.tecsup.autosmart.model.Usuario;
@@ -27,16 +30,15 @@ public class VehiculoService {
     public VehiculoResponse registrarVehiculo(VehiculoRequest request, String correoCliente) {
         String placa = request.getPlaca() == null ? "" : request.getPlaca().trim().toUpperCase();
 
-        // Criterio de aceptación HU-02: formato de placa válido (ej. ABC-123)
         if (!placa.matches("^[A-Z0-9]{3}-[0-9]{3}$")) {
-            throw new RuntimeException("Formato de placa inválido. Usa el formato ABC-123");
+            throw new BadRequestException("Formato de placa inválido. Usa el formato ABC-123");
         }
         if (vehiculoRepository.existsByPlaca(placa)) {
-            throw new RuntimeException("La placa ya se encuentra registrada en el sistema");
+            throw new ConflictException("La placa ya se encuentra registrada en el sistema");
         }
 
         Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
-                .orElseThrow(() -> new RuntimeException("Usuario cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario cliente no encontrado"));
 
         Vehiculo vehiculo = new Vehiculo();
         vehiculo.setPlaca(placa);
@@ -52,7 +54,7 @@ public class VehiculoService {
     @Transactional(readOnly = true)
     public List<VehiculoResponse> listarPorCorreo(String correo) {
         Usuario cliente = usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new RuntimeException("Usuario cliente no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Usuario cliente no encontrado"));
 
         return vehiculoRepository.findByCliente(cliente).stream()
                 .map(this::mapearADTO)
