@@ -20,6 +20,7 @@ import com.tecsup.autosmart.data.model.LoginRequest
 import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.ui.screens.LoginScreen
+import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
 import com.tecsup.autosmart.ui.screens.VehiculosScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
@@ -38,12 +39,15 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by remember { mutableStateOf("loading") }
 
-                // Auto-login: Lee el token guardado al abrir la app
+                // Auto-login: Lee el token y el rol guardados al abrir la app
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()
+                    val savedRole = tokenManager.getRole.firstOrNull()
+
                     if (!savedToken.isNullOrEmpty()) {
                         RetrofitClient.token = savedToken
-                        currentScreen = "vehiculos"
+                        // Redirige según el rol guardado en DataStore
+                        currentScreen = if (savedRole == "MECANICO") "mecanico" else "vehiculos"
                     } else {
                         currentScreen = "login"
                     }
@@ -70,18 +74,21 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 if (response.isSuccessful && response.body() != null) {
                                                     val loginResponseBody = response.body()!!
+                                                    val userRole = loginResponseBody.rol ?: "CLIENTE"
 
                                                     // Guardar en memoria de Retrofit
                                                     RetrofitClient.token = loginResponseBody.token
 
-                                                    // Guardar en DataStore (Persistencia)
+                                                    // Guardar en DataStore (Token y Rol)
                                                     tokenManager.saveSession(
                                                         token = loginResponseBody.token,
-                                                        role = loginResponseBody.rol ?: "CLIENTE"
+                                                        role = userRole
                                                     )
 
                                                     Toast.makeText(this@MainActivity, "¡Login Exitoso!", Toast.LENGTH_LONG).show()
-                                                    currentScreen = "vehiculos"
+
+                                                    // Redirección dinámica por rol
+                                                    currentScreen = if (userRole == "MECANICO") "mecanico" else "vehiculos"
                                                 } else {
                                                     Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
                                                 }
@@ -120,8 +127,22 @@ class MainActivity : ComponentActivity() {
                             "vehiculos" -> {
                                 VehiculosScreen(
                                     onLogout = {
-                                        RetrofitClient.token = null
-                                        currentScreen = "login"
+                                        scope.launch {
+                                            tokenManager.clearSession()
+                                            RetrofitClient.token = null
+                                            currentScreen = "login"
+                                        }
+                                    }
+                                )
+                            }
+                            "mecanico" -> {
+                                MecanicoScreen(
+                                    onLogout = {
+                                        scope.launch {
+                                            tokenManager.clearSession()
+                                            RetrofitClient.token = null
+                                            currentScreen = "login"
+                                        }
                                     }
                                 )
                             }
