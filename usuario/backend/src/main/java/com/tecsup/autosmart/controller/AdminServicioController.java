@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.controller;
 
+import com.tecsup.autosmart.dto.EstadoRequest;
 import com.tecsup.autosmart.dto.ServicioRequest;
 import com.tecsup.autosmart.dto.ServicioResponse;
 import com.tecsup.autosmart.service.ServicioService;
@@ -22,5 +23,17 @@ public class AdminServicioController {
     @PostMapping
     public ResponseEntity<ServicioResponse> crear(@Valid @RequestBody ServicioRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(servicioService.crear(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ServicioResponse> actualizar(@PathVariable Long id,
+                                                       @Valid @RequestBody ServicioRequest request) {
+        return ResponseEntity.ok(servicioService.actualizar(id, request));
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<ServicioResponse> cambiarEstado(@PathVariable Long id,
+                                                          @Valid @RequestBody EstadoRequest request) {
+        return ResponseEntity.ok(servicioService.cambiarEstado(id, request.getActivo()));
     }
 }
