@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +25,7 @@ import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
 import com.tecsup.autosmart.ui.screens.VehiculosScreen
+import com.tecsup.autosmart.ui.screens.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -37,20 +40,32 @@ class MainActivity : ComponentActivity() {
                 val tokenManager = remember { TokenManager(context) }
                 val scope = rememberCoroutineScope()
 
-                var currentScreen by remember { mutableStateOf("loading") }
+                // rememberSaveable: la pantalla actual sobrevive al girar el dispositivo
+                var currentScreen by rememberSaveable { mutableStateOf("loading") }
 
-                // Auto-login: Lee el token y el rol guardados al abrir la app
+                // Auto-login: lee el token y el rol guardados al abrir la app
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()
                     val savedRole = tokenManager.getRole.firstOrNull()
 
+                    // El token se restaura siempre (también tras girar o si el sistema cierra el proceso)
                     if (!savedToken.isNullOrEmpty()) {
                         RetrofitClient.token = savedToken
-                        // Redirige según el rol guardado en DataStore
-                        currentScreen = if (savedRole == "MECANICO") "mecanico" else "vehiculos"
-                    } else {
-                        currentScreen = "login"
                     }
+
+                    // La pantalla solo se decide la primera vez; al girar no se toca
+                    if (currentScreen == "loading") {
+                        currentScreen = if (!savedToken.isNullOrEmpty()) {
+                            if (savedRole == "MECANICO") "mecanico" else "vehiculos"
+                        } else {
+                            "welcome"
+                        }
+                    }
+                }
+
+                // Botón "atrás": desde login o registro vuelve a la bienvenida
+                BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
+                    currentScreen = "welcome"
                 }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -63,6 +78,12 @@ class MainActivity : ComponentActivity() {
                                 ) {
                                     CircularProgressIndicator()
                                 }
+                            }
+                            "welcome" -> {
+                                WelcomeScreen(
+                                    onNavigateToLogin = { currentScreen = "login" },
+                                    onNavigateToRegister = { currentScreen = "register" }
+                                )
                             }
                             "login" -> {
                                 LoginScreen(
@@ -130,7 +151,7 @@ class MainActivity : ComponentActivity() {
                                         scope.launch {
                                             tokenManager.clearSession()
                                             RetrofitClient.token = null
-                                            currentScreen = "login"
+                                            currentScreen = "welcome"
                                         }
                                     }
                                 )
@@ -141,7 +162,7 @@ class MainActivity : ComponentActivity() {
                                         scope.launch {
                                             tokenManager.clearSession()
                                             RetrofitClient.token = null
-                                            currentScreen = "login"
+                                            currentScreen = "welcome"
                                         }
                                     }
                                 )
