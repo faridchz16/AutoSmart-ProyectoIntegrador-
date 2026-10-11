@@ -9,6 +9,9 @@ import com.tecsup.autosmart.repository.ServicioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class ServicioService {
 
@@ -58,6 +61,25 @@ public class ServicioService {
         Servicio servicio = buscarPorId(id);
         servicio.setActivo(activo);
         return mapearADTO(servicioRepository.save(servicio));
+    }
+
+    // Catálogo para usuarios: solo servicios activos, con búsqueda opcional por nombre
+    @Transactional(readOnly = true)
+    public List<ServicioResponse> listarActivos(String busqueda) {
+        String texto = busqueda == null ? "" : busqueda.trim();
+        return servicioRepository
+                .findByActivoTrueAndNombreContainingIgnoreCaseOrderByNombreAsc(texto)
+                .stream()
+                .map(this::mapearADTO)
+                .collect(Collectors.toList());
+    }
+
+    // Detalle: un servicio desactivado se trata como inexistente para el usuario
+    @Transactional(readOnly = true)
+    public ServicioResponse obtenerActivo(Long id) {
+        return servicioRepository.findByIdServicioAndActivoTrue(id)
+                .map(this::mapearADTO)
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
     }
 
     private Servicio buscarPorId(Long id) {
