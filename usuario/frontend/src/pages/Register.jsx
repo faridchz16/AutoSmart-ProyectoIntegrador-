@@ -1,7 +1,19 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { registrar } from "../services/authService";
+import AuthLayout from "../components/AuthLayout";
+import Campo from "../components/Campo";
 import "./Login.css";
+
+const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Indicador de seguridad de la contraseña (regla HU-01: 8+ caracteres, mayúscula y número)
+function fortaleza(password) {
+  const reglas = [password.length >= 8, /[A-Z]/.test(password), /\d/.test(password)];
+  const cumplidas = reglas.filter(Boolean).length;
+  const nivel = password.length === 0 ? 0 : cumplidas;
+  return { nivel, texto: ["", "Débil", "Casi lista", "Segura"][nivel] };
+}
 
 function Register() {
   const [nombre, setNombre] = useState("");
@@ -11,6 +23,8 @@ function Register() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [registrado, setRegistrado] = useState(false);
+
+  const seguridad = fortaleza(password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,8 +36,7 @@ function Register() {
     }
 
     // 2. Formato de correo
-    const formatoCorreo = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!formatoCorreo.test(correo)) {
+    if (!FORMATO_CORREO.test(correo)) {
       setError("Ingresa un correo válido.");
       return;
     }
@@ -57,76 +70,89 @@ function Register() {
   // Pantalla de éxito
   if (registrado) {
     return (
-      <div className="login-page">
-        <div className="login-card">
-          <h1 className="login-logo">🚗 AutoSmart</h1>
-          <p className="login-success">
-            ¡Cuenta creada con éxito! Ya puedes iniciar sesión con <strong>{correo}</strong>.
-          </p>
-          <p className="login-footer">
-            <Link to="/login">Ir a iniciar sesión</Link>
+      <AuthLayout titulo="¡Cuenta creada!" subtitulo="Tu registro se completó con éxito.">
+        <div className="exito" role="status">
+          <svg className="exito-check" viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="24" />
+            <path d="m15 27 8 8 15-17" />
+          </svg>
+          <p>
+            Ya puedes iniciar sesión con <strong>{correo}</strong>
           </p>
         </div>
-      </div>
+        <Link to="/login" className="login-btn-link">Ir a iniciar sesión</Link>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h1 className="login-logo">🚗 AutoSmart</h1>
-        <p className="login-subtitle">Crea tu cuenta de cliente</p>
+    <AuthLayout
+      titulo="Crea tu cuenta"
+      subtitulo="Regístrate como cliente en menos de un minuto."
+      pie={<>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></>}
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        {error && <p className="login-error" role="alert">{error}</p>}
 
-        <form onSubmit={handleSubmit} noValidate>
-          <label htmlFor="nombre">Nombre completo</label>
-          <input
-            id="nombre"
-            type="text"
-            placeholder="Juan Pérez"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-          />
+        <Campo
+          id="nombre"
+          label="Nombre completo"
+          autoComplete="name"
+          autoFocus
+          icono="usuario"
+          placeholder="Juan Pérez"
+          valor={nombre}
+          alCambiar={(v) => { setNombre(v); setError(""); }}
+        />
 
-          <label htmlFor="correo">Correo electrónico</label>
-          <input
-            id="correo"
-            type="email"
-            placeholder="tucorreo@ejemplo.com"
-            value={correo}
-            onChange={(e) => setCorreo(e.target.value)}
-          />
+        <Campo
+          id="correo"
+          label="Correo electrónico"
+          tipo="email"
+          inputMode="email"
+          autoComplete="email"
+          icono="correo"
+          placeholder="tucorreo@ejemplo.com"
+          valor={correo}
+          alCambiar={(v) => { setCorreo(v); setError(""); }}
+        />
 
-          <label htmlFor="password">Contraseña</label>
-          <input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <p className="login-hint">Mínimo 8 caracteres, una mayúscula y un número.</p>
+        <Campo
+          id="password"
+          label="Contraseña"
+          tipo="password"
+          autoComplete="new-password"
+          icono="candado"
+          placeholder="••••••••"
+          valor={password}
+          alCambiar={(v) => { setPassword(v); setError(""); }}
+          ayuda={
+            <div className="fuerza" data-nivel={seguridad.nivel}>
+              <div className="fuerza-barras" aria-hidden="true"><i /><i /><i /></div>
+              <p className="login-hint">
+                {seguridad.texto ? `${seguridad.texto}. ` : ""}Mínimo 8 caracteres, una mayúscula y un número.
+              </p>
+            </div>
+          }
+        />
 
-          <label htmlFor="confirmar">Confirmar contraseña</label>
-          <input
-            id="confirmar"
-            type="password"
-            placeholder="••••••••"
-            value={confirmar}
-            onChange={(e) => setConfirmar(e.target.value)}
-          />
+        <Campo
+          id="confirmar"
+          label="Confirmar contraseña"
+          tipo="password"
+          autoComplete="new-password"
+          icono="candado"
+          placeholder="••••••••"
+          valor={confirmar}
+          alCambiar={(v) => { setConfirmar(v); setError(""); }}
+        />
 
-          {error && <p className="login-error">{error}</p>}
-
-          <button type="submit" disabled={cargando}>
-            {cargando ? "Creando cuenta..." : "Crear cuenta"}
-          </button>
-        </form>
-
-        <p className="login-footer">
-          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
-        </p>
-      </div>
-    </div>
+        <button type="submit" disabled={cargando}>
+          {cargando ? <span className="spinner" aria-hidden="true" /> : null}
+          {cargando ? "Creando cuenta..." : "Crear cuenta"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }
 

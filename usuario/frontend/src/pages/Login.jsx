@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { login } from "../services/authService";
+import AuthLayout from "../components/AuthLayout";
+import Campo from "../components/Campo";
 import "./Login.css";
 
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,62 +17,9 @@ function validar(campo, valor) {
   return "";
 }
 
-/* ---------- Iconos (SVG en línea, sin dependencias) ---------- */
-const Icono = ({ children }) => (
-  <svg
-    className="input-icon"
-    viewBox="0 0 24 24"
-    width="18"
-    height="18"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    {children}
-  </svg>
-);
-
-const IconoCorreo = () => (
-  <Icono>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="m3 7 9 6 9-6" />
-  </Icono>
-);
-
-const IconoCandado = () => (
-  <Icono>
-    <rect x="4" y="11" width="16" height="10" rx="2" />
-    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-  </Icono>
-);
-
-const IconoOjo = ({ tachado }) => (
-  <svg
-    viewBox="0 0 24 24"
-    width="18"
-    height="18"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.8"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-    <circle cx="12" cy="12" r="3" />
-    {tachado && <path d="m3 3 18 18" />}
-  </svg>
-);
-
-const LogoAuto = () => (
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 16V11l2-5h10l2 5v5" />
-    <path d="M3 16h18v3H3z" />
-    <circle cx="7.5" cy="16" r="0.6" fill="currentColor" />
-    <circle cx="16.5" cy="16" r="0.6" fill="currentColor" />
+const IconoFlecha = () => (
+  <svg className="btn-flecha" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12h14M13 6l6 6-6 6" />
   </svg>
 );
 
@@ -79,17 +28,16 @@ function Login() {
   const [password, setPassword] = useState("");
   const [errores, setErrores] = useState({ correo: "", password: "" });
   const [errorGeneral, setErrorGeneral] = useState("");
-  const [verPassword, setVerPassword] = useState(false);
   const [mayusculas, setMayusculas] = useState(false);
   const [cargando, setCargando] = useState(false); // ¿estamos esperando al backend?
   const [usuario, setUsuario] = useState(null);    // datos del usuario si el login fue exitoso
 
-  // Valida un campo al salir de él (onBlur)
+  // Valida un campo al salir de él
   const alSalir = (campo, valor) => {
     setErrores((prev) => ({ ...prev, [campo]: validar(campo, valor) }));
   };
 
-  // Si el campo ya tenía error, lo limpiamos en cuanto el usuario vuelve a escribir
+  // Si el campo ya tenía error, se revalida mientras el usuario escribe
   const alEscribir = (campo, valor, setter) => {
     setter(valor);
     setErrorGeneral("");
@@ -101,12 +49,12 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const nuevosErrores = {
+    const nuevos = {
       correo: validar("correo", correo),
       password: validar("password", password),
     };
-    setErrores(nuevosErrores);
-    if (nuevosErrores.correo || nuevosErrores.password) return;
+    setErrores(nuevos);
+    if (nuevos.correo || nuevos.password) return;
 
     setErrorGeneral("");
     setCargando(true);
@@ -133,119 +81,79 @@ function Login() {
     setPassword("");
   };
 
-  // Si el login fue exitoso, mostramos un mensaje de bienvenida
+  // Inicio de sesión exitoso
   if (usuario) {
     return (
-      <div className="login-page">
-        <div className="login-card">
-          <div className="login-brand">
-            <span className="login-brand-icon"><LogoAuto /></span>
-            <h1 className="login-logo">AutoSmart</h1>
-          </div>
-          <p className="login-success" role="status">
-            ¡Bienvenido! Iniciaste sesión como <strong>{usuario.correo}</strong> (rol: {usuario.rol}).
+      <AuthLayout titulo="¡Bienvenido!" subtitulo="Iniciaste sesión correctamente.">
+        <div className="exito" role="status">
+          <svg className="exito-check" viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="24" />
+            <path d="m15 27 8 8 15-17" />
+          </svg>
+          <p>
+            Sesión iniciada como <strong>{usuario.correo}</strong>
           </p>
-          <button type="button" className="login-btn-secondary" onClick={cerrarSesion}>
-            Cerrar sesión
-          </button>
+          <span className="exito-rol">Rol: {usuario.rol}</span>
         </div>
-      </div>
+        <Link to="/" className="login-btn-link">Ir al inicio</Link>
+        <button type="button" className="login-btn-secondary" onClick={cerrarSesion}>
+          Cerrar sesión
+        </button>
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="login-page">
-      <main className="login-card">
-        <div className="login-brand">
-          <span className="login-brand-icon"><LogoAuto /></span>
-          <h1 className="login-logo">AutoSmart</h1>
-        </div>
-        <p className="login-subtitle">Inicia sesión para gestionar tus vehículos</p>
+    <AuthLayout
+      titulo="Bienvenido de nuevo"
+      subtitulo="Inicia sesión para gestionar tus vehículos."
+      pie={<>¿No tienes cuenta? <Link to="/registro">Regístrate</Link></>}
+    >
+      <form onSubmit={handleSubmit} noValidate>
+        {errorGeneral && (
+          <p className="login-error" role="alert">{errorGeneral}</p>
+        )}
 
-        <form onSubmit={handleSubmit} noValidate>
-          {/* Error general (backend / conexión) */}
-          {errorGeneral && (
-            <p className="login-error" role="alert">{errorGeneral}</p>
-          )}
+        <Campo
+          id="correo"
+          label="Correo electrónico"
+          tipo="email"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          icono="correo"
+          placeholder="tucorreo@ejemplo.com"
+          valor={correo}
+          alCambiar={(v) => alEscribir("correo", v, setCorreo)}
+          alSalir={() => alSalir("correo", correo)}
+          error={errores.correo}
+        />
 
-          {/* Correo */}
-          <div className="field">
-            <label htmlFor="correo">Correo electrónico</label>
-            <div className={`input-wrap ${errores.correo ? "has-error" : ""}`}>
-              <IconoCorreo />
-              <input
-                id="correo"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                autoFocus
-                placeholder="tucorreo@ejemplo.com"
-                value={correo}
-                onChange={(e) => alEscribir("correo", e.target.value, setCorreo)}
-                onBlur={() => alSalir("correo", correo)}
-                aria-invalid={!!errores.correo}
-                aria-describedby={errores.correo ? "correo-error" : undefined}
-              />
-            </div>
-            {errores.correo && (
-              <p id="correo-error" className="field-error" role="alert">{errores.correo}</p>
-            )}
-          </div>
+        <Campo
+          id="password"
+          label="Contraseña"
+          tipo="password"
+          autoComplete="current-password"
+          icono="candado"
+          placeholder="••••••••"
+          valor={password}
+          alCambiar={(v) => alEscribir("password", v, setPassword)}
+          alSalir={() => {
+            alSalir("password", password);
+            setMayusculas(false);
+          }}
+          alSoltarTecla={(e) => setMayusculas(e.getModifierState("CapsLock"))}
+          error={errores.password}
+          extraLabel={<Link to="/recuperar" className="link-olvido">¿Olvidaste tu contraseña?</Link>}
+          ayuda={mayusculas && !errores.password && <p className="field-aviso">Las mayúsculas están activadas.</p>}
+        />
 
-          {/* Contraseña */}
-          <div className="field">
-            <div className="label-row">
-              <label htmlFor="password">Contraseña</label>
-              <Link to="/recuperar" className="link-olvido">¿Olvidaste tu contraseña?</Link>
-            </div>
-            <div className={`input-wrap ${errores.password ? "has-error" : ""}`}>
-              <IconoCandado />
-              <input
-                id="password"
-                type={verPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => alEscribir("password", e.target.value, setPassword)}
-                onBlur={() => {
-                  alSalir("password", password);
-                  setMayusculas(false);
-                }}
-                onKeyUp={(e) => setMayusculas(e.getModifierState("CapsLock"))}
-                aria-invalid={!!errores.password}
-                aria-describedby={errores.password ? "password-error" : undefined}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setVerPassword((v) => !v)}
-                aria-label={verPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-pressed={verPassword}
-              >
-                <IconoOjo tachado={verPassword} />
-              </button>
-            </div>
-            {errores.password && (
-              <p id="password-error" className="field-error" role="alert">{errores.password}</p>
-            )}
-            {mayusculas && !errores.password && (
-              <p className="field-aviso">Las mayúsculas están activadas.</p>
-            )}
-          </div>
-
-          <button type="submit" disabled={cargando}>
-            {cargando && <span className="spinner" aria-hidden="true" />}
-            {cargando ? "Ingresando..." : "Iniciar sesión"}
-          </button>
-        </form>
-
-        <p className="login-footer">
-          ¿No tienes cuenta? <Link to="/registro">Regístrate</Link>
-        </p>
-      </main>
-
-      <p className="login-copy">© 2026 AutoSmart · Todos los derechos reservados</p>
-    </div>
+        <button type="submit" disabled={cargando}>
+          {cargando ? <span className="spinner" aria-hidden="true" /> : null}
+          {cargando ? "Ingresando..." : <>Iniciar sesión <IconoFlecha /></>}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }
 
