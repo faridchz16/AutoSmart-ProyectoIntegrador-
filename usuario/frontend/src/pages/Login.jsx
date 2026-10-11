@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login } from "../services/authService";
+import { guardarSesion, cerrarSesion as borrarSesion, normalizarRol } from "../services/sesion";
 import AuthLayout from "../components/AuthLayout";
 import Campo from "../components/Campo";
 import "./Login.css";
@@ -24,6 +25,8 @@ const IconoFlecha = () => (
 );
 
 function Login() {
+  const navigate = useNavigate();
+  const ubicacion = useLocation();
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
   const [errores, setErrores] = useState({ correo: "", password: "" });
@@ -63,8 +66,13 @@ function Login() {
       const datos = await login(correo.trim(), password);
 
       // Guardamos el token para usarlo en las siguientes pantallas
-      localStorage.setItem("token", datos.token);
-      localStorage.setItem("usuario", JSON.stringify({ correo: datos.correo, rol: datos.rol }));
+      guardarSesion(datos);
+
+      // El administrador entra directo a su panel (o a la pantalla que quería abrir)
+      if (normalizarRol(datos.rol) === "ADMIN") {
+        navigate(ubicacion.state?.from?.pathname ?? "/admin", { replace: true });
+        return;
+      }
 
       setUsuario(datos);
     } catch (err) {
@@ -75,8 +83,7 @@ function Login() {
   };
 
   const cerrarSesion = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
+    borrarSesion();
     setUsuario(null);
     setPassword("");
   };

@@ -1,9 +1,11 @@
+import { API_URL } from "./api";
+
 // Envía correo y contraseña al backend y devuelve { token, tipo, correo, rol }
 export async function login(correo, password) {
   let respuesta;
 
   try {
-    respuesta = await fetch("/auth/login", {
+    respuesta = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ correo, password }),
@@ -29,7 +31,7 @@ export async function registrar(nombre, correo, password) {
   let respuesta;
 
   try {
-    respuesta = await fetch("/auth/register", {
+    respuesta = await fetch(`${API_URL}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ nombre, correo, password }),
