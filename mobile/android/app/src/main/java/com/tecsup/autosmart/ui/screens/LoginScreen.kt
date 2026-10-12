@@ -1,9 +1,11 @@
 package com.tecsup.autosmart.ui.screens
 
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -277,16 +279,38 @@ fun LoginScreen(
         }
     }
 
-    val enlaceRegistro: @Composable () -> Unit = {
-        TextButton(
+    // Parte de abajo estilo Instagram: "¿Olvidaste tu contraseña?" y "Registrarse"
+    val colorAzul = Color(0xFF3B82F6)
+    val avisoOlvido = {
+        Toast.makeText(context, "Recuperar contraseña estará disponible pronto", Toast.LENGTH_SHORT).show()
+    }
+
+    val olvidoPassword: @Composable () -> Unit = {
+        TextButton(onClick = avisoOlvido, enabled = !isLoading) {
+            Text(
+                text = "¿Olvidaste tu contraseña?",
+                color = Color.White,
+                fontSize = if (isLandscape) 13.sp else 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+
+    val botonRegistrarse: @Composable () -> Unit = {
+        OutlinedButton(
             onClick = onNavigateToRegister,
-            enabled = !isLoading
+            enabled = !isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (isLandscape) 44.dp else 50.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, colorAzul),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = colorAzul)
         ) {
             Text(
-                text = "¿No tienes cuenta? Regístrate aquí",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp
+                text = "Registrarse",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -340,7 +364,7 @@ fun LoginScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 if (isLandscape) {
-                    // HORIZONTAL: izquierda título; derecha campos + botón + registro
+                    // HORIZONTAL: izquierda título + Registrarse; derecha formulario + olvidaste contraseña
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -353,13 +377,17 @@ fun LoginScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             encabezado()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(modifier = Modifier.fillMaxWidth(0.8f)) {
+                                botonRegistrarse()
+                            }
                         }
                         Column(
                             modifier = Modifier.weight(1f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             formulario()
-                            enlaceRegistro()
+                            olvidoPassword()
                         }
                     }
                 } else {
@@ -374,7 +402,9 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         formulario()
                         Spacer(modifier = Modifier.height(16.dp))
-                        enlaceRegistro()
+                        olvidoPassword()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        botonRegistrarse()
                     }
                 }
             }
