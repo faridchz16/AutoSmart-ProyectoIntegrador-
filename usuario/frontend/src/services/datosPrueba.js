@@ -1,7 +1,7 @@
 // Datos de prueba para el panel mientras el backend no tenga los endpoints.
 // Se activan con VITE_DATOS_PRUEBA=true en el archivo .env (activos por defecto).
 // Para usar el backend real: VITE_DATOS_PRUEBA=false
-// Los cambios (crear, activar, desactivar) se pierden al recargar la página.
+// Los cambios (crear, editar, activar, desactivar) se pierden al recargar la página.
 
 export const DATOS_PRUEBA = import.meta.env.VITE_DATOS_PRUEBA !== "false";
 
@@ -84,4 +84,63 @@ export async function cambiarEstadoUsuario(id, activo) {
   if (!usuario) throw new Error("El usuario ya no existe.");
   usuario.activo = activo;
   return { ...usuario };
+}
+
+/* ---------- Servicios (catálogo) ---------- */
+
+let servicios = [
+  ["Cambio de aceite y filtro", "Aceite de motor según especificación del fabricante y cambio de filtro.", 120, 45, true],
+  ["Alineamiento y balanceo", "Ajuste de ángulos de dirección y balanceo de las cuatro ruedas.", 90, 60, true],
+  ["Revisión de frenos", "Inspección de pastillas, discos, líquido y mangueras de freno.", 80, 60, true],
+  ["Diagnóstico con escáner", "Lectura de códigos de falla de la computadora del vehículo.", 70, 40, true],
+  ["Revisión de batería", "Prueba de carga, bornes y sistema de arranque.", 30, 20, true],
+  ["Cambio de pastillas de freno", "Reemplazo de pastillas delanteras o posteriores.", 150, 90, true],
+  ["Afinamiento de motor", "Bujías, filtros de aire y combustible, limpieza de inyectores.", 220, 120, true],
+  ["Cambio de refrigerante", "Drenado y llenado del sistema de enfriamiento.", 95, 45, true],
+  ["Revisión de suspensión", "Inspección de amortiguadores, rótulas y terminales.", 110, 75, false],
+  ["Lavado de motor", "Limpieza exterior del compartimiento del motor.", 50, 40, false],
+].map(([nombre, descripcion, precioBase, duracionMinutos, activo], i) => ({
+  id: i + 1,
+  nombre,
+  descripcion,
+  precioBase,
+  duracionMinutos,
+  activo,
+}));
+let siguienteServicio = servicios.length + 1;
+
+const mismoNombre = (a, b) => sinTildes(a.trim().toLowerCase()) === sinTildes(b.trim().toLowerCase());
+
+export async function listarServicios() {
+  await esperar();
+  return servicios.map((s) => ({ ...s }));
+}
+
+export async function crearServicio(datos) {
+  await esperar(450);
+  if (servicios.some((s) => mismoNombre(s.nombre, datos.nombre))) {
+    throw new Error("Ya existe un servicio con ese nombre.");
+  }
+  const nuevo = { id: siguienteServicio++, activo: true, ...datos };
+  servicios = [...servicios, nuevo];
+  return { ...nuevo };
+}
+
+export async function editarServicio(id, datos) {
+  await esperar(450);
+  if (servicios.some((s) => s.id !== id && mismoNombre(s.nombre, datos.nombre))) {
+    throw new Error("Ya existe un servicio con ese nombre.");
+  }
+  const servicio = servicios.find((s) => s.id === id);
+  if (!servicio) throw new Error("El servicio ya no existe.");
+  Object.assign(servicio, datos);
+  return { ...servicio };
+}
+
+export async function cambiarEstadoServicio(id, activo) {
+  await esperar(300);
+  const servicio = servicios.find((s) => s.id === id);
+  if (!servicio) throw new Error("El servicio ya no existe.");
+  servicio.activo = activo;
+  return { ...servicio };
 }
