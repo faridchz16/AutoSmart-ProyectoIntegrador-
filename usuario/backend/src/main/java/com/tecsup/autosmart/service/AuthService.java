@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.UnauthorizedException;
 import com.tecsup.autosmart.dto.AuthResponse;
@@ -68,6 +69,10 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
             throw new UnauthorizedException("Credenciales incorrectas");
+        }
+        
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            throw new ForbiddenException("Tu cuenta esta desactivada. Contacta al administrador");
         }
 
         String rolNombre = usuario.getRol() != null ? usuario.getRol().getNombre() : "CLIENTE";

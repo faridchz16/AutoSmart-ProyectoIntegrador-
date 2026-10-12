@@ -6,6 +6,7 @@ public class UsuarioResumenResponse {
     private String nombre;
     private String correo;
     private String rol;
+    private Boolean activo;
 
     public Integer getIdUsuario() { return idUsuario; }
     public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
@@ -18,4 +19,7 @@ public class UsuarioResumenResponse {
 
     public String getRol() { return rol; }
     public void setRol(String rol) { this.rol = rol; }
+
+    public Boolean getActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
 }

@@ -28,6 +28,9 @@ public class Usuario {
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
+    @Column(name = "activo", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 1")
+    private Boolean activo = true;
+
     public Usuario() {}
 
     public Usuario(String nombre, String correo, String passwordHash, Rol rol) {
@@ -49,4 +52,6 @@ public class Usuario {
     public void setRol(Rol rol) { this.rol = rol; }
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public void setCreadoEn(LocalDateTime creadoEn) { this.creadoEn = creadoEn; }
+    public Boolean getActivo() { return activo; }
+    public void setActivo(Boolean activo) { this.activo = activo; }
 }
