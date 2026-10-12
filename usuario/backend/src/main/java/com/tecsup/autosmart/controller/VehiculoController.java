@@ -31,4 +31,11 @@ public class VehiculoController {
     public ResponseEntity<List<VehiculoResponse>> listarMisVehiculos(Authentication auth) {
         return ResponseEntity.ok(vehiculoService.listarPorCorreo(auth.getName()));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<VehiculoResponse> actualizar(@PathVariable Long id,
+                                                       @RequestBody VehiculoRequest request,
+                                                       Authentication auth) {
+        return ResponseEntity.ok(vehiculoService.actualizarVehiculo(id, request, auth.getName()));
+    }
 }

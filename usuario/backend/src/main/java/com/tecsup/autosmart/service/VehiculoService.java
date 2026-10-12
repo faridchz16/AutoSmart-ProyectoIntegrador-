@@ -1,10 +1,10 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.dto.VehiculoRequest;
+import com.tecsup.autosmart.dto.VehiculoResponse;
 import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.NotFoundException;
-import com.tecsup.autosmart.dto.VehiculoRequest;
-import com.tecsup.autosmart.dto.VehiculoResponse;
 import com.tecsup.autosmart.model.Usuario;
 import com.tecsup.autosmart.model.Vehiculo;
 import com.tecsup.autosmart.repository.UsuarioRepository;
@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 @Service
 public class VehiculoService {
 
+    private static final String FORMATO_PLACA = "^[A-Z0-9]{3}-[0-9]{3}$";
+
     private final VehiculoRepository vehiculoRepository;
     private final UsuarioRepository usuarioRepository;
 
@@ -30,7 +32,7 @@ public class VehiculoService {
     public VehiculoResponse registrarVehiculo(VehiculoRequest request, String correoCliente) {
         String placa = request.getPlaca() == null ? "" : request.getPlaca().trim().toUpperCase();
 
-        if (!placa.matches("^[A-Z0-9]{3}-[0-9]{3}$")) {
+        if (!placa.matches(FORMATO_PLACA)) {
             throw new BadRequestException("Formato de placa inválido. Usa el formato ABC-123");
         }
         if (vehiculoRepository.existsByPlaca(placa)) {
@@ -59,6 +61,59 @@ public class VehiculoService {
         return vehiculoRepository.findByCliente(cliente).stream()
                 .map(this::mapearADTO)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public VehiculoResponse actualizarVehiculo(Long id, VehiculoRequest request, String correoCliente) {
+        Vehiculo vehiculo = buscarDelCliente(id, correoCliente);
+
+        String placa = request.getPlaca() == null ? "" : request.getPlaca().trim().toUpperCase();
+        if (!placa.matches(FORMATO_PLACA)) {
+            throw new BadRequestException("Formato de placa inválido. Usa el formato ABC-123");
+        }
+        if (vehiculoRepository.existsByPlacaAndIdVehiculoNot(placa, id)) {
+            throw new ConflictException("La placa ya se encuentra registrada en el sistema");
+        }
+
+        if (request.getMarca() == null || request.getMarca().isBlank()) {
+            throw new BadRequestException("La marca es obligatoria");
+        }
+        if (request.getModelo() == null || request.getModelo().isBlank()) {
+            throw new BadRequestException("El modelo es obligatorio");
+        }
+        if (request.getAnio() == null) {
+            throw new BadRequestException("El año es obligatorio");
+        }
+
+        // El kilometraje solo puede mantenerse o aumentar
+        int actual = vehiculo.getKilometraje() != null ? vehiculo.getKilometraje() : 0;
+        int nuevo = request.getKilometraje() != null ? request.getKilometraje() : actual;
+        if (nuevo < 0) {
+            throw new BadRequestException("El kilometraje no puede ser negativo");
+        }
+        if (nuevo < actual) {
+            throw new BadRequestException("El kilometraje no puede ser menor al registrado (" + actual + " km)");
+        }
+
+        vehiculo.setPlaca(placa);
+        vehiculo.setMarca(request.getMarca().trim());
+        vehiculo.setModelo(request.getModelo().trim());
+        vehiculo.setAnio(request.getAnio());
+        vehiculo.setKilometraje(nuevo);
+
+        return mapearADTO(vehiculoRepository.save(vehiculo));
+    }
+
+    // Si el vehiculo no existe o es de otro cliente, responde igual (404) para no revelar su existencia
+    private Vehiculo buscarDelCliente(Long id, String correoCliente) {
+        Vehiculo vehiculo = vehiculoRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Vehiculo no encontrado"));
+
+        if (vehiculo.getCliente() == null
+                || !vehiculo.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
+            throw new NotFoundException("Vehiculo no encontrado");
+        }
+        return vehiculo;
     }
 
     private VehiculoResponse mapearADTO(Vehiculo v) {
