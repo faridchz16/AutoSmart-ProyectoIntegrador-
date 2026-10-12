@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cerrarSesion, obtenerUsuario, normalizarRol } from "../services/sesion";
+import { DATOS_PRUEBA } from "../services/datosPrueba";
 import "./Admin.css";
 
 /* Estructura del panel de administración:
@@ -126,6 +127,12 @@ function AdminLayout() {
           </button>
 
           <h1 className="adm-titulo">{actual?.texto ?? "Panel"}</h1>
+
+          {DATOS_PRUEBA && (
+            <span className="adm-prueba" title="El panel usa datos de ejemplo. Cambia VITE_DATOS_PRUEBA a false en .env para usar el backend.">
+              Datos de prueba
+            </span>
+          )}
 
           <div className="adm-usuario">
             <span className="adm-avatar" aria-hidden="true">
