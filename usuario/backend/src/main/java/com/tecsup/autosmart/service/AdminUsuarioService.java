@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.exception.NotFoundException;
 import com.tecsup.autosmart.dto.MecanicoCreadoResponse;
 import com.tecsup.autosmart.dto.MecanicoRequest;
 import com.tecsup.autosmart.dto.PaginaResponse;
@@ -101,12 +102,27 @@ public class AdminUsuarioService {
         return res;
     }
 
+    @Transactional
+    public UsuarioResumenResponse cambiarEstado(Integer id, boolean activo, String correoAdmin) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        // Evita que el administrador se bloquee a si mismo
+        if (!activo && usuario.getCorreo().equalsIgnoreCase(correoAdmin)) {
+            throw new BadRequestException("No puedes desactivar tu propia cuenta");
+        }
+
+        usuario.setActivo(activo);
+        return mapearResumen(usuarioRepository.save(usuario));
+    }
+
     private UsuarioResumenResponse mapearResumen(Usuario u) {
         UsuarioResumenResponse r = new UsuarioResumenResponse();
         r.setIdUsuario(u.getIdUsuario());
         r.setNombre(u.getNombre());
         r.setCorreo(u.getCorreo());
         r.setRol(u.getRol() != null ? u.getRol().getNombre() : null);
+        r.setActivo(u.getActivo());
         return r;
     }
 
