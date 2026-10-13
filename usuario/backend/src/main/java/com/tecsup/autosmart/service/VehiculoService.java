@@ -58,7 +58,7 @@ public class VehiculoService {
         Usuario cliente = usuarioRepository.findByCorreo(correo)
                 .orElseThrow(() -> new NotFoundException("Usuario cliente no encontrado"));
 
-        return vehiculoRepository.findByCliente(cliente).stream()
+        return vehiculoRepository.findByClienteAndActivoTrue(cliente).stream()
                 .map(this::mapearADTO)
                 .collect(Collectors.toList());
     }
@@ -104,13 +104,20 @@ public class VehiculoService {
         return mapearADTO(vehiculoRepository.save(vehiculo));
     }
 
-    // Si el vehiculo no existe o es de otro cliente, responde igual (404) para no revelar su existencia
+    @Transactional
+    public void eliminarVehiculo(Long id, String correoCliente) {
+        Vehiculo vehiculo = buscarDelCliente(id, correoCliente);
+        vehiculo.setActivo(false);
+        vehiculoRepository.save(vehiculo);
+    }
+
     private Vehiculo buscarDelCliente(Long id, String correoCliente) {
         Vehiculo vehiculo = vehiculoRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Vehiculo no encontrado"));
 
         if (vehiculo.getCliente() == null
-                || !vehiculo.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
+                || !vehiculo.getCliente().getCorreo().equalsIgnoreCase(correoCliente)
+                || Boolean.FALSE.equals(vehiculo.getActivo())) {
             throw new NotFoundException("Vehiculo no encontrado");
         }
         return vehiculo;

@@ -14,4 +14,5 @@ public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
     boolean existsByPlacaAndIdVehiculoNot(String placa, Long idVehiculo);
     Optional<Vehiculo> findByPlaca(String placa);
     List<Vehiculo> findByCliente(Usuario cliente);
+    List<Vehiculo> findByClienteAndActivoTrue(Usuario cliente);
 }

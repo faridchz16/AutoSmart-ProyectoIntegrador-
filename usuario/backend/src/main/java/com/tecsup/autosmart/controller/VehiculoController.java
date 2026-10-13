@@ -38,4 +38,10 @@ public class VehiculoController {
                                                        Authentication auth) {
         return ResponseEntity.ok(vehiculoService.actualizarVehiculo(id, request, auth.getName()));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication auth) {
+        vehiculoService.eliminarVehiculo(id, auth.getName());
+        return ResponseEntity.noContent().build();
+    }
 }
