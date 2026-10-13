@@ -144,3 +144,19 @@ export async function cambiarEstadoServicio(id, activo) {
   servicio.activo = activo;
   return { ...servicio };
 }
+
+/* ---------- Recuperación de contraseña ---------- */
+
+// Código fijo para probar la pantalla "Nueva contraseña" sin backend
+export const CODIGO_PRUEBA = "123456";
+
+export async function solicitarCodigo() {
+  await esperar(600);
+  return {};
+}
+
+export async function restablecerPassword(correo, codigo) {
+  await esperar(600);
+  if (codigo !== CODIGO_PRUEBA) throw new Error("El código no es válido o ya venció.");
+  return {};
+}

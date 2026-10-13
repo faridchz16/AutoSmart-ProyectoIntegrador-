@@ -36,7 +36,10 @@ function Login() {
   const [usuario, setUsuario] = useState(null);    // datos del usuario si el login fue exitoso
 
   // Valida un campo al salir de él
+  // (si el campo está vacío no se marca: así el aviso no mueve los enlaces mientras
+  //  el usuario hace clic, por ejemplo en "¿Olvidaste tu contraseña?")
   const alSalir = (campo, valor) => {
+    if (!valor.trim()) return;
     setErrores((prev) => ({ ...prev, [campo]: validar(campo, valor) }));
   };
 

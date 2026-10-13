@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Recuperar from "./pages/Recuperar";
+import RestablecerPassword from "./pages/RestablecerPassword";
 import NoAutorizado from "./pages/NoAutorizado";
 import NoEncontrado from "./pages/NoEncontrado";
 import RutaProtegida from "./components/RutaProtegida";
@@ -18,6 +20,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Register />} />
+        <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/recuperar/nueva" element={<RestablecerPassword />} />
         <Route path="/sin-acceso" element={<NoAutorizado />} />
 
         {/* Panel de administración: solo con sesión iniciada y rol ADMIN */}
