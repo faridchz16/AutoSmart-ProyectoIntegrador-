@@ -1,5 +1,8 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.exception.ForbiddenException;
+import com.tecsup.autosmart.exception.ConflictException;
+import com.tecsup.autosmart.exception.UnauthorizedException;
 import com.tecsup.autosmart.dto.AuthResponse;
 import com.tecsup.autosmart.dto.LoginRequest;
 import com.tecsup.autosmart.dto.RegisterRequest;
@@ -34,7 +37,7 @@ public class AuthService {
 
     public Map<String, Object> registrarUsuario(RegisterRequest request) {
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
-            throw new IllegalArgumentException("El correo ya se encuentra registrado");
+            throw new ConflictException("El correo ya se encuentra registrado");
         }
 
         Rol rolCliente = rolRepository.findByNombre("CLIENTE")
@@ -62,15 +65,19 @@ public class AuthService {
 
     public AuthResponse autenticarUsuario(LoginRequest request) {
         Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciales incorrectas"));
+                .orElseThrow(() -> new UnauthorizedException("Credenciales incorrectas"));
 
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
-            throw new IllegalArgumentException("Credenciales incorrectas");
+            throw new UnauthorizedException("Credenciales incorrectas");
+        }
+        
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            throw new ForbiddenException("Tu cuenta esta desactivada. Contacta al administrador");
         }
 
         String rolNombre = usuario.getRol() != null ? usuario.getRol().getNombre() : "CLIENTE";
         String token = jwtUtil.generarToken(usuario.getCorreo(), rolNombre);
 
-        return new AuthResponse(token, usuario.getCorreo(), rolNombre);
+        return new AuthResponse(token, usuario.getIdUsuario(), usuario.getNombre(), usuario.getCorreo(), rolNombre);
     }
 }

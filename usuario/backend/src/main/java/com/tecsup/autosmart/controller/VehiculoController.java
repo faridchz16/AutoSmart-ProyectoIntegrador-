@@ -5,6 +5,7 @@ import com.tecsup.autosmart.dto.VehiculoResponse;
 import com.tecsup.autosmart.service.VehiculoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,17 +22,26 @@ public class VehiculoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> registrar(@RequestBody VehiculoRequest request) {
-        try {
-            VehiculoResponse response = vehiculoService.registrarVehiculo(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<VehiculoResponse> registrar(@RequestBody VehiculoRequest request, Authentication auth) {
+        VehiculoResponse response = vehiculoService.registrarVehiculo(request, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<VehiculoResponse>> listar() {
-        return ResponseEntity.ok(vehiculoService.listarTodos());
+    public ResponseEntity<List<VehiculoResponse>> listarMisVehiculos(Authentication auth) {
+        return ResponseEntity.ok(vehiculoService.listarPorCorreo(auth.getName()));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<VehiculoResponse> actualizar(@PathVariable Long id,
+                                                       @RequestBody VehiculoRequest request,
+                                                       Authentication auth) {
+        return ResponseEntity.ok(vehiculoService.actualizarVehiculo(id, request, auth.getName()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id, Authentication auth) {
+        vehiculoService.eliminarVehiculo(id, auth.getName());
+        return ResponseEntity.noContent().build();
     }
 }

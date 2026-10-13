@@ -26,6 +26,9 @@ public class Vehiculo {
     @Column(name = "kilometraje")
     private Integer kilometraje;
 
+    @Column(name = "activo", nullable = false, columnDefinition = "TINYINT(1) NOT NULL DEFAULT 1")
+    private Boolean activo = true;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_cliente")
     private Usuario cliente;
@@ -97,5 +100,12 @@ public class Vehiculo {
 
     public void setCliente(Usuario cliente) {
         this.cliente = cliente;
+    }
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
     }
 }
