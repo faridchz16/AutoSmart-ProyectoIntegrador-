@@ -333,9 +333,9 @@ fun LoginScreen(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.45f),
-                            Color.Black.copy(alpha = 0.15f),
-                            Color.Black.copy(alpha = 0.55f)
+                            Color.Black.copy(alpha = 0.55f),
+                            Color.Black.copy(alpha = 0.35f),
+                            Color.Black.copy(alpha = 0.70f)
                         )
                     )
                 )
@@ -347,22 +347,12 @@ fun LoginScreen(
                 .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.Center
         ) {
-            Card(
+            Box(
                 modifier = Modifier
                     .widthIn(max = if (isLandscape) 760.dp else 450.dp)
                     .fillMaxWidth(0.88f)
                     .padding(vertical = if (isLandscape) 4.dp else 16.dp)
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.25f),
-                        shape = RoundedCornerShape(28.dp)
-                    ),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF0F172A).copy(alpha = 0.45f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
+            )  {
                 if (isLandscape) {
                     // HORIZONTAL: izquierda título + Registrarse; derecha formulario + olvidaste contraseña
                     Row(
