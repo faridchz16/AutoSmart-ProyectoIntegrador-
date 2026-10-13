@@ -2,40 +2,23 @@ import { useState } from "react";
 import { crearMecanico } from "../../services/usuariosService";
 
 /* Formulario "Nuevo mecánico" (T15.2).
-   El administrador crea la cuenta con una contraseña temporal y se la entrega al mecánico. */
+   El administrador registra nombre y correo; el backend genera una contraseña temporal
+   que se muestra una sola vez para entregársela al mecánico. */
 
 const FORMATO_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const FORMATO_PASSWORD = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
-// Contraseña temporal que cumple la regla: 10 caracteres, con mayúscula y número
-function generarPassword() {
-  const may = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const min = "abcdefghijkmnpqrstuvwxyz";
-  const num = "23456789";
-  const azar = (s) => s[crypto.getRandomValues(new Uint32Array(1))[0] % s.length];
-  const letras = [azar(may), azar(num), azar(min)];
-  while (letras.length < 10) letras.push(azar(may + min + num));
-  for (let i = letras.length - 1; i > 0; i--) {
-    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
-    [letras[i], letras[j]] = [letras[j], letras[i]];
-  }
-  return letras.join("");
-}
-
-function validar({ nombre, correo, password }) {
+function validar({ nombre, correo }) {
   const errores = {};
   if (!nombre.trim()) errores.nombre = "Ingresa el nombre completo.";
   else if (nombre.trim().length < 3) errores.nombre = "El nombre es muy corto.";
+  else if (nombre.trim().length > 100) errores.nombre = "Máximo 100 caracteres.";
   if (!correo.trim()) errores.correo = "Ingresa el correo.";
   else if (!FORMATO_CORREO.test(correo.trim())) errores.correo = "Ingresa un correo válido.";
-  if (!FORMATO_PASSWORD.test(password)) {
-    errores.password = "Mínimo 8 caracteres, una mayúscula y un número.";
-  }
   return errores;
 }
 
 function NuevoMecanico({ alCrear, alCerrar }) {
-  const [datos, setDatos] = useState(() => ({ nombre: "", correo: "", password: generarPassword() }));
+  const [datos, setDatos] = useState({ nombre: "", correo: "" });
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -60,7 +43,6 @@ function NuevoMecanico({ alCrear, alCerrar }) {
       const resultado = await crearMecanico({
         nombre: datos.nombre.trim(),
         correo: datos.correo.trim().toLowerCase(),
-        password: datos.password,
       });
       setCreado(resultado);
       alCrear(resultado.usuario);
@@ -141,33 +123,10 @@ function NuevoMecanico({ alCrear, alCerrar }) {
         {errores.correo && <p id="mec-correo-error" className="campo-error">{errores.correo}</p>}
       </div>
 
-      <div className="campo">
-        <label htmlFor="mec-password">Contraseña temporal</label>
-        <div className="campo-con-boton">
-          <input
-            id="mec-password"
-            autoComplete="off"
-            spellCheck="false"
-            value={datos.password}
-            onChange={cambiar("password")}
-            aria-invalid={!!errores.password}
-            aria-describedby="mec-password-ayuda"
-          />
-          <button
-            type="button"
-            className="btn btn-sec"
-            onClick={() => {
-              setDatos((d) => ({ ...d, password: generarPassword() }));
-              setErrores((er) => ({ ...er, password: "" }));
-            }}
-          >
-            Generar otra
-          </button>
-        </div>
-        <p id="mec-password-ayuda" className={errores.password ? "campo-error" : "campo-ayuda"}>
-          {errores.password || "Se genera automáticamente. Mínimo 8 caracteres, una mayúscula y un número."}
-        </p>
-      </div>
+      <p className="campo-ayuda">
+        Al crear la cuenta se genera una <strong>contraseña temporal</strong> que verás una sola vez para
+        entregársela al mecánico.
+      </p>
 
       <div className="form-acciones">
         <button type="button" className="btn btn-sec" onClick={alCerrar} disabled={enviando}>

@@ -47,7 +47,9 @@ Cada ejecución crea un cliente, un mecánico, un servicio y un vehículo nuevos
 **Cómo ejecutar:** backend encendido, `npm run dev` en `usuario/frontend`, abrir `http://localhost:5173`.
 Marca cada caso con ✅ (pasa) o ❌ (falla) y anota lo que viste.
 
-> Las pantallas de **Usuarios**, **Servicios** y **Recuperar contraseña** usan datos de prueba mientras `VITE_DATOS_PRUEBA` no sea `false` en `.env`. Repite esos casos con el backend real cuando estén sus endpoints.
+> Por defecto la web usa el **backend real** (rama `main`). Para una demo sin backend, pon `VITE_DATOS_PRUEBA=true` en `.env` y reinicia `npm run dev`: el panel usa datos de ejemplo y el código de recuperación es `123456`.
+>
+> Con el backend real, el código de recuperación **no llega por correo**: aparece en la consola del backend (IntelliJ), en una línea `[RECUPERACION] Para ... codigo XXXXXX`.
 
 ### Página de inicio
 
@@ -84,15 +86,16 @@ Marca cada caso con ✅ (pasa) o ❌ (falla) y anota lo que viste.
 
 | ID | Pasos | Resultado esperado | Resultado | Observaciones |
 |---|---|---|---|---|
-| W-17 | Buscar "lucia" | Aparece "Lucía Fernández" (sin importar tildes) | | |
+| W-17 | Buscar parte del nombre o correo de un usuario | Solo aparecen los usuarios que coinciden | | |
 | W-18 | Filtrar por "Mecánicos" | Solo aparecen mecánicos | | |
-| W-19 | Cambiar de página | "Mostrando 9–16 de …" | | |
+| W-19 | Con más de 8 usuarios, cambiar de página | "Mostrando 9–… de …" | | |
 | W-20 | Desactivar un usuario | Pide confirmación; al aceptar queda "Inactivo" y aparece un aviso | | |
 | W-21 | Activar un usuario inactivo | Cambia a "Activo" sin pedir confirmación | | |
-| W-22 | Intentar desactivar tu propia cuenta | El switch está bloqueado | | |
-| W-23 | "Nuevo mecánico" con campos vacíos | Muestra los errores de cada campo | | |
-| W-24 | "Nuevo mecánico" con un correo ya registrado | "Ya existe una cuenta con ese correo." | | |
-| W-25 | "Nuevo mecánico" con datos válidos | Muestra correo y contraseña temporal; "Copiar datos" funciona; aparece primero en la lista | | |
+| W-22 | Intentar desactivar tu propia cuenta (fila "(tú)") | El switch está bloqueado | | |
+| W-23 | "Nuevo mecánico" con campos vacíos | Errores en nombre y correo | | |
+| W-24 | "Nuevo mecánico" con un correo ya registrado | "El correo ya se encuentra registrado" | | |
+| W-25 | "Nuevo mecánico" con datos válidos | Muestra el correo y la contraseña temporal generada por el servidor; "Copiar datos" funciona | | |
+| W-25b | Iniciar sesión con la cuenta de un usuario desactivado | "Tu cuenta esta desactivada. Contacta al administrador" | | |
 
 ### Catálogo de servicios (HU-18, HU-19, HU-20)
 
@@ -104,7 +107,7 @@ Marca cada caso con ✅ (pasa) o ❌ (falla) y anota lo que viste.
 | W-29 | Crear un servicio válido | Aparece en la tabla con precio en soles y duración legible | | |
 | W-30 | "Editar" sin cambiar nada | "Guardar cambios" está deshabilitado | | |
 | W-31 | Editar precio y duración | La fila muestra los valores nuevos y un aviso | | |
-| W-32 | Desactivar un servicio | Pide confirmación; queda "Inactivo"; el contador de activos baja | | |
+| W-32 | Desactivar un servicio | Pide confirmación; queda "Inactivo"; el contador de activos baja. Con el backend actual, al recargar ya no aparece (ver pendientes) | | |
 
 ### Recuperar contraseña (HU-04)
 
@@ -114,7 +117,7 @@ Marca cada caso con ✅ (pasa) o ❌ (falla) y anota lo que viste.
 | W-34 | Enviar un correo válido | Pasa a "Crea una nueva contraseña" con el correo y el tiempo restante | | |
 | W-35 | Escribir letras en el código | Solo se aceptan números (6 dígitos) | | |
 | W-36 | Código incorrecto | "El código no es válido o ya venció." | | |
-| W-37 | Código correcto (`123456` en modo prueba) y contraseña válida | "¡Contraseña actualizada!" y botón a iniciar sesión | | |
+| W-37 | Código correcto (de la consola del backend, o `123456` en modo prueba) y contraseña válida | "¡Contraseña actualizada!"; luego el login funciona con la nueva contraseña | | |
 | W-38 | Pulsar "Reenviar código" | Espera 60 s antes de habilitarse; luego avisa "Te enviamos un código nuevo." | | |
 
 ### Diseño adaptable
@@ -124,6 +127,13 @@ Marca cada caso con ✅ (pasa) o ❌ (falla) y anota lo que viste.
 | W-39 | Ver todas las pantallas a 390 px de ancho (F12 → modo dispositivo) | Sin desplazamiento horizontal; las tablas se ven como tarjetas | | |
 
 ---
+
+## Pendientes del backend detectados
+
+| Pendiente | Efecto en la web | Responsable |
+|---|---|---|
+| Falta `GET /admin/services` (activos e inactivos) | El panel usa `GET /services`, que solo devuelve los activos: un servicio desactivado desaparece de la tabla al recargar y no se puede reactivar desde la web | Farid |
+| `GET /admin/users` no envía la fecha de registro (`creadoEn`) | La columna "Registro" no se muestra | Farid (opcional) |
 
 ## Defectos encontrados
 

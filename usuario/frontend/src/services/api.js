@@ -35,13 +35,12 @@ export async function apiFetch(ruta, { metodo = "GET", cuerpo, ...resto } = {}) 
   const datos = await respuesta.json().catch(() => ({}));
 
   if (!respuesta.ok) {
-    if (respuesta.status === 403) {
-      throw new Error("No tienes permiso para realizar esta acción.");
-    }
-    if (respuesta.status >= 500) {
-      throw new Error("El servidor tuvo un problema. Inténtalo de nuevo.");
-    }
-    throw new Error(datos.error || "No se pudo completar la operación.");
+    let mensaje = datos.error || "No se pudo completar la operación.";
+    if (respuesta.status === 403) mensaje = datos.error || "No tienes permiso para realizar esta acción.";
+    if (respuesta.status >= 500) mensaje = "El servidor tuvo un problema. Inténtalo de nuevo.";
+    const error = new Error(mensaje);
+    error.status = respuesta.status;
+    throw error;
   }
 
   return datos;

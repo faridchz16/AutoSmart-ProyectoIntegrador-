@@ -9,6 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/auth": BACKEND,
+      "/services": BACKEND,
       // /admin también es una página del frontend: si el navegador pide HTML
       // (abrir o recargar la página), se sirve React; si es una llamada de datos, va al backend.
       "/admin": {

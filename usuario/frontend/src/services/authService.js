@@ -56,7 +56,7 @@ export async function registrar(nombre, correo, password) {
 /* ---------- Recuperación de contraseña (T04.3) ----------
    Endpoints según el backlog (T04.1, Farid):
      POST /auth/forgot-password  { correo }                    -> envía un código de 6 dígitos (vence en 15 min)
-     POST /auth/reset-password   { correo, codigo, password }  -> guarda la nueva contraseña
+     POST /auth/reset-password   { correo, codigo, nuevaPassword }  -> guarda la nueva contraseña
    Con VITE_DATOS_PRUEBA activo se simulan (código de prueba: 123456). */
 
 async function postAuth(ruta, cuerpo) {
@@ -89,7 +89,11 @@ export async function solicitarCodigo(correo) {
 export async function restablecerPassword(correo, codigo, password) {
   if (prueba.DATOS_PRUEBA) return prueba.restablecerPassword(correo, codigo, password);
 
-  const { respuesta, datos } = await postAuth("/auth/reset-password", { correo, codigo, password });
+  const { respuesta, datos } = await postAuth("/auth/reset-password", {
+    correo,
+    codigo,
+    nuevaPassword: password,
+  });
   if (respuesta.ok) return datos;
   if (respuesta.status >= 500) {
     throw new Error("No se pudo actualizar la contraseña. Inténtalo en unos minutos.");

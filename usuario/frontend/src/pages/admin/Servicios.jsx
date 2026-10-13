@@ -36,7 +36,7 @@ const IconoEditar = () => (
 
 function Servicios() {
   const [recarga, setRecarga] = useState(0);
-  const [resultado, setResultado] = useState({ clave: null, servicios: [], error: "" });
+  const [resultado, setResultado] = useState({ clave: null, servicios: [], soloActivos: false, error: "" });
   const [estado, setEstado] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(0);
@@ -58,8 +58,8 @@ function Servicios() {
   useEffect(() => {
     let vigente = true;
     listarServicios()
-      .then((servicios) => vigente && setResultado({ clave: recarga, servicios, error: "" }))
-      .catch((e) => vigente && setResultado({ clave: recarga, servicios: [], error: e.message }));
+      .then((r) => vigente && setResultado({ clave: recarga, ...r, error: "" }))
+      .catch((e) => vigente && setResultado({ clave: recarga, servicios: [], soloActivos: false, error: e.message }));
     return () => {
       vigente = false;
     };
@@ -130,6 +130,13 @@ function Servicios() {
           Nuevo servicio
         </button>
       </div>
+
+      {resultado.soloActivos && (
+        <p className="aviso-fijo" role="note">
+          El servidor solo devuelve los servicios <strong>activos</strong>. Si desactivas uno, dejará de verse aquí al
+          recargar la página (falta el endpoint <code>GET /admin/services</code> en el backend).
+        </p>
+      )}
 
       {/* ---------- Filtros ---------- */}
       <div className="filtros">

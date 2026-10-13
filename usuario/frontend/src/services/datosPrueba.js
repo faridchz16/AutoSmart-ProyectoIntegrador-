@@ -1,9 +1,9 @@
-// Datos de prueba para el panel mientras el backend no tenga los endpoints.
-// Se activan con VITE_DATOS_PRUEBA=true en el archivo .env (activos por defecto).
-// Para usar el backend real: VITE_DATOS_PRUEBA=false
+// Datos de prueba para usar el panel sin el backend (por ejemplo, en una demo sin base de datos).
+// Se activan con VITE_DATOS_PRUEBA=true en el archivo .env.
+// Sin esa línea (o con false) se usa el backend real.
 // Los cambios (crear, editar, activar, desactivar) se pierden al recargar la página.
 
-export const DATOS_PRUEBA = import.meta.env.VITE_DATOS_PRUEBA !== "false";
+export const DATOS_PRUEBA = import.meta.env.VITE_DATOS_PRUEBA === "true";
 
 const esperar = (ms = 350) => new Promise((r) => setTimeout(r, ms));
 
@@ -61,10 +61,19 @@ export async function listarUsuarios({ rol = "", q = "", pagina = 0, tamano = 10
   };
 }
 
-export async function crearMecanico({ nombre, correo, password }) {
+// Contraseña temporal como la genera el backend: 10 caracteres con mayúscula, minúscula y dígito
+function passwordTemporal() {
+  const may = "ABCDEFGHJKLMNPQRSTUVWXYZ", min = "abcdefghijkmnpqrstuvwxyz", num = "23456789";
+  const azar = (s) => s[Math.floor(Math.random() * s.length)];
+  const letras = [azar(may), azar(min), azar(num)];
+  while (letras.length < 10) letras.push(azar(may + min + num));
+  return letras.sort(() => Math.random() - 0.5).join("");
+}
+
+export async function crearMecanico({ nombre, correo }) {
   await esperar(500);
   if (usuarios.some((u) => u.correo.toLowerCase() === correo.toLowerCase())) {
-    throw new Error("Ya existe una cuenta con ese correo.");
+    throw new Error("El correo ya se encuentra registrado.");
   }
   const nuevo = {
     id: siguienteId++,
@@ -75,7 +84,7 @@ export async function crearMecanico({ nombre, correo, password }) {
     creadoEn: new Date().toISOString(),
   };
   usuarios = [nuevo, ...usuarios];
-  return { ...nuevo, passwordTemporal: password };
+  return { ...nuevo, passwordTemporal: passwordTemporal() };
 }
 
 export async function cambiarEstadoUsuario(id, activo) {

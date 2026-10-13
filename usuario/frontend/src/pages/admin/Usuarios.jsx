@@ -109,6 +109,7 @@ function Usuarios() {
   };
 
   const { usuarios, total, paginas, error } = resultado;
+  const conFecha = usuarios.some((u) => u.creadoEn); // el backend actual no envía la fecha de registro
 
   return (
     <section className="gestion">
@@ -177,7 +178,7 @@ function Usuarios() {
               <tr>
                 <th scope="col">Usuario</th>
                 <th scope="col">Rol</th>
-                <th scope="col">Registro</th>
+                {conFecha && <th scope="col">Registro</th>}
                 <th scope="col">Estado</th>
               </tr>
             </thead>
@@ -186,7 +187,6 @@ function Usuarios() {
                 ? Array.from({ length: 5 }, (_, i) => (
                     <tr key={i} className="fila-esqueleto" aria-hidden="true">
                       <td><span className="esq esq-largo" /></td>
-                      <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
                     </tr>
@@ -212,7 +212,7 @@ function Usuarios() {
                         <td data-label="Rol">
                           <span className={`insignia rol-${u.rol.toLowerCase()}`}>{NOMBRE_ROL[u.rol] ?? u.rol}</span>
                         </td>
-                        <td data-label="Registro">{fecha(u.creadoEn)}</td>
+                        {conFecha && <td data-label="Registro">{fecha(u.creadoEn)}</td>}
                         <td data-label="Estado">
                           <Switch
                             activo={u.activo}

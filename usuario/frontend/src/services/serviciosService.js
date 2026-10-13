@@ -1,14 +1,17 @@
 import { apiFetch } from "./api";
 import * as prueba from "./datosPrueba";
 
-/* Catálogo de servicios del panel de administración.
-   Endpoints según el backlog del Sprint 1 (Farid):
-     GET   /admin/services                 -> todos los servicios, activos e inactivos
+/* Catálogo de servicios del panel de administración (backend de Farid, rama main):
      POST  /admin/services                 -> crea un servicio (T18.1)
      PUT   /admin/services/{id}            -> edita datos y tarifa (T19.1)
      PATCH /admin/services/{id}/estado     -> activa o desactiva (T19.1)
+     GET   /services                       -> catálogo: SOLO servicios activos (T10.1)
    Cuerpo: { nombre, descripcion, precioBase, duracionMinutos }
-   Si el backend usa otros nombres, solo hay que cambiarlos aquí. */
+   Respuesta: { idServicio, nombre, descripcion, precioBase, duracionMinutos, activo }
+
+   PENDIENTE (backend): falta GET /admin/services con activos e inactivos.
+   Mientras no exista, el panel usa GET /services y los servicios desactivados
+   desaparecen de la tabla al recargar. */
 
 // Adapta lo que devuelva el backend a un formato único para la pantalla
 function normalizarServicio(s = {}) {
@@ -22,10 +25,22 @@ function normalizarServicio(s = {}) {
   };
 }
 
+const aLista = (datos) => (Array.isArray(datos) ? datos : datos.contenido ?? datos.content ?? []);
+
+// Devuelve { servicios, soloActivos }. soloActivos = true cuando el backend no permite ver los inactivos.
 export async function listarServicios() {
-  const datos = prueba.DATOS_PRUEBA ? await prueba.listarServicios() : await apiFetch("/admin/services");
-  const lista = Array.isArray(datos) ? datos : datos.content ?? [];
-  return lista.map(normalizarServicio);
+  if (prueba.DATOS_PRUEBA) {
+    return { servicios: (await prueba.listarServicios()).map(normalizarServicio), soloActivos: false };
+  }
+  try {
+    const datos = await apiFetch("/admin/services");
+    return { servicios: aLista(datos).map(normalizarServicio), soloActivos: false };
+  } catch (e) {
+    // 404/405: el backend aún no tiene GET /admin/services -> se usa el catálogo público
+    if (e.status !== 404 && e.status !== 405) throw e;
+    const datos = await apiFetch("/services");
+    return { servicios: aLista(datos).map(normalizarServicio), soloActivos: true };
+  }
 }
 
 export async function crearServicio(servicio) {

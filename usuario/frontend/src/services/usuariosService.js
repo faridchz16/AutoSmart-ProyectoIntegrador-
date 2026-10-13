@@ -2,12 +2,11 @@ import { apiFetch } from "./api";
 import { normalizarRol } from "./sesion";
 import * as prueba from "./datosPrueba";
 
-/* Gestión de usuarios del panel de administración.
-   Endpoints según el backlog del Sprint 1 (Farid):
-     GET   /admin/users?rol=&q=&page=&size=   -> lista paginada (T16.1)
-     POST  /admin/mechanics                    -> crea un mecánico (T15.1)
-     PATCH /admin/users/{id}/estado            -> activa o desactiva (T17.1)
-   Si el backend usa otros nombres, solo hay que cambiarlos aquí. */
+/* Gestión de usuarios del panel de administración (backend de Farid, rama main):
+     GET   /admin/users?rol=&q=&page=&size=   -> { contenido, pagina, tamano, totalElementos, totalPaginas }  (T16.1)
+     POST  /admin/mechanics  { nombre, correo } -> { idUsuario, nombre, correo, rol, passwordTemporal }      (T15.1)
+     PATCH /admin/users/{id}/estado { activo }  -> { idUsuario, nombre, correo, rol, activo }                (T17.1)
+   Si el backend cambia nombres, solo hay que ajustarlos aquí. */
 
 export const NOMBRE_ROL = {
   CLIENTE: "Cliente",
@@ -28,7 +27,8 @@ function normalizarUsuario(u = {}) {
   };
 }
 
-// Acepta una página de Spring ({ content, totalElements, ... }) o una lista simple
+// Acepta la página del backend ({ contenido, totalElementos, ... }), una página de Spring
+// ({ content, totalElements, ... }) o una lista simple
 function leerPagina(datos, { rol, q, pagina, tamano }) {
   if (Array.isArray(datos)) {
     const texto = q.trim().toLowerCase();
@@ -42,11 +42,11 @@ function leerPagina(datos, { rol, q, pagina, tamano }) {
       paginas: Math.max(1, Math.ceil(todos.length / tamano)),
     };
   }
-  const usuarios = (datos.content ?? []).map(normalizarUsuario);
+  const usuarios = (datos.contenido ?? datos.content ?? []).map(normalizarUsuario);
   return {
     usuarios,
-    total: datos.totalElements ?? usuarios.length,
-    paginas: Math.max(1, datos.totalPages ?? 1),
+    total: datos.totalElementos ?? datos.totalElements ?? usuarios.length,
+    paginas: Math.max(1, datos.totalPaginas ?? datos.totalPages ?? 1),
   };
 }
 
@@ -61,15 +61,15 @@ export async function listarUsuarios({ rol = "", q = "", pagina = 0, tamano = 10
   return leerPagina(await apiFetch(`/admin/users?${params}`), filtros);
 }
 
-// Devuelve el mecánico creado y la contraseña temporal para entregársela
-export async function crearMecanico({ nombre, correo, password }) {
-  const cuerpo = { nombre, correo, password };
+// Devuelve el mecánico creado y la contraseña temporal (la genera el backend) para entregársela
+export async function crearMecanico({ nombre, correo }) {
+  const cuerpo = { nombre, correo };
   const datos = prueba.DATOS_PRUEBA
     ? await prueba.crearMecanico(cuerpo)
     : await apiFetch("/admin/mechanics", { metodo: "POST", cuerpo });
   return {
     usuario: normalizarUsuario(datos.usuario ?? datos),
-    passwordTemporal: datos.passwordTemporal ?? password,
+    passwordTemporal: datos.passwordTemporal ?? "",
   };
 }
 

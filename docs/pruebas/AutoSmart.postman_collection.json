@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "55059bdc-1dbd-424a-a506-5b8f5b467621",
+    "_postman_id": "4609f862-813a-4e60-b01d-998e7187441c",
     "name": "AutoSmart – Sprint 1",
     "description": "Pruebas de la API de AutoSmart (Sprint 1, TEC.4).\n\nAntes de ejecutar:\n1. Enciende MySQL (XAMPP) y el backend en el puerto 8081.\n2. En la pestaña Variables de la colección, completa correoAdmin y passwordAdmin con una cuenta que tenga rol ADMIN.\n3. Ejecuta la colección completa con Run (las carpetas van en orden: primero Autenticación, que guarda los tokens).\n\nLas pruebas de endpoints que aún no existen fallarán con 404 hasta que se implementen; eso es esperado.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -344,7 +344,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"correo\": \"{{correoCliente}}\",\n  \"codigo\": \"000000\",\n  \"password\": \"Nueva1234\"\n}",
+              "raw": "{\n  \"correo\": \"{{correoCliente}}\",\n  \"codigo\": \"000000\",\n  \"nuevaPassword\": \"Nueva1234\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -510,7 +510,7 @@
                 "exec": [
                   "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
                   "const datos = pm.response.json();",
-                  "const lista = Array.isArray(datos) ? datos : datos.content;",
+                  "const lista = Array.isArray(datos) ? datos : (datos.contenido ?? datos.content);",
                   "pm.test(\"Devuelve una lista\", () => pm.expect(lista).to.be.an(\"array\"));",
                   "pm.test(\"Todos son CLIENTE\", () => lista.forEach(u => {",
                   "  const rol = typeof u.rol === \"object\" ? u.rol.nombre : u.rol;",
@@ -564,7 +564,7 @@
                 "exec": [
                   "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
                   "const datos = pm.response.json();",
-                  "const lista = Array.isArray(datos) ? datos : datos.content;",
+                  "const lista = Array.isArray(datos) ? datos : (datos.contenido ?? datos.content);",
                   "const cliente = lista.find(u => u.correo === pm.collectionVariables.get(\"correoCliente\"));",
                   "pm.test(\"Encuentra al cliente registrado\", () => pm.expect(cliente).to.exist);",
                   "pm.collectionVariables.set(\"idCliente\", cliente.id ?? cliente.idUsuario);"
@@ -599,7 +599,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Mecánico de Prueba\",\n  \"correo\": \"mecanico{{$timestamp}}@prueba.com\",\n  \"password\": \"Temporal123\"\n}",
+              "raw": "{\n  \"nombre\": \"Mecánico de Prueba\",\n  \"correo\": \"mecanico{{$timestamp}}@prueba.com\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -616,6 +616,7 @@
                   "pm.test(\"Mecánico creado (200/201)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
                   "const datos = pm.response.json();",
                   "const u = datos.usuario ?? datos;",
+                  "pm.test(\"Devuelve la contraseña temporal\", () => pm.expect(datos.passwordTemporal).to.be.a(\"string\").and.not.empty);",
                   "const rol = typeof u.rol === \"object\" ? u.rol.nombre : u.rol;",
                   "pm.test(\"Tiene rol MECANICO\", () => pm.expect(String(rol).toUpperCase()).to.include(\"MECANICO\"));"
                 ]
@@ -649,7 +650,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Sin correo\",\n  \"correo\": \"\",\n  \"password\": \"Temporal123\"\n}",
+              "raw": "{\n  \"nombre\": \"Sin correo\",\n  \"correo\": \"\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1041,7 +1042,7 @@
                 "exec": [
                   "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
                   "const datos = pm.response.json();",
-                  "const lista = Array.isArray(datos) ? datos : datos.content;",
+                  "const lista = Array.isArray(datos) ? datos : (datos.contenido ?? datos.content);",
                   "const id = Number(pm.collectionVariables.get(\"idServicio\"));",
                   "pm.test(\"El servicio deshabilitado no aparece\", () =>",
                   "  pm.expect(lista.some(s => Number(s.id ?? s.idServicio) === id)).to.be.false);"
