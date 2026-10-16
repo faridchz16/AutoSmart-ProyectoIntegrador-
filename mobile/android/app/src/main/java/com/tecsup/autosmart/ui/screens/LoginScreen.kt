@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -134,7 +133,8 @@ private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
 @Composable
 fun LoginScreen(
     onLoginClick: (String, String) -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onGoogleClick: () -> Unit = {}
 ) {
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -164,6 +164,21 @@ fun LoginScreen(
             color = Color.White.copy(alpha = 0.85f),
             modifier = Modifier.padding(top = 4.dp)
         )
+    }
+
+    val botonGoogle: @Composable () -> Unit = {
+        OutlinedButton(
+            onClick = onGoogleClick,
+            enabled = !isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (isLandscape) 44.dp else 50.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+        ) {
+            Text("Continuar con Google", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
     }
 
     val formulario: @Composable () -> Unit = {
@@ -244,7 +259,7 @@ fun LoginScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 22.dp))
+        Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 18.dp))
 
         // Botón Ingresar
         Button(
@@ -277,6 +292,11 @@ fun LoginScreen(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 12.dp))
+
+        // Botón Google
+        botonGoogle()
     }
 
     // Parte de abajo estilo Instagram: "¿Olvidaste tu contraseña?" y "Registrarse"
@@ -352,7 +372,7 @@ fun LoginScreen(
                     .widthIn(max = if (isLandscape) 760.dp else 450.dp)
                     .fillMaxWidth(0.88f)
                     .padding(vertical = if (isLandscape) 4.dp else 16.dp)
-            )  {
+            ) {
                 if (isLandscape) {
                     // HORIZONTAL: izquierda título + Registrarse; derecha formulario + olvidaste contraseña
                     Row(

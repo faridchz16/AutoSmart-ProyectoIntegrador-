@@ -1,25 +1,37 @@
 package com.tecsup.autosmart.data.network
 
+import android.content.Context
+import com.tecsup.autosmart.data.local.TokenManager
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // Apuntamos directamente a la IP física de tu interfaz Wi-Fi
-    private const val BASE_URL = "http://192.168.1.63:8081/"
+    private const val BASE_URL = "http://10.200.169.240:8081/"
 
-    // Aplicamos variable global para guardar el token JWT al iniciar sesión
+    // Esta variable arregla los 4 errores de compilación en MainActivity
     var token: String? = null
 
-    // Cliente OkHttp que intercepta las peticiones y adjunta el Token de autorización
+    private var tokenManager: TokenManager? = null
+
+    fun init(context: Context) {
+        tokenManager = TokenManager(context)
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor { chain ->
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            // Adjuntamos el encabezado Authorization si el token existe
-            token?.let { jwtToken ->
-                requestBuilder.header("Authorization", "Bearer $jwtToken")
+            // Usa el token en memoria o lo busca en DataStore
+            val activeToken = token ?: runBlocking {
+                tokenManager?.getToken?.firstOrNull()
+            }
+
+            if (!activeToken.isNullOrEmpty()) {
+                requestBuilder.header("Authorization", "Bearer $activeToken")
             }
 
             chain.proceed(requestBuilder.build())
@@ -37,7 +49,7 @@ object RetrofitClient {
     val vehiculoApi: VehiculoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient) // Asignamos el OkHttpClient con el interceptor
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(VehiculoApi::class.java)
