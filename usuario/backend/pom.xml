@@ -63,6 +63,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- API Client de Google para verificacion de ID Tokens -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
         <!-- Dependencias de Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

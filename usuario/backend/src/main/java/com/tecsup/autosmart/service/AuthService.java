@@ -70,7 +70,34 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPasswordHash())) {
             throw new UnauthorizedException("Credenciales incorrectas");
         }
-        
+
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            throw new ForbiddenException("Tu cuenta esta desactivada. Contacta al administrador");
+        }
+
+        String rolNombre = usuario.getRol() != null ? usuario.getRol().getNombre() : "CLIENTE";
+        String token = jwtUtil.generarToken(usuario.getCorreo(), rolNombre);
+
+        return new AuthResponse(token, usuario.getIdUsuario(), usuario.getNombre(), usuario.getCorreo(), rolNombre);
+    }
+
+    public AuthResponse autenticarConGoogle(String email, String name) {
+        Usuario usuario = usuarioRepository.findByCorreo(email)
+                .orElseGet(() -> {
+                    Rol rolCliente = rolRepository.findByNombre("CLIENTE")
+                            .orElseGet(() -> rolRepository.save(new Rol("CLIENTE")));
+
+                    String nombreFinal = (name != null && !name.isBlank()) ? name : "Usuario Google";
+
+                    Usuario nuevo = new Usuario(
+                            nombreFinal,
+                            email,
+                            "", // Contraseña vacía al iniciar con OAuth
+                            rolCliente
+                    );
+                    return usuarioRepository.save(nuevo);
+                });
+
         if (Boolean.FALSE.equals(usuario.getActivo())) {
             throw new ForbiddenException("Tu cuenta esta desactivada. Contacta al administrador");
         }
