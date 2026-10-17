@@ -1,0 +1,98 @@
+.estado {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(60% 50% at 80% 0%, rgba(59, 130, 246, 0.18), transparent 70%),
+    radial-gradient(50% 50% at 0% 100%, rgba(34, 211, 238, 0.14), transparent 70%),
+    #f4f7fd;
+  font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.estado-caja {
+  width: 100%;
+  max-width: 460px;
+  padding: 40px 32px;
+  border: 1px solid #e3e9f5;
+  border-radius: 22px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 30px 60px -36px rgba(11, 27, 58, 0.45);
+  animation: estado-entra 0.45s ease both;
+}
+
+@keyframes estado-entra {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.estado-codigo {
+  display: block;
+  margin-top: 14px;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(135deg, #1150e8, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.estado-caja h1 {
+  margin: 10px 0 8px;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.4rem;
+  color: #0b1b3a;
+}
+
+.estado-caja p {
+  margin: 0 0 24px;
+  color: #5b6b88;
+  line-height: 1.55;
+}
+
+.estado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.estado-btn {
+  display: inline-block;
+  padding: 11px 20px;
+  border: 1px solid #1150e8;
+  border-radius: 10px;
+  background: #1150e8;
+  color: #fff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.estado-btn:hover {
+  background: #0a3ab0;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -12px rgba(17, 80, 232, 0.7);
+}
+
+.estado-btn.sec {
+  background: #fff;
+  color: #0b1b3a;
+  border-color: #cdd8ee;
+}
+
+.estado-btn.sec:hover {
+  background: #f4f7fd;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .estado-caja { animation: none; }
+  .estado-btn { transition: none; }
+}
