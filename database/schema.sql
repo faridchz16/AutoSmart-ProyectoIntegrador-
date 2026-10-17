@@ -1,6 +1,4 @@
 -- AutoSmart: esquema de base de datos (Sprint 1)
--- Las tablas tambien las crea Hibernate al iniciar la API (ddl-auto=update).
--- Este archivo documenta el esquema y permite preparar una base nueva.
 
 CREATE DATABASE IF NOT EXISTS autosmart_db;
 USE autosmart_db;
@@ -85,13 +83,3 @@ CREATE TABLE IF NOT EXISTS codigos_recuperacion (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
--- ---------- Administrador inicial (solo para demo) ----------
--- La contrasena debe guardarse cifrada con BCrypt. Reemplaza el texto
--- PEGA_AQUI_EL_HASH_BCRYPT por un hash real antes de ejecutar este bloque.
--- Cambia la contrasena del administrador antes de usarlo fuera de la demo.
-
--- INSERT INTO usuarios (nombre, correo, password_hash, id_rol)
--- SELECT 'Administrador', 'admin@mail.com', 'PEGA_AQUI_EL_HASH_BCRYPT', r.id_rol
--- FROM roles r
--- WHERE r.nombre = 'ADMIN'
---   AND NOT EXISTS (SELECT 1 FROM usuarios WHERE correo = 'admin@mail.com');
