@@ -4,6 +4,7 @@ import com.tecsup.autosmart.data.model.AuthResponse
 import com.tecsup.autosmart.data.model.LoginRequest
 import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.model.RegisterResponse
+import com.tecsup.autosmart.data.model.GoogleLoginRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -15,4 +16,7 @@ interface AuthApi {
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
+
+    @POST("auth/google")
+    suspend fun loginConGoogle(@Body request: GoogleLoginRequest): Response<AuthResponse>
 }

@@ -17,4 +17,5 @@ data class AuthResponse(
     val correo: String,
     val rol: String
 )
+data class GoogleLoginRequest(val idToken: String)
 
