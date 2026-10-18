@@ -26,12 +26,15 @@ public class Servicio {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    // VARCHAR con valor por defecto: los servicios que ya existen quedan como PREVENTIVO
     @Enumerated(EnumType.STRING)
     @Column(name = "categoria", nullable = false, columnDefinition = "VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO'")
     private CategoriaServicio categoria = CategoriaServicio.PREVENTIVO;
 
-    public CategoriaServicio getCategoria() { return categoria; }
-    public void setCategoria(CategoriaServicio categoria) { this.categoria = categoria; }
+    // Especialidad requerida (opcional): si es null, cualquier mecanico con perfil puede atenderlo
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_especialidad")
+    private Especialidad especialidad;
 
     public Long getIdServicio() { return idServicio; }
     public void setIdServicio(Long idServicio) { this.idServicio = idServicio; }
@@ -50,4 +53,10 @@ public class Servicio {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public CategoriaServicio getCategoria() { return categoria; }
+    public void setCategoria(CategoriaServicio categoria) { this.categoria = categoria; }
+
+    public Especialidad getEspecialidad() { return especialidad; }
+    public void setEspecialidad(Especialidad especialidad) { this.especialidad = especialidad; }
 }
