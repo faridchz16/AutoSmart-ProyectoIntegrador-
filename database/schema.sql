@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- ---------- Vehiculos (T06.1, T08.1, T09.1) ----------
 
 CREATE TABLE IF NOT EXISTS vehiculos (
-    id_vehiculo INT AUTO_INCREMENT PRIMARY KEY,
+    id_vehiculo BIGINT AUTO_INCREMENT PRIMARY KEY,
     placa VARCHAR(15) UNIQUE NOT NULL,
     marca VARCHAR(50) NOT NULL,
     modelo VARCHAR(50) NOT NULL,
@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS servicios (
     descripcion VARCHAR(500),
     precio_base DECIMAL(10,2) NOT NULL,
     duracion_minutos INT NOT NULL,
-    activo TINYINT(1) NOT NULL DEFAULT 1
+    activo TINYINT(1) NOT NULL DEFAULT 1,
+    categoria VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO'  
 );
 
 -- ---------- Perfil profesional del mecanico (T13.1) ----------
@@ -91,5 +92,38 @@ CREATE TABLE IF NOT EXISTS horario_mecanico (
     dia_semana TINYINT NOT NULL,          -- 1 = lunes ... 7 = domingo
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
+    FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
+);
+
+-- ---------- Citas (T23.1; la logica de reserva llega en T26.1) ----------
+
+USE autosmart_db;
+
+CREATE TABLE IF NOT EXISTS citas (
+    id_cita BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket VARCHAR(20) UNIQUE NOT NULL,
+    id_cliente INT NOT NULL,
+    id_mecanico INT NOT NULL,
+    id_vehiculo BIGINT NOT NULL,
+    id_servicio BIGINT NOT NULL,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    estado VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA
+    precio DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario),
+    FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario),
+    FOREIGN KEY (id_vehiculo) REFERENCES vehiculos(id_vehiculo),
+    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio)
+);
+
+-- ---------- Fechas bloqueadas del mecanico (T22.1) ----------
+
+CREATE TABLE IF NOT EXISTS fecha_bloqueada (
+    id_bloqueo INT AUTO_INCREMENT PRIMARY KEY,
+    id_mecanico INT NOT NULL,
+    fecha DATE NOT NULL,
+    motivo VARCHAR(200),
+    UNIQUE KEY uk_mecanico_fecha (id_mecanico, fecha),
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
 );
