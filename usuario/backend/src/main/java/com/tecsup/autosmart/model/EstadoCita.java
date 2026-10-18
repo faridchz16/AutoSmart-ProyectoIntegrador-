@@ -1,4 +1,8 @@
 package com.tecsup.autosmart.model;
 
-public class EstadoCita {
+public enum EstadoCita {
+    PENDIENTE,
+    CONFIRMADA,
+    RECHAZADA,
+    CANCELADA
 }

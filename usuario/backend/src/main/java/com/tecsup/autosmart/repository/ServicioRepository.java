@@ -2,6 +2,7 @@ package com.tecsup.autosmart.repository;
 
 import com.tecsup.autosmart.model.Servicio;
 import org.springframework.data.jpa.repository.JpaRepository;
+import com.tecsup.autosmart.model.CategoriaServicio;
 
 import java.util.List;
 import java.util.Optional;
@@ -12,4 +13,7 @@ public interface ServicioRepository extends JpaRepository<Servicio, Long> {
 
     List<Servicio> findByActivoTrueAndNombreContainingIgnoreCaseOrderByNombreAsc(String nombre);
     Optional<Servicio> findByIdServicioAndActivoTrue(Long idServicio);
+
+    List<Servicio> findByActivoTrueAndNombreContainingIgnoreCaseAndCategoriaOrderByNombreAsc(
+            String nombre, CategoriaServicio categoria);
 }

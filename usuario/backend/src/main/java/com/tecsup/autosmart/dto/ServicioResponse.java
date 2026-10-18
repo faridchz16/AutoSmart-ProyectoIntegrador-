@@ -10,6 +10,10 @@ public class ServicioResponse {
     private BigDecimal precioBase;
     private Integer duracionMinutos;
     private Boolean activo;
+    private String categoria;
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
 
     public Long getIdServicio() { return idServicio; }
     public void setIdServicio(Long idServicio) { this.idServicio = idServicio; }
