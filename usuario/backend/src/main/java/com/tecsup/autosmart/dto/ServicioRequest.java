@@ -20,6 +20,12 @@ public class ServicioRequest {
     @Min(value = 1, message = "La duracion debe ser de al menos 1 minuto")
     private Integer duracionMinutos;
 
+    @Pattern(regexp = "PREVENTIVO|CORRECTIVO", message = "La categoria debe ser PREVENTIVO o CORRECTIVO")
+    private String categoria;
+
+    public String getCategoria() { return categoria; }
+    public void setCategoria(String categoria) { this.categoria = categoria; }
+
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 

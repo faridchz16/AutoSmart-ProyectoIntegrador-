@@ -19,8 +19,9 @@ public class ServicioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ServicioResponse>> listar(@RequestParam(required = false) String q) {
-        return ResponseEntity.ok(servicioService.listarActivos(q));
+    public ResponseEntity<List<ServicioResponse>> listar(@RequestParam(required = false) String q,
+                                                         @RequestParam(required = false) String categoria) {
+        return ResponseEntity.ok(servicioService.listarActivos(q, categoria));
     }
 
     @GetMapping("/{id}")

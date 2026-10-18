@@ -26,6 +26,13 @@ public class Servicio {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categoria", nullable = false, columnDefinition = "VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO'")
+    private CategoriaServicio categoria = CategoriaServicio.PREVENTIVO;
+
+    public CategoriaServicio getCategoria() { return categoria; }
+    public void setCategoria(CategoriaServicio categoria) { this.categoria = categoria; }
+
     public Long getIdServicio() { return idServicio; }
     public void setIdServicio(Long idServicio) { this.idServicio = idServicio; }
 

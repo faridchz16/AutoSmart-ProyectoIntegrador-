@@ -1,4 +1,6 @@
 package com.tecsup.autosmart.model;
 
-public class CategoriaServicio {
+public enum CategoriaServicio {
+    PREVENTIVO,
+    CORRECTIVO
 }
