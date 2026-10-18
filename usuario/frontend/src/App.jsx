@@ -8,9 +8,16 @@ import NoAutorizado from "./pages/NoAutorizado";
 import NoEncontrado from "./pages/NoEncontrado";
 import RutaProtegida from "./components/RutaProtegida";
 import AdminLayout from "./layouts/AdminLayout";
+import MecanicoLayout from "./layouts/MecanicoLayout";
 import Resumen from "./pages/admin/Resumen";
 import Usuarios from "./pages/admin/Usuarios";
 import Servicios from "./pages/admin/Servicios";
+import InicioMecanico from "./pages/mecanico/Inicio";
+import Agenda from "./pages/mecanico/Agenda";
+import CitasHoy from "./pages/mecanico/CitasHoy";
+import Horarios from "./pages/mecanico/Horarios";
+import Bloqueos from "./pages/mecanico/Bloqueos";
+import Perfil from "./pages/mecanico/Perfil";
 
 function App() {
   return (
@@ -30,6 +37,18 @@ function App() {
             <Route index element={<Resumen />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="servicios" element={<Servicios />} />
+          </Route>
+        </Route>
+
+        {/* Panel del mecánico: solo con sesión iniciada y rol MECANICO (TEC2.1) */}
+        <Route element={<RutaProtegida roles={["MECANICO"]} />}>
+          <Route path="/mecanico" element={<MecanicoLayout />}>
+            <Route index element={<InicioMecanico />} />
+            <Route path="agenda" element={<Agenda />} />
+            <Route path="citas-hoy" element={<CitasHoy />} />
+            <Route path="horarios" element={<Horarios />} />
+            <Route path="bloqueos" element={<Bloqueos />} />
+            <Route path="perfil" element={<Perfil />} />
           </Route>
         </Route>
 
