@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by rememberSaveable { mutableStateOf("loading") }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
 
-                // Inicio forzado a "reserva" para probar T24.2 y T25.2
+                // Lógica de inicio (Welcome por defecto)
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()
 
@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (currentScreen == "loading") {
-                        currentScreen = "reserva"
+                        currentScreen = "welcome"
                     }
                 }
 
@@ -187,6 +187,9 @@ class MainActivity : ComponentActivity() {
                                             RetrofitClient.token = null
                                             currentScreen = "welcome"
                                         }
+                                    },
+                                    onNavigateToReserva = {
+                                        currentScreen = "reserva"
                                     }
                                 )
                             }

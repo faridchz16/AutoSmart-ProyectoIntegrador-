@@ -111,7 +111,7 @@ fun ReservaScreen(
                 }
             }
 
-            // T25.2: Calendario y Selección de Turnos
+            // T25.2:  Implementacion de Calendario y Selección de Turnos
             if (mecanicoSeleccionado != null) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
