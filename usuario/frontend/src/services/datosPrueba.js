@@ -169,3 +169,48 @@ export async function restablecerPassword(correo, codigo) {
   if (codigo !== CODIGO_PRUEBA) throw new Error("El código no es válido o ya venció.");
   return {};
 }
+
+/* ---------- Horarios del mecánico ---------- */
+
+let horarios = [
+  { idHorario: 1, diaSemana: 1, horaInicio: "08:00", horaFin: "12:00" },
+  { idHorario: 2, diaSemana: 1, horaInicio: "14:00", horaFin: "18:00" },
+  { idHorario: 3, diaSemana: 3, horaInicio: "09:00", horaFin: "17:00" },
+  { idHorario: 4, diaSemana: 5, horaInicio: "08:00", horaFin: "13:00" },
+];
+let siguienteHorario = 5;
+
+function validarHorario({ diaSemana, horaInicio, horaFin }, excluirId) {
+  if (horaFin <= horaInicio) throw new Error("La hora de fin debe ser posterior a la hora de inicio");
+  const cruza = horarios.some(
+    (h) => h.idHorario !== excluirId && h.diaSemana === diaSemana && horaInicio < h.horaFin && h.horaInicio < horaFin
+  );
+  if (cruza) throw new Error("El horario se cruza con otro rango registrado ese dia");
+}
+
+export async function listarHorarios() {
+  await esperar();
+  return horarios.map((h) => ({ ...h }));
+}
+
+export async function crearHorario(datos) {
+  await esperar(300);
+  validarHorario(datos, -1);
+  const nuevo = { idHorario: siguienteHorario++, ...datos };
+  horarios = [...horarios, nuevo];
+  return { ...nuevo };
+}
+
+export async function editarHorario(id, datos) {
+  await esperar(300);
+  validarHorario(datos, id);
+  const horario = horarios.find((h) => h.idHorario === id);
+  if (!horario) throw new Error("Horario no encontrado");
+  Object.assign(horario, datos);
+  return { ...horario };
+}
+
+export async function eliminarHorario(id) {
+  await esperar(250);
+  horarios = horarios.filter((h) => h.idHorario !== id);
+}
