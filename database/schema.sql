@@ -38,6 +38,15 @@ CREATE TABLE IF NOT EXISTS vehiculos (
     FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario)
 );
 
+
+-- ---------- Perfil profesional del mecanico (T13.1) ----------
+
+CREATE TABLE IF NOT EXISTS especialidades (
+    id_especialidad INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(60) UNIQUE NOT NULL
+);
+
+
 -- ---------- Catalogo de servicios (T18.1, T19.1, T10.1) ----------
 
 CREATE TABLE IF NOT EXISTS servicios (
@@ -47,15 +56,11 @@ CREATE TABLE IF NOT EXISTS servicios (
     precio_base DECIMAL(10,2) NOT NULL,
     duracion_minutos INT NOT NULL,
     activo TINYINT(1) NOT NULL DEFAULT 1,
-    categoria VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO'  
+    categoria VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO',
+    id_especialidad INT NULL,   -- especialidad requerida, opcional (T24.1)
+    FOREIGN KEY (id_especialidad) REFERENCES especialidades(id_especialidad) 
 );
 
--- ---------- Perfil profesional del mecanico (T13.1) ----------
-
-CREATE TABLE IF NOT EXISTS especialidades (
-    id_especialidad INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(60) UNIQUE NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS perfil_mecanico (
     id_perfil INT AUTO_INCREMENT PRIMARY KEY,
