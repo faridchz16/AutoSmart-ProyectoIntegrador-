@@ -83,3 +83,13 @@ CREATE TABLE IF NOT EXISTS codigos_recuperacion (
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
 
+-- ---------- Horario semanal del mecanico (T21.1) ----------
+
+CREATE TABLE IF NOT EXISTS horario_mecanico (
+    id_horario INT AUTO_INCREMENT PRIMARY KEY,
+    id_mecanico INT NOT NULL,
+    dia_semana TINYINT NOT NULL,          -- 1 = lunes ... 7 = domingo
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
+);
