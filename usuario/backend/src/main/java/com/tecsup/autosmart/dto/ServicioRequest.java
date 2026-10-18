@@ -23,6 +23,12 @@ public class ServicioRequest {
     @Pattern(regexp = "PREVENTIVO|CORRECTIVO", message = "La categoria debe ser PREVENTIVO o CORRECTIVO")
     private String categoria;
 
+    @Size(max = 60, message = "La especialidad no puede superar 60 caracteres")
+    private String especialidad;
+
+    public String getEspecialidad() { return especialidad; }
+    public void setEspecialidad(String especialidad) { this.especialidad = especialidad; }
+
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
 
