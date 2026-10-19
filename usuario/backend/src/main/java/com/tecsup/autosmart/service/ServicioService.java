@@ -2,9 +2,13 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.ServicioRequest;
 import com.tecsup.autosmart.dto.ServicioResponse;
+import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.NotFoundException;
+import com.tecsup.autosmart.model.CategoriaServicio;
+import com.tecsup.autosmart.model.Especialidad;
 import com.tecsup.autosmart.model.Servicio;
+import com.tecsup.autosmart.repository.EspecialidadRepository;
 import com.tecsup.autosmart.repository.ServicioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +20,12 @@ import java.util.stream.Collectors;
 public class ServicioService {
 
     private final ServicioRepository servicioRepository;
+    private final EspecialidadRepository especialidadRepository;
 
-    public ServicioService(ServicioRepository servicioRepository) {
+    public ServicioService(ServicioRepository servicioRepository,
+                           EspecialidadRepository especialidadRepository) {
         this.servicioRepository = servicioRepository;
+        this.especialidadRepository = especialidadRepository;
     }
 
     @Transactional
@@ -35,6 +42,12 @@ public class ServicioService {
         servicio.setPrecioBase(request.getPrecioBase());
         servicio.setDuracionMinutos(request.getDuracionMinutos());
         servicio.setActivo(true);
+        servicio.setCategoria(request.getCategoria() == null
+                ? CategoriaServicio.PREVENTIVO
+                : CategoriaServicio.valueOf(request.getCategoria()));
+
+        String esp = request.getEspecialidad();
+        servicio.setEspecialidad(esp == null || esp.isBlank() ? null : resolverEspecialidad(esp));
 
         return mapearADTO(servicioRepository.save(servicio));
     }
@@ -52,6 +65,14 @@ public class ServicioService {
         servicio.setDescripcion(request.getDescripcion());
         servicio.setPrecioBase(request.getPrecioBase());
         servicio.setDuracionMinutos(request.getDuracionMinutos());
+        if (request.getCategoria() != null) {
+            servicio.setCategoria(CategoriaServicio.valueOf(request.getCategoria()));
+        }
+        // null = conservar la actual; vacio = quitarla; con texto = asignarla
+        if (request.getEspecialidad() != null) {
+            servicio.setEspecialidad(request.getEspecialidad().isBlank()
+                    ? null : resolverEspecialidad(request.getEspecialidad()));
+        }
 
         return mapearADTO(servicioRepository.save(servicio));
     }
@@ -63,15 +84,21 @@ public class ServicioService {
         return mapearADTO(servicioRepository.save(servicio));
     }
 
-    // Catálogo para usuarios: solo servicios activos, con búsqueda opcional por nombre
+    // Catálogo para usuarios: solo servicios activos, con búsqueda por nombre y filtro opcional por categoría
     @Transactional(readOnly = true)
-    public List<ServicioResponse> listarActivos(String busqueda) {
+    public List<ServicioResponse> listarActivos(String busqueda, String categoria) {
         String texto = busqueda == null ? "" : busqueda.trim();
-        return servicioRepository
-                .findByActivoTrueAndNombreContainingIgnoreCaseOrderByNombreAsc(texto)
-                .stream()
-                .map(this::mapearADTO)
-                .collect(Collectors.toList());
+
+        List<Servicio> servicios;
+        if (categoria == null || categoria.isBlank()) {
+            servicios = servicioRepository
+                    .findByActivoTrueAndNombreContainingIgnoreCaseOrderByNombreAsc(texto);
+        } else {
+            servicios = servicioRepository
+                    .findByActivoTrueAndNombreContainingIgnoreCaseAndCategoriaOrderByNombreAsc(
+                            texto, parsearCategoria(categoria));
+        }
+        return servicios.stream().map(this::mapearADTO).collect(Collectors.toList());
     }
 
     // Detalle: un servicio desactivado se trata como inexistente para el usuario
@@ -80,6 +107,22 @@ public class ServicioService {
         return servicioRepository.findByIdServicioAndActivoTrue(id)
                 .map(this::mapearADTO)
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+    }
+
+    // Busca la especialidad por nombre (sin importar mayusculas) y la crea si aun no existe
+    private Especialidad resolverEspecialidad(String nombre) {
+        String limpio = nombre.trim().toLowerCase();
+        return especialidadRepository.findByNombreIgnoreCase(limpio)
+                .orElseGet(() -> especialidadRepository.save(
+                        new Especialidad(limpio.substring(0, 1).toUpperCase() + limpio.substring(1))));
+    }
+
+    private CategoriaServicio parsearCategoria(String categoria) {
+        try {
+            return CategoriaServicio.valueOf(categoria.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("La categoria debe ser PREVENTIVO o CORRECTIVO");
+        }
     }
 
     private Servicio buscarPorId(Long id) {
@@ -95,6 +138,8 @@ public class ServicioService {
         res.setPrecioBase(s.getPrecioBase());
         res.setDuracionMinutos(s.getDuracionMinutos());
         res.setActivo(s.getActivo());
+        res.setCategoria(s.getCategoria().name());
+        res.setEspecialidad(s.getEspecialidad() == null ? null : s.getEspecialidad().getNombre());
         return res;
     }
 }
