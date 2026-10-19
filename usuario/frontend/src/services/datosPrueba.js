@@ -237,3 +237,38 @@ export async function desbloquearFecha(id) {
   await esperar(250);
   bloqueos = bloqueos.filter((b) => b.idBloqueo !== id);
 }
+
+/* ---------- Agenda del mecánico (citas de ejemplo alrededor de hoy) ---------- */
+
+const dosCifras = (n) => String(n).padStart(2, "0");
+const fechaRelativa = (dias) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${dosCifras(d.getMonth() + 1)}-${dosCifras(d.getDate())}`;
+};
+
+const citasPrueba = [
+  [0, "09:00", "10:00", "CONFIRMADA", "Alineamiento y balanceo", "Lucía Fernández", "ABC-123"],
+  [0, "11:00", "11:45", "PENDIENTE", "Cambio de aceite y filtro", "José Huamán", "BCD-456"],
+  [1, "08:00", "09:00", "CONFIRMADA", "Revisión de frenos", "María Torres", "CDE-789"],
+  [1, "15:00", "15:40", "CANCELADA", "Diagnóstico con escáner", "Diego Mendoza", "DEF-321"],
+  [2, "10:00", "11:30", "PENDIENTE", "Cambio de pastillas de freno", "Andrea Salazar", "EFG-654"],
+  [3, "14:00", "16:00", "CONFIRMADA", "Afinamiento de motor", "Jorge Ramírez", "FGH-987"],
+  [5, "09:30", "10:15", "RECHAZADA", "Cambio de refrigerante", "Paola Medina", "GHI-246"],
+  [7, "08:00", "09:00", "PENDIENTE", "Revisión de frenos", "Camila Flores", "HIJ-135"],
+].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
+  idCita: i + 1,
+  ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,
+  fecha: fechaRelativa(dias),
+  horaInicio,
+  horaFin,
+  estado,
+  servicio,
+  cliente,
+  placa,
+}));
+
+export async function listarAgenda(desde, hasta) {
+  await esperar();
+  return citasPrueba.filter((c) => c.fecha >= desde && c.fecha <= hasta).map((c) => ({ ...c }));
+}
