@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tecsup.autosmart.data.model.MecanicoDisponible
 import com.tecsup.autosmart.data.model.Turno
+import com.tecsup.autosmart.data.model.VehiculoResponse
 import com.tecsup.autosmart.ui.viewmodel.ReservaViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -43,9 +45,13 @@ fun ReservaScreen(
     val mecanicosState by viewModel.mecanicos.collectAsState()
     val turnosState by viewModel.turnos.collectAsState()
 
+    var vehiculoSeleccionado by remember { mutableStateOf<VehiculoResponse?>(null) }
     var mecanicoSeleccionado by remember { mutableStateOf<MecanicoDisponible?>(null) }
     var fechaSeleccionada by remember { mutableStateOf(LocalDate.now()) }
     var turnoSeleccionado by remember { mutableStateOf<Turno?>(null) }
+
+    var mostrarResumen by remember { mutableStateOf(false) }
+    var ticketGenerado by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(idServicio) {
         viewModel.cargarMecanicos(idServicio)
@@ -80,10 +86,28 @@ fun ReservaScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // T24.2: Selección de Mecánico
+            // T27.1: Selector de Vehículo
             item {
                 Text(
-                    text = "1. Selecciona un Mecánico",
+                    text = "1. Vehículo Seleccionado",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Simulación/Selección básica con la estructura existente
+                VehiculoCardSimple(
+                    marca = "Toyota",
+                    modelo = "Corolla",
+                    placa = "ABC-123",
+                    seleccionado = true,
+                    onSelect = { }
+                )
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = "2. Selecciona un Mecánico",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -111,18 +135,17 @@ fun ReservaScreen(
                 }
             }
 
-            // T25.2:  Implementacion de Calendario y Selección de Turnos
+            // T25.2: Selector de Fecha y Hora
             if (mecanicoSeleccionado != null) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(
-                        text = "2. Selecciona Fecha y Hora",
+                        text = "3. Selecciona Fecha y Hora",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                // Selector de Fecha (Próximos 5 días)
                 item {
                     Row(
                         modifier = Modifier
@@ -197,19 +220,111 @@ fun ReservaScreen(
                     }
                 }
 
-                // Botón de Confirmación
+                // T26.2 y T28.1: Confirmación de reserva
                 if (turnoSeleccionado != null) {
                     item {
                         Button(
-                            onClick = { /* Próxima tarea: POST /appointments */ },
+                            onClick = { mostrarResumen = true },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 16.dp)
                         ) {
-                            Text("Confirmar Reserva (${turnoSeleccionado?.hora})")
+                            Text("Ver Resumen y Confirmar Reserva")
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // T28.1: Diálogo de Ticket de Confirmación
+    if (mostrarResumen) {
+        AlertDialog(
+            onDismissRequest = { mostrarResumen = false },
+            title = { Text("Resumen de la Cita", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🚗 Vehículo: Toyota Corolla (ABC-123)")
+                    Text("👨‍🔧 Mecánico: ${mecanicoSeleccionado?.nombre}")
+                    Text("📅 Fecha: $fechaSeleccionada")
+                    Text("⏰ Turno: ${turnoSeleccionado?.hora}")
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    if (ticketGenerado != null) {
+                        Text(
+                            text = "Ticket: $ticketGenerado",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (ticketGenerado == null) {
+                    Button(
+                        onClick = {
+                            // Genera el código de ticket localmente para la demostración
+                            ticketGenerado = "AS-2026-${(1000..9999).random()}"
+                        }
+                    ) {
+                        Text("Confirmar Cita")
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            mostrarResumen = false
+                            onNavigateBack()
+                        }
+                    ) {
+                        Text("Finalizar")
+                    }
+                }
+            },
+            dismissButton = {
+                if (ticketGenerado == null) {
+                    TextButton(onClick = { mostrarResumen = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun VehiculoCardSimple(
+    marca: String,
+    modelo: String,
+    placa: String,
+    seleccionado: Boolean,
+    onSelect: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelect() }
+            .border(
+                width = if (seleccionado) 2.dp else 0.dp,
+                color = if (seleccionado) MaterialTheme.colorScheme.primary else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.DirectionsCar,
+                contentDescription = null,
+                modifier = Modifier.size(36.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = "$marca $modelo", fontWeight = FontWeight.Bold)
+                Text(text = "Placa: $placa", fontSize = 12.sp, color = Color.Gray)
             }
         }
     }
