@@ -214,3 +214,26 @@ export async function eliminarHorario(id) {
   await esperar(250);
   horarios = horarios.filter((h) => h.idHorario !== id);
 }
+
+/* ---------- Fechas bloqueadas del mecánico ---------- */
+
+let bloqueos = [];
+let siguienteBloqueo = 1;
+
+export async function listarBloqueos(desde) {
+  await esperar();
+  return bloqueos.filter((b) => !desde || b.fecha >= desde).map((b) => ({ ...b }));
+}
+
+export async function bloquearFecha({ fecha, motivo }) {
+  await esperar(300);
+  if (bloqueos.some((b) => b.fecha === fecha)) throw new Error("Esa fecha ya esta bloqueada");
+  const nuevo = { idBloqueo: siguienteBloqueo++, fecha, motivo: motivo || null };
+  bloqueos = [...bloqueos, nuevo];
+  return { ...nuevo };
+}
+
+export async function desbloquearFecha(id) {
+  await esperar(250);
+  bloqueos = bloqueos.filter((b) => b.idBloqueo !== id);
+}
