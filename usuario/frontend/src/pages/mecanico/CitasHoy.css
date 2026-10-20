@@ -1,0 +1,324 @@
+/* ===== Citas de hoy (T34.1) =====
+   Los colores de estado (.insignia-estado.est-*), la placa y el resumen vienen de Agenda.css */
+
+.ch-fecha::first-letter { text-transform: uppercase; }
+
+.ch-actualizar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  color: #7a8aa6;
+  font-size: 0.82rem;
+}
+
+.ch-girando { animation: giro 0.8s linear infinite; }
+
+.ch-resumen { margin: -4px 0 16px; }
+
+/* ---------- Tarjeta destacada ---------- */
+.ch-foco {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding: 18px 20px;
+  border: 1px solid #cfe0ff;
+  border-left: 5px solid #1150e8;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 36px -30px rgba(11, 27, 58, 0.55);
+}
+
+.ch-foco h3 {
+  margin: 0;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.2rem;
+  color: #0b1b3a;
+}
+
+.ch-foco-cab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #1150e8;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ch-foco-tiempo {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ch-foco-datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0;
+  color: #3b4a66;
+  font-size: 0.92rem;
+}
+
+.ch-foco-datos > span:first-child { font-weight: 800; font-variant-numeric: tabular-nums; }
+.ch-foco-texto { margin: 0; color: #3b4a66; }
+.ch-foco-enlace { justify-self: start; margin-top: 4px; }
+
+/* En curso: tarjeta azul con barra de avance */
+.ch-foco.en-curso {
+  border-color: transparent;
+  background: linear-gradient(135deg, #0b3fc4 0%, #1150e8 55%, #3b82f6 100%);
+  color: #fff;
+}
+
+.ch-foco.en-curso h3,
+.ch-foco.en-curso .ch-foco-cab,
+.ch-foco.en-curso .ch-foco-datos { color: #fff; }
+.ch-foco.en-curso .ch-foco-tiempo { background: rgba(255, 255, 255, 0.18); }
+.ch-foco.en-curso .ag-placa { border-color: transparent; }
+
+.ch-pulso {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.ch-pulso::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid #4ade80;
+  animation: ch-latido 1.6s ease-out infinite;
+}
+
+@keyframes ch-latido {
+  from { opacity: 0.9; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(1.6); }
+}
+
+.ch-barra {
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+}
+
+.ch-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transition: width 0.6s ease;
+}
+
+.ch-despues { margin: 2px 0 0; color: rgba(255, 255, 255, 0.85); font-size: 0.86rem; }
+.ch-despues strong { color: #fff; }
+
+/* Día terminado */
+.ch-foco.listo { border-color: #c6f0dd; border-left-color: #10b981; }
+.ch-foco.listo .ch-foco-cab { color: #047857; }
+
+/* ---------- Línea de tiempo ---------- */
+.ch-lista {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Línea vertical que une los puntos */
+.ch-lista::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 69px;
+  width: 2px;
+  background: #e3e9f5;
+}
+
+.ch-item,
+.ch-ahora {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px 24px minmax(0, 1fr);
+  column-gap: 0;
+}
+
+.ch-hora {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 12px 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ch-hora time {
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0b1b3a;
+}
+
+.ch-hora span { color: #9aa7bf; font-size: 0.78rem; font-weight: 600; }
+
+.ch-punto {
+  justify-self: center;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  margin-top: 17px;
+  border: 2px solid #1150e8;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.ch-cita {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e3e9f5;
+  border-left: 4px solid #94a3b8;
+  border-radius: 14px;
+  background: #fff;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.ch-cita:hover { box-shadow: 0 12px 24px -20px rgba(11, 27, 58, 0.6); }
+
+.ch-cita-cab {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ch-cita-cab strong { color: #0b1b3a; font-size: 0.98rem; line-height: 1.3; }
+
+.ch-cliente {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #3b4a66;
+  font-size: 0.88rem;
+}
+
+.ch-cliente svg { flex: none; color: #7a8aa6; }
+
+.ch-cita-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  color: #5b6b88;
+  font-size: 0.8rem;
+}
+
+.ch-ticket { color: #9aa7bf; font-variant-numeric: tabular-nums; }
+
+.ch-etiqueta {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  color: #1150e8;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.ch-etiqueta.ahora { background: #1150e8; color: #fff; }
+
+/* Colores por estado (borde izquierdo de la tarjeta y punto) */
+.ch-item.est-PENDIENTE .ch-cita { border-left-color: #f59e0b; }
+.ch-item.est-CONFIRMADA .ch-cita { border-left-color: #10b981; }
+.ch-item.est-PENDIENTE .ch-punto { border-color: #f59e0b; }
+.ch-item.est-CONFIRMADA .ch-punto { border-color: #10b981; }
+
+.ch-item.est-RECHAZADA .ch-cita,
+.ch-item.est-CANCELADA .ch-cita { border-left-color: #cbd5e1; background: #f8fafc; }
+.ch-item.est-RECHAZADA .ch-cita-cab strong,
+.ch-item.est-CANCELADA .ch-cita-cab strong { color: #64748b; text-decoration: line-through; }
+.ch-item.est-RECHAZADA .ch-punto,
+.ch-item.est-CANCELADA .ch-punto { border-color: #cbd5e1; }
+
+/* Cita en curso */
+.ch-item.en-curso .ch-cita {
+  border-color: #93b4ff;
+  border-left-color: #1150e8;
+  box-shadow: 0 0 0 1px #93b4ff, 0 16px 30px -22px rgba(17, 80, 232, 0.7);
+}
+
+.ch-item.en-curso .ch-punto { border-color: #1150e8; background: #1150e8; box-shadow: 0 0 0 4px #d6e4ff; }
+.ch-item.en-curso .ch-hora time { color: #1150e8; }
+
+/* Citas cuya hora ya pasó */
+.ch-item.pasada .ch-cita { opacity: 0.62; }
+.ch-item.pasada .ch-hora time { color: #9aa7bf; }
+.ch-item.pasada .ch-punto { border-color: #cbd5e1; background: #cbd5e1; }
+
+/* ---------- Marca de la hora actual ---------- */
+.ch-ahora { align-items: center; margin: -2px 0; }
+
+.ch-ahora time {
+  justify-self: end;
+  padding-right: 4px;
+  color: #e11d48;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.ch-ahora-punto {
+  justify-self: center;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e11d48;
+}
+
+.ch-ahora-linea {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e11d48;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ch-ahora-linea::after { content: ""; flex: 1; height: 2px; border-radius: 2px; background: #fda4af; }
+
+/* ---------- Celular ---------- */
+@media (max-width: 560px) {
+  .ch-actualizar { justify-content: space-between; }
+  .ch-foco { padding: 16px; }
+  .ch-foco-tiempo { margin-left: 0; }
+  .ch-lista::before { left: 57px; }
+  .ch-item, .ch-ahora { grid-template-columns: 48px 20px minmax(0, 1fr); }
+  .ch-hora time { font-size: 0.92rem; }
+  .ch-cita-cab { flex-direction: column; gap: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-pulso::after, .ch-girando { animation: none; }
+  .ch-barra span { transition: none; }
+}

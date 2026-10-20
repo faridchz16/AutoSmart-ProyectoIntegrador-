@@ -43,6 +43,16 @@ export function hoyLima() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
 }
 
+// Hora actual en Lima, como "HH:mm" (formato de 24 horas)
+export function horaLima() {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Lima",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date());
+}
+
 export const isoDe = (anio, mes, dia) => `${anio}-${dos(mes + 1)}-${dos(dia)}`;
 
 export function aFecha(iso) {

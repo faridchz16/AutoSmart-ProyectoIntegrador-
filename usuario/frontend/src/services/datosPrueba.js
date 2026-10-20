@@ -257,6 +257,8 @@ const citasPrueba = [
   [3, "14:00", "16:00", "CONFIRMADA", "Afinamiento de motor", "Jorge Ramírez", "FGH-987"],
   [5, "09:30", "10:15", "RECHAZADA", "Cambio de refrigerante", "Paola Medina", "GHI-246"],
   [7, "08:00", "09:00", "PENDIENTE", "Revisión de frenos", "Camila Flores", "HIJ-135"],
+  [0, "14:00", "15:00", "CONFIRMADA", "Revisión de suspensión", "Daniela Vargas", "JKL-482"],
+  [0, "16:30", "17:10", "CANCELADA", "Revisión de batería", "Fernando Ríos", "KLM-517"],
 ].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
   idCita: i + 1,
   ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,

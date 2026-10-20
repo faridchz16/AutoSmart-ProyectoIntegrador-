@@ -32,11 +32,20 @@ function normalizar(c = {}) {
   };
 }
 
+const ordenar = (datos) =>
+  (Array.isArray(datos) ? datos : [])
+    .map(normalizar)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio));
+
 export async function listarAgenda(desde, hasta) {
   const datos = prueba.DATOS_PRUEBA
     ? await prueba.listarAgenda(desde, hasta)
     : await apiFetch(`${RUTA}?desde=${desde}&hasta=${hasta}`);
-  return (Array.isArray(datos) ? datos : [])
-    .map(normalizar)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio));
+  return ordenar(datos);
+}
+
+// Citas de hoy (T34.1): sin parámetros, el backend usa la fecha de hoy en Lima
+export async function listarCitasHoy(hoy) {
+  const datos = prueba.DATOS_PRUEBA ? await prueba.listarAgenda(hoy, hoy) : await apiFetch(RUTA);
+  return ordenar(datos);
 }
