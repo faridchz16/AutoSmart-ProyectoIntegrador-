@@ -13,10 +13,10 @@ import java.util.Optional;
 public interface HorarioMecanicoRepository extends JpaRepository<HorarioMecanico, Integer> {
 
     List<HorarioMecanico> findByMecanicoOrderByDiaSemanaAscHoraInicioAsc(Usuario mecanico);
+    List<HorarioMecanico> findByMecanicoAndDiaSemanaOrderByHoraInicioAsc(Usuario mecanico, Integer diaSemana);
 
     Optional<HorarioMecanico> findByIdHorarioAndMecanico(Integer idHorario, Usuario mecanico);
 
-    // Dos rangos se cruzan si inicio1 < fin2 y fin1 > inicio2 (8-12 y 12-18 NO se cruzan)
     @Query("SELECT CASE WHEN COUNT(h) > 0 THEN true ELSE false END FROM HorarioMecanico h " +
             "WHERE h.mecanico = :mecanico AND h.diaSemana = :dia " +
             "AND h.horaInicio < :fin AND h.horaFin > :inicio AND h.idHorario <> :excluirId")

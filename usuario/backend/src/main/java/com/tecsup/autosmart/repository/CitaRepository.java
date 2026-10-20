@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+
 
 public interface CitaRepository extends JpaRepository<Cita, Long> {
 
@@ -27,4 +29,9 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
             "JOIN FETCH c.cliente JOIN FETCH c.mecanico JOIN FETCH c.servicio JOIN FETCH c.vehiculo " +
             "WHERE c.idCita = :id")
     Optional<Cita> buscarDetalle(@Param("id") Long id);
+
+    @Query("SELECT c FROM Cita c WHERE c.mecanico = :mecanico AND c.fecha = :fecha AND c.estado IN :estados")
+    List<Cita> buscarActivasDelDia(@Param("mecanico") Usuario mecanico,
+                                   @Param("fecha") LocalDate fecha,
+                                   @Param("estados") Collection<EstadoCita> estados);
 }
