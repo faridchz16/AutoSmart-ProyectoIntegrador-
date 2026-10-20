@@ -86,14 +86,12 @@ fun ReservaScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             item {
                 Text(
                     text = "1. Vehículo Seleccionado",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
 
                 VehiculoCardSimple(
                     marca = "Toyota",
@@ -134,7 +132,6 @@ fun ReservaScreen(
                     )
                 }
             }
-
 
             if (mecanicoSeleccionado != null) {
                 item {
@@ -220,14 +217,21 @@ fun ReservaScreen(
                     }
                 }
 
-
+                // T33.2: Muestra el contador de 10 min al seleccionar un turno
                 if (turnoSeleccionado != null) {
+                    item {
+                        TemporizadorBloqueoTurno(
+                            tiempoInicialSegundos = 600,
+                            onTiempoAgotado = { turnoSeleccionado = null }
+                        )
+                    }
+
                     item {
                         Button(
                             onClick = { mostrarResumen = true },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 16.dp)
+                                .padding(top = 8.dp)
                         ) {
                             Text("Ver Resumen y Confirmar Reserva")
                         }
@@ -236,7 +240,6 @@ fun ReservaScreen(
             }
         }
     }
-
 
     if (mostrarResumen) {
         AlertDialog(
@@ -263,7 +266,6 @@ fun ReservaScreen(
                 if (ticketGenerado == null) {
                     Button(
                         onClick = {
-
                             ticketGenerado = "AS-2026-${(1000..9999).random()}"
                         }
                     ) {
@@ -403,5 +405,52 @@ fun TurnoChip(
             color = textColor,
             fontWeight = FontWeight.SemiBold
         )
+    }
+}
+
+// T33.2: Componente independiente para el temporizador de bloqueo
+@Composable
+fun TemporizadorBloqueoTurno(
+    tiempoInicialSegundos: Int = 600,
+    onTiempoAgotado: () -> Unit = {}
+) {
+    var segundosRestantes by remember { mutableIntStateOf(tiempoInicialSegundos) }
+
+    LaunchedEffect(segundosRestantes) {
+        if (segundosRestantes > 0) {
+            kotlinx.coroutines.delay(1000L)
+            segundosRestantes--
+        } else {
+            onTiempoAgotado()
+        }
+    }
+
+    val minutos = segundosRestantes / 60
+    val segundos = segundosRestantes % 60
+    val tiempoFormateado = String.format(Locale.getDefault(), "%02d:%02d", minutos, segundos)
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "⏱️ Turno reservado por:",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = tiempoFormateado,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
     }
 }

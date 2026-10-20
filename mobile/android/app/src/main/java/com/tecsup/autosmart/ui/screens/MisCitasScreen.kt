@@ -1,6 +1,9 @@
 package com.tecsup.autosmart.ui.screens
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.tecsup.autosmart.ui.viewmodel.ReservaViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
-// Modelo temporal UI
 data class CitaUI(
     val id: Long,
     val servicio: String,
@@ -33,14 +36,12 @@ data class CitaUI(
     val estado: String
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisCitasScreen(
-    onNavigateBack: () -> Unit = {},
-    onReprogramarClick: (Long) -> Unit = {},
-    viewModel: ReservaViewModel = viewModel() // Inyección MVVM
+    onNavigateBack: () -> Unit = {}
 ) {
-    // Lista temporal para renderizar en UI
     val listaCitas = remember {
         mutableStateListOf(
             CitaUI(1L, "Mantenimiento 10,000 km", "Toyota Corolla - ABC-123", "Juan Pérez", "2026-10-25", "10:00 AM", "CONFIRMADA"),
@@ -50,6 +51,11 @@ fun MisCitasScreen(
     }
 
     var citaACancelar by remember { mutableStateOf<CitaUI?>(null) }
+    var citaAReprogramar by remember { mutableStateOf<CitaUI?>(null) }
+
+    // Estados para reprogramación (T31.2)
+    var nuevaFecha by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
+    var nuevoTurno by remember { mutableStateOf("09:00 AM") }
 
     Scaffold(
         topBar = {
@@ -63,30 +69,19 @@ fun MisCitasScreen(
             )
         }
     ) { padding ->
-        if (listaCitas.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No tienes citas registradas.")
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(listaCitas) { cita ->
-                    CitaCard(
-                        cita = cita,
-                        onCancelar = { citaACancelar = cita },
-                        onReprogramar = { onReprogramarClick(cita.id) }
-                    )
-                }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(listaCitas) { cita ->
+                CitaCard(
+                    cita = cita,
+                    onCancelar = { citaACancelar = cita },
+                    onReprogramar = { citaAReprogramar = cita }
+                )
             }
         }
     }
@@ -114,6 +109,92 @@ fun MisCitasScreen(
             dismissButton = {
                 TextButton(onClick = { citaACancelar = null }) {
                     Text("Volver")
+                }
+            }
+        )
+    }
+
+    // T31.2: Diálogo de Reprogramación de Cita
+    citaAReprogramar?.let { cita ->
+        AlertDialog(
+            onDismissRequest = { citaAReprogramar = null },
+            title = { Text("Reprogramar Cita") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Selecciona una nueva fecha y turno para tu cita de ${cita.servicio}:")
+
+                    Text("Nueva Fecha:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val hoy = LocalDate.now()
+                        (1..3).forEach { i ->
+                            val dia = hoy.plusDays(i.toLong())
+                            val esSel = dia == nuevaFecha
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (esSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { nuevaFecha = dia }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${dia.dayOfMonth} ${dia.format(DateTimeFormatter.ofPattern("MMM", Locale("es")))}",
+                                    color = if (esSel) Color.White else Color.Black,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Text("Nuevo Turno:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf("08:00 AM", "11:00 AM", "03:00 PM").forEach { turno ->
+                            val esSel = turno == nuevoTurno
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (esSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .clickable { nuevoTurno = turno }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = turno,
+                                    color = if (esSel) Color.White else Color.Black,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val index = listaCitas.indexOfFirst { it.id == cita.id }
+                        if (index != -1) {
+                            listaCitas[index] = cita.copy(
+                                fecha = nuevaFecha.toString(),
+                                hora = nuevoTurno
+                            )
+                        }
+                        citaAReprogramar = null
+                    }
+                ) {
+                    Text("Confirmar Cambio")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { citaAReprogramar = null }) {
+                    Text("Cancelar")
                 }
             }
         )
