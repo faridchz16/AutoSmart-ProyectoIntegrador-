@@ -86,7 +86,7 @@ fun ReservaScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // T27.1: Selector de Vehículo
+
             item {
                 Text(
                     text = "1. Vehículo Seleccionado",
@@ -94,7 +94,7 @@ fun ReservaScreen(
                     fontWeight = FontWeight.Bold
                 )
 
-                // Simulación/Selección básica con la estructura existente
+
                 VehiculoCardSimple(
                     marca = "Toyota",
                     modelo = "Corolla",
@@ -135,7 +135,7 @@ fun ReservaScreen(
                 }
             }
 
-            // T25.2: Selector de Fecha y Hora
+
             if (mecanicoSeleccionado != null) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -220,7 +220,7 @@ fun ReservaScreen(
                     }
                 }
 
-                // T26.2 y T28.1: Confirmación de reserva
+
                 if (turnoSeleccionado != null) {
                     item {
                         Button(
@@ -237,7 +237,7 @@ fun ReservaScreen(
         }
     }
 
-    // T28.1: Diálogo de Ticket de Confirmación
+
     if (mostrarResumen) {
         AlertDialog(
             onDismissRequest = { mostrarResumen = false },
@@ -263,7 +263,7 @@ fun ReservaScreen(
                 if (ticketGenerado == null) {
                     Button(
                         onClick = {
-                            // Genera el código de ticket localmente para la demostración
+
                             ticketGenerado = "AS-2026-${(1000..9999).random()}"
                         }
                     ) {
