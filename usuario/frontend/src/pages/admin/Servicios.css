@@ -1,0 +1,93 @@
+/* ===== Categorías del catálogo de servicios (T37.2) ===== */
+
+/* ---------- Insignia en la tabla ---------- */
+.insignia.cat-PREVENTIVO { background: #dcfce7; color: #15803d; }
+.insignia.cat-CORRECTIVO { background: #ffedd5; color: #c2410c; }
+
+/* ---------- Filtro por categoría ---------- */
+.filtro-select select {
+  min-width: 200px;
+  padding: 10px 36px 10px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8aa6' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 18px;
+  font: inherit;
+  font-size: 0.92rem;
+  color: #0b1b3a;
+  cursor: pointer;
+  appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.filtro-select select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+
+.btn-limpiar {
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-limpiar:hover { text-decoration: underline; }
+.btn-limpiar:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- Selector en el formulario ---------- */
+.cat-selector { margin: 0; padding: 0; border: 0; min-width: 0; }
+.cat-selector legend { margin-bottom: 6px; padding: 0; font-size: 0.86rem; font-weight: 700; color: #0b1b3a; }
+
+.cat-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.cat-opcion {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid #d6e0f2;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.cat-opcion:hover { border-color: #93b4ff; }
+
+/* El radio real queda oculto pero sigue siendo accesible con el teclado */
+.cat-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.cat-opcion:has(input:focus-visible) { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25); }
+
+.cat-punto {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 2px solid #b9c8e6;
+  border-radius: 50%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cat-textos { display: grid; gap: 2px; }
+.cat-textos strong { color: #0b1b3a; font-size: 0.92rem; }
+.cat-textos small { color: #5b6b88; font-size: 0.8rem; line-height: 1.4; }
+
+.cat-opcion.elegida.cat-PREVENTIVO { border-color: #22c55e; background: #f0fdf4; }
+.cat-opcion.elegida.cat-PREVENTIVO .cat-punto { border-color: #16a34a; box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 9px #16a34a; }
+.cat-opcion.elegida.cat-CORRECTIVO { border-color: #f97316; background: #fff7ed; }
+.cat-opcion.elegida.cat-CORRECTIVO .cat-punto { border-color: #ea580c; box-shadow: inset 0 0 0 4px #fff, inset 0 0 0 9px #ea580c; }
+
+.cat-selector[aria-invalid="true"] .cat-opcion { border-color: #e11d48; }
+
+@media (max-width: 720px) {
+  .filtro-select { flex: 1 1 100%; }
+  .filtro-select select { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .cat-opciones { grid-template-columns: 1fr; }
+}

@@ -98,23 +98,24 @@ export async function cambiarEstadoUsuario(id, activo) {
 /* ---------- Servicios (catálogo) ---------- */
 
 let servicios = [
-  ["Cambio de aceite y filtro", "Aceite de motor según especificación del fabricante y cambio de filtro.", 120, 45, true],
-  ["Alineamiento y balanceo", "Ajuste de ángulos de dirección y balanceo de las cuatro ruedas.", 90, 60, true],
-  ["Revisión de frenos", "Inspección de pastillas, discos, líquido y mangueras de freno.", 80, 60, true],
-  ["Diagnóstico con escáner", "Lectura de códigos de falla de la computadora del vehículo.", 70, 40, true],
-  ["Revisión de batería", "Prueba de carga, bornes y sistema de arranque.", 30, 20, true],
-  ["Cambio de pastillas de freno", "Reemplazo de pastillas delanteras o posteriores.", 150, 90, true],
-  ["Afinamiento de motor", "Bujías, filtros de aire y combustible, limpieza de inyectores.", 220, 120, true],
-  ["Cambio de refrigerante", "Drenado y llenado del sistema de enfriamiento.", 95, 45, true],
-  ["Revisión de suspensión", "Inspección de amortiguadores, rótulas y terminales.", 110, 75, false],
-  ["Lavado de motor", "Limpieza exterior del compartimiento del motor.", 50, 40, false],
-].map(([nombre, descripcion, precioBase, duracionMinutos, activo], i) => ({
+  ["Cambio de aceite y filtro", "Aceite de motor según especificación del fabricante y cambio de filtro.", 120, 45, true, "PREVENTIVO"],
+  ["Alineamiento y balanceo", "Ajuste de ángulos de dirección y balanceo de las cuatro ruedas.", 90, 60, true, "PREVENTIVO"],
+  ["Revisión de frenos", "Inspección de pastillas, discos, líquido y mangueras de freno.", 80, 60, true, "PREVENTIVO"],
+  ["Diagnóstico con escáner", "Lectura de códigos de falla de la computadora del vehículo.", 70, 40, true, "CORRECTIVO"],
+  ["Revisión de batería", "Prueba de carga, bornes y sistema de arranque.", 30, 20, true, "PREVENTIVO"],
+  ["Cambio de pastillas de freno", "Reemplazo de pastillas delanteras o posteriores.", 150, 90, true, "CORRECTIVO"],
+  ["Afinamiento de motor", "Bujías, filtros de aire y combustible, limpieza de inyectores.", 220, 120, true, "PREVENTIVO"],
+  ["Cambio de refrigerante", "Drenado y llenado del sistema de enfriamiento.", 95, 45, true, "PREVENTIVO"],
+  ["Revisión de suspensión", "Inspección de amortiguadores, rótulas y terminales.", 110, 75, false, "CORRECTIVO"],
+  ["Lavado de motor", "Limpieza exterior del compartimiento del motor.", 50, 40, false, "PREVENTIVO"],
+].map(([nombre, descripcion, precioBase, duracionMinutos, activo, categoria], i) => ({
   id: i + 1,
   nombre,
   descripcion,
   precioBase,
   duracionMinutos,
   activo,
+  categoria,
 }));
 let siguienteServicio = servicios.length + 1;
 
