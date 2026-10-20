@@ -98,23 +98,24 @@ export async function cambiarEstadoUsuario(id, activo) {
 /* ---------- Servicios (catálogo) ---------- */
 
 let servicios = [
-  ["Cambio de aceite y filtro", "Aceite de motor según especificación del fabricante y cambio de filtro.", 120, 45, true],
-  ["Alineamiento y balanceo", "Ajuste de ángulos de dirección y balanceo de las cuatro ruedas.", 90, 60, true],
-  ["Revisión de frenos", "Inspección de pastillas, discos, líquido y mangueras de freno.", 80, 60, true],
-  ["Diagnóstico con escáner", "Lectura de códigos de falla de la computadora del vehículo.", 70, 40, true],
-  ["Revisión de batería", "Prueba de carga, bornes y sistema de arranque.", 30, 20, true],
-  ["Cambio de pastillas de freno", "Reemplazo de pastillas delanteras o posteriores.", 150, 90, true],
-  ["Afinamiento de motor", "Bujías, filtros de aire y combustible, limpieza de inyectores.", 220, 120, true],
-  ["Cambio de refrigerante", "Drenado y llenado del sistema de enfriamiento.", 95, 45, true],
-  ["Revisión de suspensión", "Inspección de amortiguadores, rótulas y terminales.", 110, 75, false],
-  ["Lavado de motor", "Limpieza exterior del compartimiento del motor.", 50, 40, false],
-].map(([nombre, descripcion, precioBase, duracionMinutos, activo], i) => ({
+  ["Cambio de aceite y filtro", "Aceite de motor según especificación del fabricante y cambio de filtro.", 120, 45, true, "PREVENTIVO"],
+  ["Alineamiento y balanceo", "Ajuste de ángulos de dirección y balanceo de las cuatro ruedas.", 90, 60, true, "PREVENTIVO"],
+  ["Revisión de frenos", "Inspección de pastillas, discos, líquido y mangueras de freno.", 80, 60, true, "PREVENTIVO"],
+  ["Diagnóstico con escáner", "Lectura de códigos de falla de la computadora del vehículo.", 70, 40, true, "CORRECTIVO"],
+  ["Revisión de batería", "Prueba de carga, bornes y sistema de arranque.", 30, 20, true, "PREVENTIVO"],
+  ["Cambio de pastillas de freno", "Reemplazo de pastillas delanteras o posteriores.", 150, 90, true, "CORRECTIVO"],
+  ["Afinamiento de motor", "Bujías, filtros de aire y combustible, limpieza de inyectores.", 220, 120, true, "PREVENTIVO"],
+  ["Cambio de refrigerante", "Drenado y llenado del sistema de enfriamiento.", 95, 45, true, "PREVENTIVO"],
+  ["Revisión de suspensión", "Inspección de amortiguadores, rótulas y terminales.", 110, 75, false, "CORRECTIVO"],
+  ["Lavado de motor", "Limpieza exterior del compartimiento del motor.", 50, 40, false, "PREVENTIVO"],
+].map(([nombre, descripcion, precioBase, duracionMinutos, activo, categoria], i) => ({
   id: i + 1,
   nombre,
   descripcion,
   precioBase,
   duracionMinutos,
   activo,
+  categoria,
 }));
 let siguienteServicio = servicios.length + 1;
 
@@ -168,4 +169,137 @@ export async function restablecerPassword(correo, codigo) {
   await esperar(600);
   if (codigo !== CODIGO_PRUEBA) throw new Error("El código no es válido o ya venció.");
   return {};
+}
+
+/* ---------- Horarios del mecánico ---------- */
+
+let horarios = [
+  { idHorario: 1, diaSemana: 1, horaInicio: "08:00", horaFin: "12:00" },
+  { idHorario: 2, diaSemana: 1, horaInicio: "14:00", horaFin: "18:00" },
+  { idHorario: 3, diaSemana: 3, horaInicio: "09:00", horaFin: "17:00" },
+  { idHorario: 4, diaSemana: 5, horaInicio: "08:00", horaFin: "13:00" },
+];
+let siguienteHorario = 5;
+
+function validarHorario({ diaSemana, horaInicio, horaFin }, excluirId) {
+  if (horaFin <= horaInicio) throw new Error("La hora de fin debe ser posterior a la hora de inicio");
+  const cruza = horarios.some(
+    (h) => h.idHorario !== excluirId && h.diaSemana === diaSemana && horaInicio < h.horaFin && h.horaInicio < horaFin
+  );
+  if (cruza) throw new Error("El horario se cruza con otro rango registrado ese dia");
+}
+
+export async function listarHorarios() {
+  await esperar();
+  return horarios.map((h) => ({ ...h }));
+}
+
+export async function crearHorario(datos) {
+  await esperar(300);
+  validarHorario(datos, -1);
+  const nuevo = { idHorario: siguienteHorario++, ...datos };
+  horarios = [...horarios, nuevo];
+  return { ...nuevo };
+}
+
+export async function editarHorario(id, datos) {
+  await esperar(300);
+  validarHorario(datos, id);
+  const horario = horarios.find((h) => h.idHorario === id);
+  if (!horario) throw new Error("Horario no encontrado");
+  Object.assign(horario, datos);
+  return { ...horario };
+}
+
+export async function eliminarHorario(id) {
+  await esperar(250);
+  horarios = horarios.filter((h) => h.idHorario !== id);
+}
+
+/* ---------- Fechas bloqueadas del mecánico ---------- */
+
+let bloqueos = [];
+let siguienteBloqueo = 1;
+
+export async function listarBloqueos(desde) {
+  await esperar();
+  return bloqueos.filter((b) => !desde || b.fecha >= desde).map((b) => ({ ...b }));
+}
+
+export async function bloquearFecha({ fecha, motivo }) {
+  await esperar(300);
+  if (bloqueos.some((b) => b.fecha === fecha)) throw new Error("Esa fecha ya esta bloqueada");
+  const nuevo = { idBloqueo: siguienteBloqueo++, fecha, motivo: motivo || null };
+  bloqueos = [...bloqueos, nuevo];
+  return { ...nuevo };
+}
+
+export async function desbloquearFecha(id) {
+  await esperar(250);
+  bloqueos = bloqueos.filter((b) => b.idBloqueo !== id);
+}
+
+/* ---------- Agenda del mecánico (citas de ejemplo alrededor de hoy) ---------- */
+
+const dosCifras = (n) => String(n).padStart(2, "0");
+const fechaRelativa = (dias) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return `${d.getFullYear()}-${dosCifras(d.getMonth() + 1)}-${dosCifras(d.getDate())}`;
+};
+
+const citasPrueba = [
+  [0, "09:00", "10:00", "CONFIRMADA", "Alineamiento y balanceo", "Lucía Fernández", "ABC-123"],
+  [0, "11:00", "11:45", "PENDIENTE", "Cambio de aceite y filtro", "José Huamán", "BCD-456"],
+  [1, "08:00", "09:00", "CONFIRMADA", "Revisión de frenos", "María Torres", "CDE-789"],
+  [1, "15:00", "15:40", "CANCELADA", "Diagnóstico con escáner", "Diego Mendoza", "DEF-321"],
+  [2, "10:00", "11:30", "PENDIENTE", "Cambio de pastillas de freno", "Andrea Salazar", "EFG-654"],
+  [3, "14:00", "16:00", "CONFIRMADA", "Afinamiento de motor", "Jorge Ramírez", "FGH-987"],
+  [5, "09:30", "10:15", "RECHAZADA", "Cambio de refrigerante", "Paola Medina", "GHI-246"],
+  [7, "08:00", "09:00", "PENDIENTE", "Revisión de frenos", "Camila Flores", "HIJ-135"],
+  [0, "14:00", "15:00", "CONFIRMADA", "Revisión de suspensión", "Daniela Vargas", "JKL-482"],
+  [0, "16:30", "17:10", "CANCELADA", "Revisión de batería", "Fernando Ríos", "KLM-517"],
+].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
+  idCita: i + 1,
+  ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,
+  fecha: fechaRelativa(dias),
+  horaInicio,
+  horaFin,
+  estado,
+  servicio,
+  cliente,
+  placa,
+}));
+
+export async function listarAgenda(desde, hasta) {
+  await esperar();
+  return citasPrueba.filter((c) => c.fecha >= desde && c.fecha <= hasta).map((c) => ({ ...c }));
+}
+
+/* ---------- Perfil profesional del mecánico ---------- */
+
+let perfilMecanico = {
+  idUsuario: 2,
+  nombre: "Carlos Quispe",
+  correo: "carlos@taller.com",
+  aniosExperiencia: 0,
+  especialidades: [],
+};
+
+export async function obtenerPerfilMecanico() {
+  await esperar();
+  return { ...perfilMecanico, especialidades: [...perfilMecanico.especialidades] };
+}
+
+export async function guardarPerfilMecanico({ aniosExperiencia, especialidades }) {
+  await esperar(400);
+  if (aniosExperiencia < 0 || aniosExperiencia > 60) throw new Error("Los anios de experiencia deben estar entre 0 y 60");
+  if (especialidades.length > 10) throw new Error("Puedes registrar hasta 10 especialidades");
+  const unicas = [...new Map(especialidades.map((e) => [e.trim().toLowerCase(), e.trim()])).values()];
+  perfilMecanico = {
+    ...perfilMecanico,
+    aniosExperiencia,
+    especialidades: unicas.map((e) => e.charAt(0).toUpperCase() + e.slice(1)).sort((a, b) => a.localeCompare(b)),
+  };
+  return obtenerPerfilMecanico();
 }

@@ -4,6 +4,7 @@ import {
   cambiarEstadoServicio,
   formatoPrecio,
   formatoDuracion,
+  CATEGORIAS,
 } from "../../services/serviciosService";
 import Modal from "../../components/admin/Modal";
 import Switch from "../../components/admin/Switch";
@@ -11,11 +12,13 @@ import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
 import FormServicio from "./FormServicio";
 import "../../components/admin/admin-ui.css";
+import "./Servicios.css";
 
 /* Catálogo de servicios:
    - T18.2 Formulario "Nuevo servicio" con validaciones
    - T19.2 Edición desde la tabla
-   - T20.1 Switch activo / inactivo (deshabilitar sin borrar) */
+   - T20.1 Switch activo / inactivo (deshabilitar sin borrar)
+   - T37.2 Categoría (preventivo / correctivo): columna y filtro */
 
 const TAMANO = 8;
 
@@ -38,6 +41,7 @@ function Servicios() {
   const [recarga, setRecarga] = useState(0);
   const [resultado, setResultado] = useState({ clave: null, servicios: [], soloActivos: false, error: "" });
   const [estado, setEstado] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(0);
   const [formulario, setFormulario] = useState(null); // { servicio: null | {...} }
@@ -69,12 +73,15 @@ function Servicios() {
   const texto = sinTildes(busqueda.trim());
   const filtrados = resultado.servicios
     .filter((s) => (estado === "activos" ? s.activo : estado === "inactivos" ? !s.activo : true))
+    .filter((s) => !categoria || s.categoria === categoria)
     .filter((s) => !texto || sinTildes(`${s.nombre} ${s.descripcion}`).includes(texto))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
   const paginas = Math.max(1, Math.ceil(filtrados.length / TAMANO));
   const paginaActual = Math.min(pagina, paginas - 1);
   const visibles = filtrados.slice(paginaActual * TAMANO, paginaActual * TAMANO + TAMANO);
   const activos = resultado.servicios.filter((s) => s.activo).length;
+  const porCategoria = (c) => resultado.servicios.filter((s) => s.categoria === c).length;
+  const hayFiltros = !!(texto || estado || categoria);
 
   const reemplazar = (id, cambios) =>
     setResultado((r) => ({ ...r, servicios: r.servicios.map((s) => (s.id === id ? { ...s, ...cambios } : s)) }));
@@ -105,6 +112,7 @@ function Servicios() {
     } else {
       setResultado((r) => ({ ...r, servicios: [...r.servicios, guardado] }));
       setEstado("");
+      setCategoria("");
       setBusqueda(guardado.nombre);
       setPagina(0);
       avisar("ok", `Se creó el servicio "${guardado.nombre}".`);
@@ -173,6 +181,40 @@ function Servicios() {
             </button>
           ))}
         </div>
+
+        <label className="filtro-select">
+          <span className="sr-only">Filtrar por categoría</span>
+          <select
+            value={categoria}
+            onChange={(e) => {
+              setCategoria(e.target.value);
+              setPagina(0);
+            }}
+          >
+            <option value="">Todas las categorías</option>
+            {Object.entries(CATEGORIAS).map(([valor, c]) => (
+              <option key={valor} value={valor}>
+                {c.texto}
+                {!primeraCarga && ` (${porCategoria(valor)})`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {hayFiltros && (
+          <button
+            type="button"
+            className="btn-limpiar"
+            onClick={() => {
+              setBusqueda("");
+              setEstado("");
+              setCategoria("");
+              setPagina(0);
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {/* ---------- Tabla ---------- */}
@@ -192,7 +234,7 @@ function Servicios() {
             </p>
             <p>
               {resultado.servicios.length
-                ? "No hay servicios que coincidan con la búsqueda."
+                ? "No hay servicios que coincidan con los filtros elegidos."
                 : "Crea el primer servicio del catálogo con el botón «Nuevo servicio»."}
             </p>
           </div>
@@ -201,6 +243,7 @@ function Servicios() {
             <thead>
               <tr>
                 <th scope="col">Servicio</th>
+                <th scope="col">Categoría</th>
                 <th scope="col" className="col-num">Precio base</th>
                 <th scope="col">Duración</th>
                 <th scope="col">Estado</th>
@@ -215,6 +258,7 @@ function Servicios() {
                       <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
+                      <td><span className="esq" /></td>
                       <td />
                     </tr>
                   ))
@@ -225,6 +269,9 @@ function Servicios() {
                           <strong>{s.nombre}</strong>
                           {s.descripcion && <span>{s.descripcion}</span>}
                         </div>
+                      </td>
+                      <td data-label="Categoría">
+                        <span className={`insignia cat-${s.categoria}`}>{CATEGORIAS[s.categoria].texto}</span>
                       </td>
                       <td data-label="Precio base" className="col-num">
                         <span className="precio">{formatoPrecio(s.precioBase)}</span>

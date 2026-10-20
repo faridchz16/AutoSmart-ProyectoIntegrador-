@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { crearServicio, editarServicio, formatoDuracion } from "../../services/serviciosService";
+import { crearServicio, editarServicio, formatoDuracion, CATEGORIAS } from "../../services/serviciosService";
 
 /* Formulario de servicio (T18.2) que también sirve para editar (T19.2).
+   T37.2: selector de categoría (preventivo / correctivo).
    - servicio = null      -> crea uno nuevo
    - servicio = {...}     -> edita ese servicio */
 
 const MAX_DESCRIPCION = 250;
 
-function validar({ nombre, descripcion, precio, duracion }) {
+function validar({ nombre, descripcion, precio, duracion, categoria }) {
   const errores = {};
+  if (!CATEGORIAS[categoria]) errores.categoria = "Elige la categoría del servicio.";
   const n = nombre.trim();
   if (!n) errores.nombre = "Ingresa el nombre del servicio.";
   else if (n.length < 3) errores.nombre = "El nombre debe tener al menos 3 caracteres.";
@@ -39,6 +41,7 @@ function FormServicio({ servicio, alGuardar, alCerrar }) {
     descripcion: servicio?.descripcion ?? "",
     precio: servicio ? String(servicio.precioBase) : "",
     duracion: servicio ? String(servicio.duracionMinutos) : "",
+    categoria: servicio?.categoria ?? "",
   };
   const [datos, setDatos] = useState(inicial);
   const [errores, setErrores] = useState({});
@@ -50,6 +53,10 @@ function FormServicio({ servicio, alGuardar, alCerrar }) {
 
   const cambiar = (campo) => (e) => {
     const valor = e.target.value;
+    actualizar(campo, valor);
+  };
+
+  const actualizar = (campo, valor) => {
     setDatos((d) => ({ ...d, [campo]: valor }));
     setErrorGeneral("");
     if (errores[campo]) setErrores((er) => ({ ...er, [campo]: "" }));
@@ -66,6 +73,7 @@ function FormServicio({ servicio, alGuardar, alCerrar }) {
       descripcion: datos.descripcion.trim(),
       precioBase: Number(String(datos.precio).replace(",", ".")),
       duracionMinutos: Number(datos.duracion),
+      categoria: datos.categoria,
     };
 
     setEnviando(true);
@@ -101,6 +109,35 @@ function FormServicio({ servicio, alGuardar, alCerrar }) {
         />
         {errores.nombre && <p id="srv-nombre-error" className="campo-error">{errores.nombre}</p>}
       </div>
+
+      <fieldset
+        className="campo cat-selector"
+        aria-invalid={!!errores.categoria}
+        aria-describedby={errores.categoria ? "srv-categoria-ayuda" : undefined}
+      >
+        <legend>Categoría</legend>
+        <div className="cat-opciones">
+          {Object.entries(CATEGORIAS).map(([valor, c]) => (
+            <label key={valor} className={`cat-opcion cat-${valor}${datos.categoria === valor ? " elegida" : ""}`}>
+              <input
+                type="radio"
+                name="srv-categoria"
+                value={valor}
+                checked={datos.categoria === valor}
+                onChange={() => actualizar("categoria", valor)}
+              />
+              <span className="cat-punto" aria-hidden="true" />
+              <span className="cat-textos">
+                <strong>{c.texto}</strong>
+                <small>{c.descripcion}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        {errores.categoria && (
+          <p id="srv-categoria-ayuda" className="campo-error">{errores.categoria}</p>
+        )}
+      </fieldset>
 
       <div className="campo">
         <div className="campo-fila">

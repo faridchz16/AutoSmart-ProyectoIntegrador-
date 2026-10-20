@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { login } from "../services/authService";
-import { guardarSesion, cerrarSesion as borrarSesion, normalizarRol } from "../services/sesion";
+import { guardarSesion, cerrarSesion as borrarSesion, panelDeRol } from "../services/sesion";
 import AuthLayout from "../components/AuthLayout";
 import Campo from "../components/Campo";
 import "./Login.css";
@@ -71,9 +71,12 @@ function Login() {
       // Guardamos el token para usarlo en las siguientes pantallas
       guardarSesion(datos);
 
-      // El administrador entra directo a su panel (o a la pantalla que quería abrir)
-      if (normalizarRol(datos.rol) === "ADMIN") {
-        navigate(ubicacion.state?.from?.pathname ?? "/admin", { replace: true });
+      // El administrador y el mecánico entran directo a su panel
+      // (o a la pantalla de su panel que querían abrir antes de iniciar sesión)
+      const panel = panelDeRol(datos.rol);
+      if (panel) {
+        const desde = ubicacion.state?.from?.pathname;
+        navigate(desde?.startsWith(panel) ? desde : panel, { replace: true });
         return;
       }
 

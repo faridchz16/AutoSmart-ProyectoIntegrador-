@@ -6,12 +6,24 @@ import * as prueba from "./datosPrueba";
      PUT   /admin/services/{id}            -> edita datos y tarifa (T19.1)
      PATCH /admin/services/{id}/estado     -> activa o desactiva (T19.1)
      GET   /services                       -> catálogo: SOLO servicios activos (T10.1)
-   Cuerpo: { nombre, descripcion, precioBase, duracionMinutos }
-   Respuesta: { idServicio, nombre, descripcion, precioBase, duracionMinutos, activo }
+   Cuerpo: { nombre, descripcion, precioBase, duracionMinutos, categoria }
+   Respuesta: { idServicio, nombre, descripcion, precioBase, duracionMinutos, activo, categoria, especialidad }
+   categoria (T37.1): "PREVENTIVO" | "CORRECTIVO". Los servicios antiguos quedan como PREVENTIVO.
 
    PENDIENTE (backend): falta GET /admin/services con activos e inactivos.
    Mientras no exista, el panel usa GET /services y los servicios desactivados
    desaparecen de la tabla al recargar. */
+
+// Categorías del catálogo (T37.1 / T37.2)
+export const CATEGORIAS = {
+  PREVENTIVO: { texto: "Preventivo", descripcion: "Mantenimiento programado para evitar fallas." },
+  CORRECTIVO: { texto: "Correctivo", descripcion: "Reparación de una falla o avería ya presente." },
+};
+
+const categoriaValida = (c) => {
+  const valor = String(c ?? "").toUpperCase();
+  return CATEGORIAS[valor] ? valor : "PREVENTIVO";
+};
 
 // Adapta lo que devuelva el backend a un formato único para la pantalla
 function normalizarServicio(s = {}) {
@@ -22,6 +34,7 @@ function normalizarServicio(s = {}) {
     precioBase: Number(s.precioBase ?? s.precio_base ?? s.precio ?? 0),
     duracionMinutos: Number(s.duracionMinutos ?? s.duracion_minutos ?? s.duracion ?? 0),
     activo: s.activo ?? true,
+    categoria: categoriaValida(s.categoria),
   };
 }
 

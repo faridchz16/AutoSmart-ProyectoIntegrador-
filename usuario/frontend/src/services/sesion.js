@@ -58,3 +58,10 @@ export function sesionActiva() {
   }
   return true;
 }
+
+// Panel web de cada rol (null = el rol no tiene panel web; el cliente usa la app móvil)
+const PANEL_POR_ROL = { ADMIN: "/admin", MECANICO: "/mecanico" };
+
+export function panelDeRol(rol) {
+  return PANEL_POR_ROL[normalizarRol(rol)] ?? null;
+}
