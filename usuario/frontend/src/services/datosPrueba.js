@@ -272,3 +272,31 @@ export async function listarAgenda(desde, hasta) {
   await esperar();
   return citasPrueba.filter((c) => c.fecha >= desde && c.fecha <= hasta).map((c) => ({ ...c }));
 }
+
+/* ---------- Perfil profesional del mecánico ---------- */
+
+let perfilMecanico = {
+  idUsuario: 2,
+  nombre: "Carlos Quispe",
+  correo: "carlos@taller.com",
+  aniosExperiencia: 0,
+  especialidades: [],
+};
+
+export async function obtenerPerfilMecanico() {
+  await esperar();
+  return { ...perfilMecanico, especialidades: [...perfilMecanico.especialidades] };
+}
+
+export async function guardarPerfilMecanico({ aniosExperiencia, especialidades }) {
+  await esperar(400);
+  if (aniosExperiencia < 0 || aniosExperiencia > 60) throw new Error("Los anios de experiencia deben estar entre 0 y 60");
+  if (especialidades.length > 10) throw new Error("Puedes registrar hasta 10 especialidades");
+  const unicas = [...new Map(especialidades.map((e) => [e.trim().toLowerCase(), e.trim()])).values()];
+  perfilMecanico = {
+    ...perfilMecanico,
+    aniosExperiencia,
+    especialidades: unicas.map((e) => e.charAt(0).toUpperCase() + e.slice(1)).sort((a, b) => a.localeCompare(b)),
+  };
+  return obtenerPerfilMecanico();
+}

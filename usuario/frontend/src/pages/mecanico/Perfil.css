@@ -1,0 +1,231 @@
+/* ===== Perfil profesional del mecánico (T13.2, T14.1) ===== */
+
+.pf {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.pf-tarjeta,
+.pf-form {
+  padding: 20px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+}
+
+/* ---------- Vista previa ---------- */
+.pf-tarjeta {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 14px;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 55%);
+}
+
+.pf-etiqueta {
+  margin: 0;
+  color: #7a8aa6;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pf-cabeza { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.pf-cabeza > div { min-width: 0; }
+
+.pf-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #1150e8;
+  color: #fff;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.pf-cabeza h3 {
+  margin: 0;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.08rem;
+  color: #0b1b3a;
+  overflow-wrap: anywhere;
+}
+
+.pf-correo { color: #5b6b88; font-size: 0.84rem; overflow-wrap: anywhere; }
+
+.pf-anios {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #0b1b3a;
+  font-weight: 700;
+}
+
+.pf-anios svg { color: #f59e0b; }
+
+.pf-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.pf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  color: #1150e8;
+  font-size: 0.82rem;
+  font-weight: 700;
+  animation: pf-entra 0.2s ease both;
+}
+
+@keyframes pf-entra {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+.pf-sin { margin: 0; color: #9aa7bf; font-size: 0.86rem; }
+
+.pf-pendiente {
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px dashed #d6e0f2;
+  color: #b45309;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+/* ---------- Formulario ---------- */
+.pf-form { display: grid; gap: 18px; }
+
+.pf-stepper { display: flex; width: max-content; }
+
+.pf-stepper button {
+  width: 44px;
+  border: 1px solid #d6e0f2;
+  background: #f7f9fe;
+  color: #0b1b3a;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.pf-stepper button:first-child { border-radius: 10px 0 0 10px; }
+.pf-stepper button:last-child { border-radius: 0 10px 10px 0; }
+.pf-stepper button:hover:not(:disabled) { background: #e6f0ff; color: #1150e8; }
+.pf-stepper button:disabled { color: #c3ccdc; cursor: not-allowed; }
+.pf-stepper button:focus-visible { outline: 3px solid #93b4ff; outline-offset: 1px; position: relative; }
+
+.campo .pf-stepper input {
+  width: 84px;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.pf-stepper input::-webkit-outer-spin-button,
+.pf-stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Caja de etiquetas: chips + campo de texto en la misma línea */
+.pf-caja {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px 8px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  cursor: text;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pf-caja:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+.pf-caja.invalida { border-color: #e11d48; }
+
+.campo .pf-caja input {
+  flex: 1;
+  min-width: 140px;
+  width: auto;
+  padding: 6px 4px;
+  border: 0;
+  box-shadow: none;
+}
+
+.campo .pf-caja input:focus { box-shadow: none; }
+.campo .pf-caja input:disabled { background: transparent; }
+
+.pf-chip.editable { padding-right: 4px; }
+
+.pf-chip.editable button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pf-chip.editable button:hover { background: #1150e8; color: #fff; }
+.pf-chip.editable button:focus-visible { outline: 2px solid #1150e8; }
+
+.pf-sugerencias p {
+  margin: 0 0 8px;
+  color: #5b6b88;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pf-sugerencias > div { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.pf-sug {
+  padding: 5px 11px;
+  border: 1px dashed #b9c8e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #3b4a66;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.pf-sug:hover:not(:disabled) { border-color: #1150e8; border-style: solid; background: #f1f6ff; color: #1150e8; }
+.pf-sug:disabled { opacity: 0.45; cursor: not-allowed; }
+.pf-sug:focus-visible { outline: 3px solid #93b4ff; outline-offset: 1px; }
+
+@media (max-width: 900px) {
+  .pf { grid-template-columns: minmax(0, 1fr); }
+  .pf-tarjeta { position: static; }
+}
+
+@media (max-width: 480px) {
+  .pf-tarjeta, .pf-form { padding: 16px; }
+  .pf-form .form-acciones { flex-direction: column-reverse; }
+  .pf-form .form-acciones .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-chip { animation: none; }
+}
