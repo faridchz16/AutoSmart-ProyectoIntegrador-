@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/mechanics/**").hasRole("MECANICO")
                         .requestMatchers("/vehicles/**").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.POST, "/appointments").hasRole("CLIENTE")
                         // El resto (/users/me, /services, ...) solo requiere estar autenticado
                         .anyRequest().authenticated()
                 )
@@ -54,7 +55,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Mismo formato JSON que GlobalExceptionHandler (T06.3)
     private void escribirError(jakarta.servlet.http.HttpServletResponse response,
                                HttpStatus status, String mensaje, String path) throws java.io.IOException {
         response.setStatus(status.value());

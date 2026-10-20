@@ -1,23 +1,111 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.dto.CitaCreadaResponse;
 import com.tecsup.autosmart.dto.CitaDetalleResponse;
+import com.tecsup.autosmart.dto.CitaRequest;
+import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.NotFoundException;
 import com.tecsup.autosmart.model.Cita;
+import com.tecsup.autosmart.model.EstadoCita;
+import com.tecsup.autosmart.model.Servicio;
+import com.tecsup.autosmart.model.Usuario;
+import com.tecsup.autosmart.model.Vehiculo;
 import com.tecsup.autosmart.repository.CitaRepository;
+import com.tecsup.autosmart.repository.ServicioRepository;
+import com.tecsup.autosmart.repository.UsuarioRepository;
+import com.tecsup.autosmart.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.UUID;
 
 @Service
 public class CitaService {
 
-    private final CitaRepository citaRepository;
+    private static final ZoneId LIMA = ZoneId.of("America/Lima");
 
-    public CitaService(CitaRepository citaRepository) {
+    private final CitaRepository citaRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final ServicioRepository servicioRepository;
+    private final VehiculoRepository vehiculoRepository;
+    private final TurnoService turnoService;
+
+    public CitaService(CitaRepository citaRepository,
+                       UsuarioRepository usuarioRepository,
+                       ServicioRepository servicioRepository,
+                       VehiculoRepository vehiculoRepository,
+                       TurnoService turnoService) {
         this.citaRepository = citaRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.servicioRepository = servicioRepository;
+        this.vehiculoRepository = vehiculoRepository;
+        this.turnoService = turnoService;
     }
 
-    // Solo el mecanico asignado a la cita puede ver su detalle
+    @Transactional
+    public CitaCreadaResponse reservar(String correoCliente, CitaRequest req) {
+
+        Usuario mecanico = usuarioRepository.buscarParaReserva(req.getIdMecanico())
+                .orElseThrow(() -> new NotFoundException("Mecanico no encontrado"));
+
+        Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        Servicio servicio = servicioRepository.findByIdServicioAndActivoTrue(req.getIdServicio())
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+
+        Vehiculo vehiculo = vehiculoRepository.findById(req.getIdVehiculo())
+                .filter(v -> Boolean.TRUE.equals(v.getActivo()))
+                .orElseThrow(() -> new NotFoundException("Vehiculo no encontrado"));
+        if (!vehiculo.getCliente().getIdUsuario().equals(cliente.getIdUsuario())) {
+            throw new ForbiddenException("El vehiculo no te pertenece");
+        }
+
+        boolean libre = turnoService.turnosLibres(req.getIdServicio(), req.getIdMecanico(), req.getFecha())
+                .stream()
+                .anyMatch(t -> t.getHoraInicio().equals(req.getHoraInicio()));
+        if (!libre) {
+            throw new ConflictException("El turno ya no esta disponible");
+        }
+
+        LocalTime horaFin = req.getHoraInicio().plusMinutes(servicio.getDuracionMinutos());
+
+        Cita cita = new Cita();
+        cita.setTicket("TMP-" + UUID.randomUUID().toString().substring(0, 12));
+        cita.setCliente(cliente);
+        cita.setMecanico(mecanico);
+        cita.setVehiculo(vehiculo);
+        cita.setServicio(servicio);
+        cita.setFecha(req.getFecha());
+        cita.setHoraInicio(req.getHoraInicio());
+        cita.setHoraFin(horaFin);
+        cita.setEstado(EstadoCita.PENDIENTE);
+        cita.setPrecio(servicio.getPrecioBase());
+        cita = citaRepository.saveAndFlush(cita);
+
+        // 4) Ticket AS-AAAA-NNNNN a partir del id (nunca se repite)
+        int anio = LocalDate.now(LIMA).getYear();
+        cita.setTicket(String.format("AS-%d-%05d", anio, cita.getIdCita()));
+        cita = citaRepository.save(cita);
+
+        CitaCreadaResponse res = new CitaCreadaResponse();
+        res.setIdCita(cita.getIdCita());
+        res.setTicket(cita.getTicket());
+        res.setEstado(cita.getEstado().name());
+        res.setFecha(cita.getFecha().toString());
+        res.setHoraInicio(cita.getHoraInicio().toString());
+        res.setHoraFin(cita.getHoraFin().toString());
+        res.setPrecio(cita.getPrecio());
+        res.setServicio(servicio.getNombre());
+        res.setMecanico(mecanico.getNombre());
+        res.setPlaca(vehiculo.getPlaca());
+        return res;
+    }
+
     @Transactional(readOnly = true)
     public CitaDetalleResponse detalleParaMecanico(String correoMecanico, Long idCita) {
         Cita cita = citaRepository.buscarDetalle(idCita)
