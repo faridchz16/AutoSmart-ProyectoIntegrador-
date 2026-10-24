@@ -42,14 +42,15 @@ public class Cita {
     @Column(name = "hora_fin", nullable = false)
     private LocalTime horaFin;
 
-    // VARCHAR para que agregar estados nuevos no obligue a cambiar la tabla
     @Enumerated(EnumType.STRING)
     @Column(name = "estado", nullable = false, columnDefinition = "VARCHAR(15)")
     private EstadoCita estado = EstadoCita.PENDIENTE;
 
-    // Precio vigente del servicio al momento de reservar
     @Column(name = "precio", nullable = false, precision = 10, scale = 2)
     private BigDecimal precio;
+
+    @Column(name = "motivo_rechazo", length = 300)
+    private String motivoRechazo;
 
     public Cita() {}
 
@@ -75,4 +76,6 @@ public class Cita {
     public void setEstado(EstadoCita estado) { this.estado = estado; }
     public BigDecimal getPrecio() { return precio; }
     public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public String getMotivoRechazo() { return motivoRechazo; }
+    public void setMotivoRechazo(String motivoRechazo) { this.motivoRechazo = motivoRechazo; }
 }
