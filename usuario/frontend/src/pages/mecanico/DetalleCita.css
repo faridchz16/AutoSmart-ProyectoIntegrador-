@@ -185,3 +185,35 @@ button.ag-cita:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; 
 @media (max-width: 560px) {
   .dc-secciones { grid-template-columns: 1fr; }
 }
+
+/* ---------- Aceptar / rechazar (T36.2) ---------- */
+.dc-acciones .btn-sec:first-child { margin-right: auto; }
+
+.dc-rechazar { color: #be123c; border-color: #fecdd3; }
+.dc-rechazar:hover:not(:disabled) { background: #fff1f2; border-color: #fda4af; }
+
+.dc-rechazo { display: grid; gap: 12px; }
+.dc-rechazo-texto { margin: 0; color: #3b4a66; line-height: 1.5; }
+.dc-rapidos { display: flex; flex-wrap: wrap; gap: 6px; }
+
+@media (max-width: 480px) {
+  .form-acciones.dc-acciones { display: grid; grid-template-columns: 1fr 1fr; }
+  .form-acciones.dc-acciones .btn { width: 100%; }
+  .form-acciones.dc-acciones .btn-sec:first-child { grid-column: 1 / -1; order: 3; margin-right: 0; }
+}
+
+.dc-rapido {
+  padding: 5px 11px;
+  border: 1px dashed #b9c8e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #3b4a66;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.dc-rapido:hover { border-color: #be123c; border-style: solid; background: #fff1f2; color: #be123c; }
+.dc-rapido:focus-visible { outline: 3px solid #93b4ff; outline-offset: 1px; }

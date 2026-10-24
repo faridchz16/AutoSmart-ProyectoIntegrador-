@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { listarCitasHoy, ESTADOS_CITA } from "../../services/agendaService";
 import { listarBloqueos, hoyLima, horaLima, aFecha, diaSemanaDe } from "../../services/bloqueosService";
@@ -6,13 +6,15 @@ import { listarHorarios, duracionMinutos, formatoHoras } from "../../services/ho
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import DetalleCita from "./DetalleCita";
+import Aviso from "../../components/admin/Aviso";
+import { mensajeRespuesta } from "../../services/citasService";
 import "./CitasHoy.css";
 
 /* T34.1 – Citas de hoy: las citas del día ordenadas por hora, con la cita en curso
    (o la siguiente) destacada y una marca de la hora actual.
    Usa GET /mechanics/me/appointments sin parámetros (el backend devuelve las de hoy, hora de Lima).
    Se actualiza sola cada 2 minutos y al volver a la pestaña.
-   T35.2: al hacer clic en una cita se abre su detalle. Más adelante: aceptar / rechazar (T36.2). */
+   T35.2: al hacer clic en una cita se abre su detalle; T36.2: desde ahí se acepta o rechaza. */
 
 const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
 const CADA_RELOJ = 30 * 1000;
@@ -169,6 +171,17 @@ function CitasHoy() {
   });
   const [verTodas, setVerTodas] = useState(false);
   const [abierta, setAbierta] = useState(null);
+
+  // T36.2: al aceptar o rechazar se actualiza la cita en la lista y se muestra un aviso
+  const [aviso, setAviso] = useState(null);
+  const contadorAvisos = useRef(0);
+  const cerrarAviso = useCallback(() => setAviso(null), []);
+  const alResponder = (cita, estado) => {
+    setAbierta(null);
+    setResultado((r) => ({ ...r, citas: r.citas.map((x) => (x.id === cita.id ? { ...x, estado } : x)) }));
+    contadorAvisos.current += 1;
+    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado), id: contadorAvisos.current });
+  };
 
   const { hoy, ahora } = reloj;
   const clave = `${hoy}|${recarga}`;
@@ -379,7 +392,13 @@ function CitasHoy() {
         </>
       )}
 
-      <DetalleCita cita={abierta} alCerrar={() => setAbierta(null)} />
+      <DetalleCita
+        cita={abierta}
+        alCerrar={() => setAbierta(null)}
+        alResponder={alResponder}
+        alDesactualizar={() => setRecarga((n) => n + 1)}
+      />
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>
   );
 }

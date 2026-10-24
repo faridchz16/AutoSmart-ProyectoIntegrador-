@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listarAgenda, ESTADOS_CITA } from "../../services/agendaService";
 import { listarBloqueos, hoyLima, isoDe, aFecha } from "../../services/bloqueosService";
 import { listarHorarios } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import DetalleCita from "./DetalleCita";
+import Aviso from "../../components/admin/Aviso";
+import { mensajeRespuesta } from "../../services/citasService";
 
 /* T23.2 – Agenda semanal del mecánico: citas de lunes a domingo,
    con navegación entre semanas (usa /mechanics/me/appointments, T23.1).
    También marca los días bloqueados y los días sin horario de atención.
-   T35.2: al hacer clic en una cita se abre su detalle. */
+   T35.2: al hacer clic en una cita se abre su detalle; T36.2: desde ahí se acepta o rechaza. */
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
@@ -48,6 +50,17 @@ function Agenda() {
   const [verTodas, setVerTodas] = useState(false);
   const [recarga, setRecarga] = useState(0);
   const [abierta, setAbierta] = useState(null);
+
+  // T36.2: al aceptar o rechazar se actualiza la cita en la lista y se muestra un aviso
+  const [aviso, setAviso] = useState(null);
+  const contadorAvisos = useRef(0);
+  const cerrarAviso = useCallback(() => setAviso(null), []);
+  const alResponder = (cita, estado) => {
+    setAbierta(null);
+    setResultado((r) => ({ ...r, citas: r.citas.map((x) => (x.id === cita.id ? { ...x, estado } : x)) }));
+    contadorAvisos.current += 1;
+    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado), id: contadorAvisos.current });
+  };
   const [resultado, setResultado] = useState({ clave: null, citas: [], bloqueadas: [], laborables: null, error: "" });
 
   const domingo = sumarDias(lunes, 6);
@@ -191,7 +204,13 @@ function Agenda() {
         </p>
       )}
 
-      <DetalleCita cita={abierta} alCerrar={() => setAbierta(null)} />
+      <DetalleCita
+        cita={abierta}
+        alCerrar={() => setAbierta(null)}
+        alResponder={alResponder}
+        alDesactualizar={() => setRecarga((n) => n + 1)}
+      />
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>
   );
 }

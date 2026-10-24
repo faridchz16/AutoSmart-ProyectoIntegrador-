@@ -335,3 +335,14 @@ export async function obtenerCita(id) {
     kilometraje,
   };
 }
+
+// Aceptar o rechazar (T36.1): solo citas pendientes
+export async function responderCita(id, estado, motivo) {
+  await esperar(450);
+  const cita = citasPrueba.find((c) => c.idCita === Number(id));
+  if (!cita) throw new Error("Cita no encontrada");
+  if (cita.estado !== "PENDIENTE") throw new Error(`La cita ya no esta pendiente (estado: ${cita.estado})`);
+  cita.estado = estado;
+  if (motivo) cita.motivoRechazo = motivo;
+  return { ...cita };
+}
