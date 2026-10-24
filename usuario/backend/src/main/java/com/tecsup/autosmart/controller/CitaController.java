@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.tecsup.autosmart.dto.RechazoRequest;
 
 @RestController
 @RequestMapping("/appointments")
@@ -38,5 +39,17 @@ public class CitaController {
     public ResponseEntity<List<CitaCreadaResponse>> mias(
             @RequestParam(defaultValue = "false") boolean futuras, Authentication auth) {
         return ResponseEntity.ok(citaService.misCitas(auth.getName(), futuras));
+    }
+
+    @PutMapping("/{id}/accept")
+    public ResponseEntity<CitaCreadaResponse> aceptar(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(citaService.aceptar(auth.getName(), id));
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<CitaCreadaResponse> rechazar(@PathVariable Long id,
+                                                       @Valid @RequestBody RechazoRequest request,
+                                                       Authentication auth) {
+        return ResponseEntity.ok(citaService.rechazar(auth.getName(), id, request.getMotivo()));
     }
 }

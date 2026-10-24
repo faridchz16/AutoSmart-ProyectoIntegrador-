@@ -107,6 +107,36 @@ public class CitaService {
         return res;
     }
 
+
+    @Transactional
+    public CitaCreadaResponse aceptar(String correoMecanico, Long idCita) {
+        Cita cita = citaPendienteDelMecanico(correoMecanico, idCita);
+        cita.setEstado(EstadoCita.CONFIRMADA);
+        return aRespuesta(citaRepository.save(cita));
+    }
+
+
+    @Transactional
+    public CitaCreadaResponse rechazar(String correoMecanico, Long idCita, String motivo) {
+        Cita cita = citaPendienteDelMecanico(correoMecanico, idCita);
+        cita.setEstado(EstadoCita.RECHAZADA);
+        cita.setMotivoRechazo(motivo.trim());
+        return aRespuesta(citaRepository.save(cita));
+    }
+
+    private Cita citaPendienteDelMecanico(String correoMecanico, Long idCita) {
+        Cita cita = citaRepository.buscarDetalle(idCita)
+                .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
+
+        if (!cita.getMecanico().getCorreo().equalsIgnoreCase(correoMecanico)) {
+            throw new ForbiddenException("Solo el mecanico asignado puede responder esta cita");
+        }
+        if (cita.getEstado() != EstadoCita.PENDIENTE) {
+            throw new ConflictException("La cita ya no esta pendiente (estado: " + cita.getEstado() + ")");
+        }
+        return cita;
+    }
+
     @Transactional(readOnly = true)
     public List<CitaCreadaResponse> misCitas(String correoCliente, boolean futuras) {
         Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
