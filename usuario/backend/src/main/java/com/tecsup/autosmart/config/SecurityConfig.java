@@ -32,20 +32,21 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/error").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // Rutas por rol (T12.1)
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/mechanics/**").hasRole("MECANICO")
                         .requestMatchers("/vehicles/**").hasRole("CLIENTE")
+                        
                         .requestMatchers(HttpMethod.POST, "/appointments").hasRole("CLIENTE")
-                        // El resto (/users/me, /services, ...) solo requiere estar autenticado
+                        .requestMatchers(HttpMethod.GET, "/appointments/mine").hasRole("CLIENTE")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(e -> e
-                        // Sin token válido -> 401
+
                         .authenticationEntryPoint((request, response, ex) ->
                                 escribirError(response, HttpStatus.UNAUTHORIZED,
                                         "Token ausente, inválido o expirado", request.getRequestURI()))
-                        // Con token pero sin el rol requerido -> 403
+
                         .accessDeniedHandler((request, response, ex) ->
                                 escribirError(response, HttpStatus.FORBIDDEN,
                                         "No tienes permisos para acceder a este recurso", request.getRequestURI()))

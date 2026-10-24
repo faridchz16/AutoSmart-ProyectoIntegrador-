@@ -34,4 +34,17 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> buscarActivasDelDia(@Param("mecanico") Usuario mecanico,
                                    @Param("fecha") LocalDate fecha,
                                    @Param("estados") Collection<EstadoCita> estados);
+    @Query("SELECT c FROM Cita c " +
+            "JOIN FETCH c.mecanico JOIN FETCH c.servicio JOIN FETCH c.vehiculo " +
+            "WHERE c.cliente = :cliente " +
+            "ORDER BY c.fecha ASC, c.horaInicio ASC")
+    List<Cita> buscarDelCliente(@Param("cliente") Usuario cliente);
+
+    @Query("SELECT c FROM Cita c " +
+            "JOIN FETCH c.mecanico JOIN FETCH c.servicio JOIN FETCH c.vehiculo " +
+            "WHERE c.cliente = :cliente AND c.fecha >= :desde AND c.estado IN :estados " +
+            "ORDER BY c.fecha ASC, c.horaInicio ASC")
+    List<Cita> buscarFuturasDelCliente(@Param("cliente") Usuario cliente,
+                                       @Param("desde") LocalDate desde,
+                                       @Param("estados") Collection<EstadoCita> estados);
 }
