@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/appointments")
@@ -31,5 +32,11 @@ public class CitaController {
     @GetMapping("/{id}")
     public ResponseEntity<CitaDetalleResponse> detalle(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(citaService.detalleParaMecanico(auth.getName(), id));
+    }
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<CitaCreadaResponse>> mias(
+            @RequestParam(defaultValue = "false") boolean futuras, Authentication auth) {
+        return ResponseEntity.ok(citaService.misCitas(auth.getName(), futuras));
     }
 }

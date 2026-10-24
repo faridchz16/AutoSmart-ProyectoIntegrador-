@@ -22,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 public class CitaService {
@@ -103,6 +104,34 @@ public class CitaService {
         res.setServicio(servicio.getNombre());
         res.setMecanico(mecanico.getNombre());
         res.setPlaca(vehiculo.getPlaca());
+        return res;
+    }
+
+    @Transactional(readOnly = true)
+    public List<CitaCreadaResponse> misCitas(String correoCliente, boolean futuras) {
+        Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        List<Cita> citas = futuras
+                ? citaRepository.buscarFuturasDelCliente(cliente, LocalDate.now(LIMA),
+                List.of(EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA))
+                : citaRepository.buscarDelCliente(cliente);
+
+        return citas.stream().map(this::aRespuesta).toList();
+    }
+
+    private CitaCreadaResponse aRespuesta(Cita c) {
+        CitaCreadaResponse res = new CitaCreadaResponse();
+        res.setIdCita(c.getIdCita());
+        res.setTicket(c.getTicket());
+        res.setEstado(c.getEstado().name());
+        res.setFecha(c.getFecha().toString());
+        res.setHoraInicio(c.getHoraInicio().toString());
+        res.setHoraFin(c.getHoraFin().toString());
+        res.setPrecio(c.getPrecio());
+        res.setServicio(c.getServicio().getNombre());
+        res.setMecanico(c.getMecanico().getNombre());
+        res.setPlaca(c.getVehiculo().getPlaca());
         return res;
     }
 
