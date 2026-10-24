@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS servicios (
     duracion_minutos INT NOT NULL,
     activo TINYINT(1) NOT NULL DEFAULT 1,
     categoria VARCHAR(15) NOT NULL DEFAULT 'PREVENTIVO',
-    id_especialidad INT NULL,   -- especialidad requerida, opcional (T24.1)
+    id_especialidad INT NULL,   
     FOREIGN KEY (id_especialidad) REFERENCES especialidades(id_especialidad) 
 );
 
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS codigos_recuperacion (
 CREATE TABLE IF NOT EXISTS horario_mecanico (
     id_horario INT AUTO_INCREMENT PRIMARY KEY,
     id_mecanico INT NOT NULL,
-    dia_semana TINYINT NOT NULL,          -- 1 = lunes ... 7 = domingo
+    dia_semana TINYINT NOT NULL,          
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS citas (
     hora_fin TIME NOT NULL,
     estado VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA
     precio DECIMAL(10,2) NOT NULL,
+    motivo_rechazo VARCHAR(300) NULL,   
     FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_vehiculo) REFERENCES vehiculos(id_vehiculo),
