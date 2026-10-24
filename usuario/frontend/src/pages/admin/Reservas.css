@@ -1,0 +1,99 @@
+/* ===== Reservas del taller (T38.2) ===== */
+
+.rs-rango { font-weight: 700; color: #0b1b3a; }
+.rs-rango::first-letter { text-transform: uppercase; }
+
+.rs-fechas { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.rs-fechas label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5b6b88;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.rs-fechas input,
+.rs-select select {
+  padding: 9px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #0b1b3a;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.rs-select select {
+  min-width: 190px;
+  padding-right: 34px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8aa6' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 18px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.rs-fechas input:focus,
+.rs-select select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+
+.rs-limpiar {
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rs-limpiar:hover { text-decoration: underline; }
+.rs-limpiar:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; border-radius: 6px; }
+
+.rs-ayuda { font-size: 0.86rem; }
+.rs-ayuda code { margin: 0 2px; }
+
+/* ---------- Celdas ---------- */
+.rs-cuando, .rs-cliente { display: flex; flex-direction: column; gap: 3px; }
+
+.rs-cuando strong { color: #0b1b3a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rs-cuando strong::first-letter { text-transform: uppercase; }
+.rs-cuando strong.rs-hoy { color: #1150e8; }
+
+.rs-ticket { color: #7a8aa6; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.78rem; }
+
+.rs-placa {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.insignia.rs-est-PENDIENTE { background: #fef3c7; color: #92400e; }
+.insignia.rs-est-CONFIRMADA { background: #d1fae5; color: #065f46; }
+.insignia.rs-est-RECHAZADA { background: #ffe4e6; color: #9f1239; }
+.insignia.rs-est-CANCELADA { background: #e2e8f0; color: #475569; }
+
+.rs-tabla .fila-inactiva td:not([data-label="Estado"]) { opacity: 0.6; }
+
+/* ---------- Celular: la primera celda hace de título de la tarjeta ---------- */
+@media (max-width: 720px) {
+  .rs-fechas, .rs-select { flex: 1 1 100%; }
+  .rs-fechas label { flex: 1; }
+  .rs-fechas input, .rs-select select { width: 100%; }
+  .rs-cliente { align-items: flex-end; text-align: right; }
+  .rs-cliente .rs-placa { align-self: flex-end; }
+  .tabla td[data-label="Reserva"] { padding-bottom: 10px; border-bottom: 1px solid #eef2f9; }
+  .tabla td[data-label="Reserva"]::before { display: none; }
+  .rs-cuando { flex-direction: row; justify-content: space-between; width: 100%; }
+  /* En esta tabla "Servicio" es una fila normal (con su etiqueta), no el título de la tarjeta */
+  .rs-tabla td[data-label="Servicio"] { padding-bottom: 8px; border-bottom: 0; text-align: right; }
+  .rs-tabla td[data-label="Servicio"]::before { display: block; }
+}

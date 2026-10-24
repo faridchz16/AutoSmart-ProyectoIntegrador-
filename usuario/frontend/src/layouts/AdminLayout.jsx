@@ -17,6 +17,17 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/reservas",
+    texto: "Reservas",
+    icono: (
+      <Icono>
+        <rect x="3.5" y="5" width="17" height="15" rx="2" />
+        <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+        <path d="m9 14.5 2 2 4-4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/usuarios",
     texto: "Usuarios",
     icono: (

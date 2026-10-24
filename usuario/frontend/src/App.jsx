@@ -12,6 +12,7 @@ import MecanicoLayout from "./layouts/MecanicoLayout";
 import Resumen from "./pages/admin/Resumen";
 import Usuarios from "./pages/admin/Usuarios";
 import Servicios from "./pages/admin/Servicios";
+import Reservas from "./pages/admin/Reservas";
 import InicioMecanico from "./pages/mecanico/Inicio";
 import Agenda from "./pages/mecanico/Agenda";
 import CitasHoy from "./pages/mecanico/CitasHoy";
@@ -35,6 +36,7 @@ function App() {
         <Route element={<RutaProtegida roles={["ADMIN"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Resumen />} />
+            <Route path="reservas" element={<Reservas />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="servicios" element={<Servicios />} />
           </Route>

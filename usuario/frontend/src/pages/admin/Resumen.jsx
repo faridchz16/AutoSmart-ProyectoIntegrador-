@@ -12,10 +12,23 @@ function Resumen() {
     <>
       <div className="adm-intro">
         <h2>Hola, {nombre}</h2>
-        <p>Desde aquí administras las cuentas y los servicios de AutoSmart.</p>
+        <p>Desde aquí administras las reservas, las cuentas y los servicios de AutoSmart.</p>
       </div>
 
       <div className="adm-cards">
+        <Link to="/admin/reservas" className="adm-card">
+          <span className="adm-card-icono">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3.5" y="5" width="17" height="15" rx="2" />
+              <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+              <path d="m9 14.5 2 2 4-4" />
+            </svg>
+          </span>
+          <h3>Reservas</h3>
+          <p>Revisa las citas del taller por fecha, estado y mecánico.</p>
+          <span className="adm-mas">Abrir reservas <Flecha /></span>
+        </Link>
+
         <Link to="/admin/usuarios" className="adm-card">
           <span className="adm-card-icono">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

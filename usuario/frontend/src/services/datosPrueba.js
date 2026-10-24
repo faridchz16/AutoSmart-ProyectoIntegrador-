@@ -346,3 +346,70 @@ export async function responderCita(id, estado, motivo) {
   if (motivo) cita.motivoRechazo = motivo;
   return { ...cita };
 }
+
+/* ---------- Reservas del taller para el administrador (T38.2) ---------- */
+
+const SERVICIOS_RESERVA = [
+  ["Cambio de aceite y filtro", 120, 45],
+  ["Alineamiento y balanceo", 90, 60],
+  ["Revisión de frenos", 80, 60],
+  ["Diagnóstico con escáner", 70, 40],
+  ["Afinamiento de motor", 220, 120],
+  ["Cambio de pastillas de freno", 150, 90],
+];
+const HORAS_RESERVA = ["08:00", "09:00", "10:30", "11:00", "14:00", "15:30", "16:00"];
+const PLACAS = ["ABC-123", "BCD-456", "CDE-789", "DEF-321", "EFG-654", "FGH-987", "GHI-246", "HIJ-135", "JKL-482"];
+
+const sumarMinutos = (h, min) => {
+  const [hh, mm] = h.split(":").map(Number);
+  const t = hh * 60 + mm + min;
+  return `${dosCifras(Math.floor(t / 60))}:${dosCifras(t % 60)}`;
+};
+
+const reservasPrueba = (() => {
+  const mecanicos = usuarios.filter((u) => u.rol === "MECANICO");
+  const clientes = usuarios.filter((u) => u.rol === "CLIENTE");
+  const lista = [];
+  for (let i = 0; i < 54; i++) {
+    const dias = (i % 41) - 20; // de 20 días atrás a 20 días adelante
+    const [servicio, precio, duracion] = SERVICIOS_RESERVA[i % SERVICIOS_RESERVA.length];
+    const horaInicio = HORAS_RESERVA[(i * 3) % HORAS_RESERVA.length];
+    const mecanico = mecanicos[(i * 7) % mecanicos.length];
+    const pasada = dias < 0;
+    const estado =
+      i % 9 === 4 ? "CANCELADA" : i % 11 === 7 ? "RECHAZADA" : pasada || i % 3 === 0 ? "CONFIRMADA" : "PENDIENTE";
+    lista.push({
+      idCita: 500 + i,
+      ticket: `AS-2026-${String(200 + i).padStart(5, "0")}`,
+      fecha: fechaRelativa(dias),
+      horaInicio,
+      horaFin: sumarMinutos(horaInicio, duracion),
+      estado,
+      servicio,
+      precio,
+      cliente: clientes[(i * 5) % clientes.length].nombre,
+      placa: PLACAS[i % PLACAS.length],
+      idMecanico: mecanico.id,
+      mecanico: mecanico.nombre,
+    });
+  }
+  return lista;
+})();
+
+export async function listarReservas({ desde, hasta, estado, idMecanico, q, pagina, tamano }) {
+  await esperar();
+  const texto = sinTildes(q.trim().toLowerCase());
+  const filtradas = reservasPrueba
+    .filter((r) => (!desde || r.fecha >= desde) && (!hasta || r.fecha <= hasta))
+    .filter((r) => !estado || r.estado === estado)
+    .filter((r) => !idMecanico || r.idMecanico === Number(idMecanico))
+    .filter((r) => !texto || sinTildes(`${r.ticket} ${r.cliente} ${r.placa}`.toLowerCase()).includes(texto))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio));
+  return {
+    contenido: filtradas.slice(pagina * tamano, pagina * tamano + tamano).map((r) => ({ ...r })),
+    pagina,
+    tamano,
+    totalElementos: filtradas.length,
+    totalPaginas: Math.max(1, Math.ceil(filtradas.length / tamano)),
+  };
+}
