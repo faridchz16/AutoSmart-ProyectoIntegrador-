@@ -1,0 +1,187 @@
+/* ===== Detalle de la cita (T35.2) ===== */
+
+.dc { display: grid; gap: 16px; }
+
+.dc-cabeza {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f4f8ff;
+}
+
+.dc-cabeza-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+.dc-ticket {
+  color: #5b6b88;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.dc-cabeza h3 {
+  margin: 2px 0 0;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.15rem;
+  color: #0b1b3a;
+}
+
+.dc-cuando {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 0;
+  color: #3b4a66;
+  font-size: 0.9rem;
+}
+
+.dc-cuando > span:last-child { font-weight: 800; color: #0b1b3a; font-variant-numeric: tabular-nums; }
+.dc-fecha::first-letter { text-transform: uppercase; }
+
+.dc-nota {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.dc-secciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.dc-seccion {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #e3e9f5;
+  border-radius: 14px;
+}
+
+.dc-seccion h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 2px;
+  color: #7a8aa6;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dc-valor { margin: 0; color: #0b1b3a; font-weight: 700; }
+.dc-sin { margin: 0; color: #9aa7bf; font-size: 0.82rem; }
+
+.dc-contacto { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.dc-tel,
+.dc-wsp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 9px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+
+.dc-tel { background: #e6f0ff; color: #1150e8; font-variant-numeric: tabular-nums; }
+.dc-tel:hover { background: #d6e4ff; }
+.dc-wsp { background: #dcfce7; color: #15803d; }
+.dc-wsp:hover { background: #bbf7d0; }
+.dc-tel:focus-visible, .dc-wsp:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+.dc-placa { justify-self: start; font-size: 0.9rem; padding: 3px 9px; }
+
+.dc-datos { display: grid; gap: 6px; margin: 2px 0 0; }
+.dc-datos div { display: flex; justify-content: space-between; gap: 10px; font-size: 0.86rem; }
+.dc-datos dt { color: #7a8aa6; }
+.dc-datos dd { margin: 0; color: #0b1b3a; font-weight: 700; text-align: right; }
+
+.dc-precio { grid-column: 1 / -1; }
+
+.dc-monto {
+  margin: 0;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0b1b3a;
+  font-variant-numeric: tabular-nums;
+}
+
+.dc-error {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.9rem;
+}
+
+.dc-error p { margin: 0; }
+
+/* ---------- Tarjetas que abren el detalle ---------- */
+button.ag-cita {
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.ag-cita:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+.ch-cita[data-abrible] { position: relative; cursor: pointer; }
+.ch-cita[data-abrible]:hover { border-color: #b9cdf5; }
+
+.ch-ver {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ch-cita-pie .ch-ver { margin-left: auto; }
+.ch-etiqueta + .ch-ver { margin-left: 0; }
+.ch-ver:hover { text-decoration: underline; }
+.ch-ver:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; border-radius: 6px; }
+
+.ch-foco-ver {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 7px 12px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ch-foco:not(.en-curso) .ch-foco-ver { color: #1150e8; border-color: #b9cdf5; }
+.ch-foco-ver:hover { background: rgba(255, 255, 255, 0.15); }
+.ch-foco:not(.en-curso) .ch-foco-ver:hover { background: #f1f6ff; }
+.ch-foco-ver:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+@media (max-width: 560px) {
+  .dc-secciones { grid-template-columns: 1fr; }
+}

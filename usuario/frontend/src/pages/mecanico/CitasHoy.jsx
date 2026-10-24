@@ -5,13 +5,14 @@ import { listarBloqueos, hoyLima, horaLima, aFecha, diaSemanaDe } from "../../se
 import { listarHorarios, duracionMinutos, formatoHoras } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
+import DetalleCita from "./DetalleCita";
 import "./CitasHoy.css";
 
 /* T34.1 – Citas de hoy: las citas del día ordenadas por hora, con la cita en curso
    (o la siguiente) destacada y una marca de la hora actual.
    Usa GET /mechanics/me/appointments sin parámetros (el backend devuelve las de hoy, hora de Lima).
    Se actualiza sola cada 2 minutos y al volver a la pestaña.
-   Más adelante: detalle de la cita (T35.2) y aceptar / rechazar (T36.2). */
+   T35.2: al hacer clic en una cita se abre su detalle. Más adelante: aceptar / rechazar (T36.2). */
 
 const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
 const CADA_RELOJ = 30 * 1000;
@@ -39,7 +40,7 @@ const IconoPersona = () => (
 );
 
 /* ---------- Tarjeta destacada: cita en curso, la siguiente o día terminado ---------- */
-function Foco({ enCurso, siguiente, ahora, total }) {
+function Foco({ enCurso, siguiente, ahora, total, alAbrir }) {
   if (enCurso) {
     const duracion = duracionMinutos(enCurso.horaInicio, enCurso.horaFin);
     const pasados = duracionMinutos(enCurso.horaInicio, ahora);
@@ -72,6 +73,9 @@ function Foco({ enCurso, siguiente, ahora, total }) {
             Después: <strong>{siguiente.horaInicio}</strong> · {siguiente.servicio}
           </p>
         )}
+        <button type="button" className="ch-foco-ver" onClick={() => alAbrir(enCurso)}>
+          Ver detalle
+        </button>
       </section>
     );
   }
@@ -90,6 +94,9 @@ function Foco({ enCurso, siguiente, ahora, total }) {
           <span>{siguiente.cliente}</span>
           <span className="ag-placa">{siguiente.placa}</span>
         </p>
+        <button type="button" className="ch-foco-ver" onClick={() => alAbrir(siguiente)}>
+          Ver detalle
+        </button>
       </section>
     );
   }
@@ -161,6 +168,7 @@ function CitasHoy() {
     actualizado: "",
   });
   const [verTodas, setVerTodas] = useState(false);
+  const [abierta, setAbierta] = useState(null);
 
   const { hoy, ahora } = reloj;
   const clave = `${hoy}|${recarga}`;
@@ -304,7 +312,7 @@ function CitasHoy() {
             </div>
           )}
 
-          {activas.length > 0 && <Foco enCurso={enCurso} siguiente={siguiente} ahora={ahora} total={activas.length} />}
+          {activas.length > 0 && <Foco enCurso={enCurso} siguiente={siguiente} ahora={ahora} total={activas.length} alAbrir={setAbierta} />}
 
           {visibles.length === 0 ? (
             <Vacio bloqueado={bloqueado} sinHorario={sinHorario} ocultas={ocultas} hoy={hoy} />
@@ -328,7 +336,12 @@ function CitasHoy() {
                         <span>{c.horaFin}</span>
                       </div>
                       <span className="ch-punto" aria-hidden="true" />
-                      <article className="ch-cita" aria-label={`${c.horaInicio} ${c.servicio}, ${c.cliente}`}>
+                      <article
+                        className="ch-cita"
+                        data-abrible
+                        onClick={() => setAbierta(c)}
+                        aria-label={`${c.horaInicio} ${c.servicio}, ${c.cliente}`}
+                      >
                         <div className="ch-cita-cab">
                           <strong>{c.servicio}</strong>
                           <span className={`insignia-estado est-${c.estado}`}>{ESTADOS_CITA[c.estado] ?? c.estado}</span>
@@ -343,6 +356,17 @@ function CitasHoy() {
                           {c.ticket && <span className="ch-ticket">Ticket {c.ticket}</span>}
                           {c === enCurso && <span className="ch-etiqueta ahora">En curso</span>}
                           {c === siguiente && <span className="ch-etiqueta">Siguiente</span>}
+                          <button
+                            type="button"
+                            className="ch-ver"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAbierta(c);
+                            }}
+                            aria-label={`Ver detalle: ${c.horaInicio} ${c.servicio}`}
+                          >
+                            Ver detalle
+                          </button>
                         </div>
                       </article>
                     </li>
@@ -354,6 +378,8 @@ function CitasHoy() {
           )}
         </>
       )}
+
+      <DetalleCita cita={abierta} alCerrar={() => setAbierta(null)} />
     </section>
   );
 }

@@ -303,3 +303,35 @@ export async function guardarPerfilMecanico({ aniosExperiencia, especialidades }
   };
   return obtenerPerfilMecanico();
 }
+
+/* ---------- Detalle de una cita (vehículo, teléfono y precio de ejemplo) ---------- */
+
+const VEHICULOS = [
+  ["Toyota", "Yaris", 2019, 58200],
+  ["Hyundai", "Accent", 2021, 31450],
+  ["Kia", "Rio", 2018, 74900],
+  ["Nissan", "Sentra", 2020, 46300],
+  ["Chevrolet", "Sail", 2017, 98120],
+  ["Suzuki", "Swift", 2022, 18750],
+];
+const PRECIOS = [90, 120, 80, 70, 150, 220, 95, 80, 110, 30];
+
+export async function obtenerCita(id) {
+  await esperar(400);
+  const i = citasPrueba.findIndex((c) => c.idCita === Number(id));
+  if (i === -1) throw new Error("Cita no encontrada");
+  const c = citasPrueba[i];
+  const [marca, modelo, anio, kilometraje] = VEHICULOS[i % VEHICULOS.length];
+  const [h1, m1] = c.horaInicio.split(":").map(Number);
+  const [h2, m2] = c.horaFin.split(":").map(Number);
+  return {
+    ...c,
+    precio: PRECIOS[i % PRECIOS.length],
+    duracionMinutos: h2 * 60 + m2 - (h1 * 60 + m1),
+    telefonoCliente: i % 4 === 3 ? null : `9${String(87654321 - i * 1111111).padStart(8, "0")}`,
+    marca,
+    modelo,
+    anio,
+    kilometraje,
+  };
+}

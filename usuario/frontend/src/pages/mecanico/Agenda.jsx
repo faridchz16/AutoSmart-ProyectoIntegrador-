@@ -4,10 +4,12 @@ import { listarBloqueos, hoyLima, isoDe, aFecha } from "../../services/bloqueosS
 import { listarHorarios } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
+import DetalleCita from "./DetalleCita";
 
 /* T23.2 – Agenda semanal del mecánico: citas de lunes a domingo,
    con navegación entre semanas (usa /mechanics/me/appointments, T23.1).
-   También marca los días bloqueados y los días sin horario de atención. */
+   También marca los días bloqueados y los días sin horario de atención.
+   T35.2: al hacer clic en una cita se abre su detalle. */
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
@@ -45,6 +47,7 @@ function Agenda() {
   const [lunes, setLunes] = useState(() => lunesDe(hoy));
   const [verTodas, setVerTodas] = useState(false);
   const [recarga, setRecarga] = useState(0);
+  const [abierta, setAbierta] = useState(null);
   const [resultado, setResultado] = useState({ clave: null, citas: [], bloqueadas: [], laborables: null, error: "" });
 
   const domingo = sumarDias(lunes, 6);
@@ -154,7 +157,13 @@ function Agenda() {
                       {bloqueado && <p className="ag-marca bloqueado">Día bloqueado</p>}
                       {!bloqueado && sinHorario && delDia.length === 0 && <p className="ag-marca">Sin horario</p>}
                       {delDia.map((c) => (
-                        <div key={c.id} className={`ag-cita est-${c.estado}`} title={`Ticket ${c.ticket}`}>
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`ag-cita est-${c.estado}`}
+                          title={`Ticket ${c.ticket}`}
+                          onClick={() => setAbierta(c)}
+                        >
                           <span className="ag-cita-hora">
                             {c.horaInicio} – {c.horaFin}
                           </span>
@@ -164,7 +173,7 @@ function Agenda() {
                             <span className="ag-placa">{c.placa}</span>
                             <span className={`insignia-estado est-${c.estado}`}>{ESTADOS_CITA[c.estado] ?? c.estado}</span>
                           </span>
-                        </div>
+                        </button>
                       ))}
                       {delDia.length === 0 && !bloqueado && !sinHorario && <p className="ag-libre">Sin citas</p>}
                     </>
@@ -181,6 +190,8 @@ function Agenda() {
           No tienes citas esta semana. Las reservas que hagan los clientes desde la app aparecerán aquí.
         </p>
       )}
+
+      <DetalleCita cita={abierta} alCerrar={() => setAbierta(null)} />
     </section>
   );
 }
