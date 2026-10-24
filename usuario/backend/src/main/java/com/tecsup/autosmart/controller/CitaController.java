@@ -52,4 +52,9 @@ public class CitaController {
                                                        Authentication auth) {
         return ResponseEntity.ok(citaService.rechazar(auth.getName(), id, request.getMotivo()));
     }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<CitaCreadaResponse> cancelar(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(citaService.cancelar(auth.getName(), id));
+    }
 }

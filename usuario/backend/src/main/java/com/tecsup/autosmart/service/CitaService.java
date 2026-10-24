@@ -17,12 +17,14 @@ import com.tecsup.autosmart.repository.UsuarioRepository;
 import com.tecsup.autosmart.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tecsup.autosmart.exception.BadRequestException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.UUID;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 public class CitaService {
@@ -88,7 +90,7 @@ public class CitaService {
         cita.setPrecio(servicio.getPrecioBase());
         cita = citaRepository.saveAndFlush(cita);
 
-        // 4) Ticket AS-AAAA-NNNNN a partir del id (nunca se repite)
+
         int anio = LocalDate.now(LIMA).getYear();
         cita.setTicket(String.format("AS-%d-%05d", anio, cita.getIdCita()));
         cita = citaRepository.save(cita);
@@ -137,6 +139,27 @@ public class CitaService {
         return cita;
     }
 
+    @Transactional
+    public CitaCreadaResponse cancelar(String correoCliente, Long idCita) {
+        Cita cita = citaRepository.buscarDetalle(idCita)
+                .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
+
+        if (!cita.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
+            throw new ForbiddenException("Solo el cliente que reservo puede cancelar esta cita");
+        }
+        if (cita.getEstado() != EstadoCita.PENDIENTE && cita.getEstado() != EstadoCita.CONFIRMADA) {
+            throw new ConflictException("La cita ya no esta activa (estado: " + cita.getEstado() + ")");
+        }
+
+        LocalDateTime inicio = LocalDateTime.of(cita.getFecha(), cita.getHoraInicio());
+        if (LocalDateTime.now(LIMA).plusHours(2).isAfter(inicio)) {
+            throw new BadRequestException("Solo se puede cancelar con al menos 2 horas de anticipacion");
+        }
+
+        cita.setEstado(EstadoCita.CANCELADA);
+        return aRespuesta(citaRepository.save(cita));
+    }
+
     @Transactional(readOnly = true)
     public List<CitaCreadaResponse> misCitas(String correoCliente, boolean futuras) {
         Usuario cliente = usuarioRepository.findByCorreo(correoCliente)
@@ -174,6 +197,7 @@ public class CitaService {
             throw new ForbiddenException("Solo el mecanico asignado puede ver esta cita");
         }
         return mapear(cita);
+
     }
 
     private CitaDetalleResponse mapear(Cita c) {
