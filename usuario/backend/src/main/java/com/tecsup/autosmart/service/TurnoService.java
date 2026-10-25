@@ -4,6 +4,7 @@ import com.tecsup.autosmart.dto.TurnoResponse;
 import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.NotFoundException;
 import com.tecsup.autosmart.model.Cita;
+import com.tecsup.autosmart.model.ConfiguracionTaller;
 import com.tecsup.autosmart.model.Especialidad;
 import com.tecsup.autosmart.model.EstadoCita;
 import com.tecsup.autosmart.model.HorarioMecanico;
@@ -34,17 +35,20 @@ public class TurnoService {
     private final HorarioMecanicoRepository horarioRepository;
     private final FechaBloqueadaRepository fechaBloqueadaRepository;
     private final CitaRepository citaRepository;
+    private final ConfiguracionTallerService tallerService;
 
     public TurnoService(ServicioRepository servicioRepository,
                         PerfilMecanicoRepository perfilRepository,
                         HorarioMecanicoRepository horarioRepository,
                         FechaBloqueadaRepository fechaBloqueadaRepository,
-                        CitaRepository citaRepository) {
+                        CitaRepository citaRepository,
+                        ConfiguracionTallerService tallerService) {
         this.servicioRepository = servicioRepository;
         this.perfilRepository = perfilRepository;
         this.horarioRepository = horarioRepository;
         this.fechaBloqueadaRepository = fechaBloqueadaRepository;
         this.citaRepository = citaRepository;
+        this.tallerService = tallerService;
     }
 
     // Turnos libres de un mecanico para un servicio en una fecha
@@ -66,12 +70,19 @@ public class TurnoService {
                 throw new BadRequestException("El mecanico no tiene la especialidad requerida por el servicio");
             }
         }
+
         LocalDate hoy = LocalDate.now(LIMA);
         if (fecha.isBefore(hoy)) {
             throw new BadRequestException("La fecha no puede ser pasada");
         }
 
         Usuario mecanico = perfil.getUsuario();
+
+        // Horario del taller (T40.1): feriados y dias cerrados no tienen turnos
+        ConfiguracionTaller taller = tallerService.obtenerDia(fecha.getDayOfWeek().getValue());
+        if (tallerService.esFeriado(fecha) || !Boolean.TRUE.equals(taller.getAbierto())) {
+            return List.of();
+        }
 
         if (fechaBloqueadaRepository.existsByMecanicoAndFecha(mecanico, fecha)) {
             return List.of();
@@ -93,9 +104,11 @@ public class TurnoService {
                 final LocalTime ini = inicio;
                 final LocalTime fin = inicio.plusMinutes(duracion);
                 boolean yaPaso = fecha.equals(hoy) && !ini.isAfter(ahora);
+                boolean dentroDelTaller = !ini.isBefore(taller.getHoraApertura())
+                        && !fin.isAfter(taller.getHoraCierre());
                 boolean seCruza = ocupadas.stream()
                         .anyMatch(c -> ini.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()));
-                if (!yaPaso && !seCruza) {
+                if (!yaPaso && dentroDelTaller && !seCruza) {
                     libres.add(new TurnoResponse(ini, fin));
                 }
                 inicio = fin;
@@ -104,8 +117,15 @@ public class TurnoService {
         return libres;
     }
 
+    // Un mecanico esta libre si el taller atiende, trabaja ese dia en ese rango,
+    // la fecha no esta bloqueada y no tiene otra cita activa que se cruce
     @Transactional(readOnly = true)
     public boolean mecanicoLibre(Usuario mecanico, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        ConfiguracionTaller taller = tallerService.obtenerDia(fecha.getDayOfWeek().getValue());
+        if (tallerService.esFeriado(fecha) || !Boolean.TRUE.equals(taller.getAbierto())
+                || inicio.isBefore(taller.getHoraApertura()) || fin.isAfter(taller.getHoraCierre())) {
+            return false;
+        }
         if (fechaBloqueadaRepository.existsByMecanicoAndFecha(mecanico, fecha)) {
             return false;
         }
