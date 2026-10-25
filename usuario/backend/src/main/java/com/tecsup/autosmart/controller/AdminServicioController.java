@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/services")
@@ -35,5 +36,10 @@ public class AdminServicioController {
     public ResponseEntity<ServicioResponse> cambiarEstado(@PathVariable Long id,
                                                           @Valid @RequestBody EstadoRequest request) {
         return ResponseEntity.ok(servicioService.cambiarEstado(id, request.getActivo()));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ServicioResponse>> listar() {
+        return ResponseEntity.ok(servicioService.listarTodos());
     }
 }
