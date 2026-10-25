@@ -133,3 +133,17 @@ CREATE TABLE IF NOT EXISTS fecha_bloqueada (
     UNIQUE KEY uk_mecanico_fecha (id_mecanico, fecha),
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
 );
+-- ---------- Horario del taller y feriados (T40.1) ----------
+
+CREATE TABLE IF NOT EXISTS configuracion_taller (
+    dia_semana INT PRIMARY KEY,           -- 1 = lunes ... 7 = domingo
+    abierto TINYINT(1) NOT NULL,
+    hora_apertura TIME NOT NULL,
+    hora_cierre TIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS feriados (
+    id_feriado INT AUTO_INCREMENT PRIMARY KEY,
+    fecha DATE UNIQUE NOT NULL,
+    descripcion VARCHAR(100) NOT NULL
+);
