@@ -66,7 +66,6 @@ public class TurnoService {
                 throw new BadRequestException("El mecanico no tiene la especialidad requerida por el servicio");
             }
         }
-
         LocalDate hoy = LocalDate.now(LIMA);
         if (fecha.isBefore(hoy)) {
             throw new BadRequestException("La fecha no puede ser pasada");
@@ -103,5 +102,23 @@ public class TurnoService {
             }
         }
         return libres;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean mecanicoLibre(Usuario mecanico, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        if (fechaBloqueadaRepository.existsByMecanicoAndFecha(mecanico, fecha)) {
+            return false;
+        }
+        boolean trabaja = horarioRepository
+                .findByMecanicoAndDiaSemanaOrderByHoraInicioAsc(mecanico, fecha.getDayOfWeek().getValue())
+                .stream()
+                .anyMatch(h -> !h.getHoraInicio().isAfter(inicio) && !h.getHoraFin().isBefore(fin));
+        if (!trabaja) {
+            return false;
+        }
+        return citaRepository.buscarActivasDelDia(
+                        mecanico, fecha, List.of(EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA))
+                .stream()
+                .noneMatch(c -> inicio.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()));
     }
 }
