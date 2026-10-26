@@ -63,4 +63,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
                            @Param("idMecanico") Integer idMecanico,
                            @Param("q") String q,
                            Pageable pageable);
+
+    @Query(value = "SELECT id_mecanico FROM citas WHERE id_cita = :id FOR UPDATE", nativeQuery = true)
+    Optional<Integer> bloquearMecanicoDeCita(@Param("id") Long id);
 }
