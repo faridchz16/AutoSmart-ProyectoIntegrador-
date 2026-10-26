@@ -147,3 +147,17 @@ CREATE TABLE IF NOT EXISTS feriados (
     fecha DATE UNIQUE NOT NULL,
     descripcion VARCHAR(100) NOT NULL
 );
+
+-- ---------- Bloqueo temporal de turnos (T33.1) ----------
+
+CREATE TABLE IF NOT EXISTS bloqueos_turno (
+    id_bloqueo BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente INT NOT NULL,
+    id_mecanico INT NOT NULL,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    expira_en DATETIME NOT NULL,   -- vence 10 minutos despues de crearse
+    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario),
+    FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
+);
