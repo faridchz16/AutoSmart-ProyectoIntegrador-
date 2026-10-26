@@ -18,6 +18,7 @@ import com.tecsup.autosmart.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tecsup.autosmart.exception.BadRequestException;
+import com.tecsup.autosmart.dto.ReprogramarRequest;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -157,6 +158,50 @@ public class CitaService {
         }
 
         cita.setEstado(EstadoCita.CANCELADA);
+        return aRespuesta(citaRepository.save(cita));
+    }
+
+    @Transactional
+    public CitaCreadaResponse reprogramar(String correoCliente, Long idCita, ReprogramarRequest req) {
+
+        Integer idMecanico = citaRepository.bloquearMecanicoDeCita(idCita)
+                .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
+        usuarioRepository.buscarParaReserva(idMecanico)
+                .orElseThrow(() -> new NotFoundException("Mecanico no encontrado"));
+
+        Cita cita = citaRepository.buscarDetalle(idCita)
+                .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
+
+        if (!cita.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
+            throw new ForbiddenException("Solo el cliente que reservo puede reprogramar esta cita");
+        }
+        if (cita.getEstado() != EstadoCita.PENDIENTE && cita.getEstado() != EstadoCita.CONFIRMADA) {
+            throw new ConflictException("La cita ya no esta activa (estado: " + cita.getEstado() + ")");
+        }
+
+
+        LocalDateTime inicioActual = LocalDateTime.of(cita.getFecha(), cita.getHoraInicio());
+        if (LocalDateTime.now(LIMA).plusHours(24).isAfter(inicioActual)) {
+            throw new BadRequestException("Solo se puede reprogramar con al menos 24 horas de anticipacion");
+        }
+
+        if (cita.getFecha().equals(req.getFecha()) && cita.getHoraInicio().equals(req.getHoraInicio())) {
+            throw new ConflictException("La cita ya esta en ese turno");
+        }
+
+
+        boolean libre = turnoService
+                .turnosLibres(cita.getServicio().getIdServicio(), idMecanico, req.getFecha())
+                .stream()
+                .anyMatch(t -> t.getHoraInicio().equals(req.getHoraInicio()));
+        if (!libre) {
+            throw new ConflictException("El nuevo turno no esta disponible");
+        }
+
+        cita.setFecha(req.getFecha());
+        cita.setHoraInicio(req.getHoraInicio());
+        cita.setHoraFin(req.getHoraInicio().plusMinutes(cita.getServicio().getDuracionMinutos()));
+        cita.setEstado(EstadoCita.PENDIENTE);
         return aRespuesta(citaRepository.save(cita));
     }
 
