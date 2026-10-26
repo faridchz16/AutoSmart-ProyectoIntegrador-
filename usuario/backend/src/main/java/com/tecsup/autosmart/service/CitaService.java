@@ -3,6 +3,8 @@ package com.tecsup.autosmart.service;
 import com.tecsup.autosmart.dto.CitaCreadaResponse;
 import com.tecsup.autosmart.dto.CitaDetalleResponse;
 import com.tecsup.autosmart.dto.CitaRequest;
+import com.tecsup.autosmart.dto.ReprogramarRequest;
+import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.NotFoundException;
@@ -11,21 +13,20 @@ import com.tecsup.autosmart.model.EstadoCita;
 import com.tecsup.autosmart.model.Servicio;
 import com.tecsup.autosmart.model.Usuario;
 import com.tecsup.autosmart.model.Vehiculo;
+import com.tecsup.autosmart.repository.BloqueoTurnoRepository;
 import com.tecsup.autosmart.repository.CitaRepository;
 import com.tecsup.autosmart.repository.ServicioRepository;
 import com.tecsup.autosmart.repository.UsuarioRepository;
 import com.tecsup.autosmart.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.tecsup.autosmart.exception.BadRequestException;
-import com.tecsup.autosmart.dto.ReprogramarRequest;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.UUID;
 import java.util.List;
-import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 public class CitaService {
@@ -37,22 +38,26 @@ public class CitaService {
     private final ServicioRepository servicioRepository;
     private final VehiculoRepository vehiculoRepository;
     private final TurnoService turnoService;
+    private final BloqueoTurnoRepository bloqueoRepository;
 
     public CitaService(CitaRepository citaRepository,
                        UsuarioRepository usuarioRepository,
                        ServicioRepository servicioRepository,
                        VehiculoRepository vehiculoRepository,
-                       TurnoService turnoService) {
+                       TurnoService turnoService,
+                       BloqueoTurnoRepository bloqueoRepository) {
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.servicioRepository = servicioRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.turnoService = turnoService;
+        this.bloqueoRepository = bloqueoRepository;
     }
 
     @Transactional
     public CitaCreadaResponse reservar(String correoCliente, CitaRequest req) {
 
+        // Lo primero es bloquear la fila del mecanico: serializa las reservas de ese mecanico
         Usuario mecanico = usuarioRepository.buscarParaReserva(req.getIdMecanico())
                 .orElseThrow(() -> new NotFoundException("Mecanico no encontrado"));
 
@@ -69,7 +74,9 @@ public class CitaService {
             throw new ForbiddenException("El vehiculo no te pertenece");
         }
 
-        boolean libre = turnoService.turnosLibres(req.getIdServicio(), req.getIdMecanico(), req.getFecha())
+        // El bloqueo propio del cliente no le estorba; el de otros clientes si
+        boolean libre = turnoService.turnosLibres(req.getIdServicio(), req.getIdMecanico(), req.getFecha(),
+                        cliente.getIdUsuario())
                 .stream()
                 .anyMatch(t -> t.getHoraInicio().equals(req.getHoraInicio()));
         if (!libre) {
@@ -91,10 +98,13 @@ public class CitaService {
         cita.setPrecio(servicio.getPrecioBase());
         cita = citaRepository.saveAndFlush(cita);
 
-
+        // Ticket definitivo a partir del id generado
         int anio = LocalDate.now(LIMA).getYear();
         cita.setTicket(String.format("AS-%d-%05d", anio, cita.getIdCita()));
         cita = citaRepository.save(cita);
+
+        // La reserva consume el bloqueo temporal del cliente (T33.1)
+        bloqueoRepository.liberarDelCliente(cliente);
 
         CitaCreadaResponse res = new CitaCreadaResponse();
         res.setIdCita(cita.getIdCita());
@@ -110,14 +120,12 @@ public class CitaService {
         return res;
     }
 
-
     @Transactional
     public CitaCreadaResponse aceptar(String correoMecanico, Long idCita) {
         Cita cita = citaPendienteDelMecanico(correoMecanico, idCita);
         cita.setEstado(EstadoCita.CONFIRMADA);
         return aRespuesta(citaRepository.save(cita));
     }
-
 
     @Transactional
     public CitaCreadaResponse rechazar(String correoMecanico, Long idCita, String motivo) {
@@ -163,7 +171,7 @@ public class CitaService {
 
     @Transactional
     public CitaCreadaResponse reprogramar(String correoCliente, Long idCita, ReprogramarRequest req) {
-
+        
         Integer idMecanico = citaRepository.bloquearMecanicoDeCita(idCita)
                 .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
         usuarioRepository.buscarParaReserva(idMecanico)
@@ -179,7 +187,6 @@ public class CitaService {
             throw new ConflictException("La cita ya no esta activa (estado: " + cita.getEstado() + ")");
         }
 
-
         LocalDateTime inicioActual = LocalDateTime.of(cita.getFecha(), cita.getHoraInicio());
         if (LocalDateTime.now(LIMA).plusHours(24).isAfter(inicioActual)) {
             throw new BadRequestException("Solo se puede reprogramar con al menos 24 horas de anticipacion");
@@ -189,9 +196,9 @@ public class CitaService {
             throw new ConflictException("La cita ya esta en ese turno");
         }
 
-
         boolean libre = turnoService
-                .turnosLibres(cita.getServicio().getIdServicio(), idMecanico, req.getFecha())
+                .turnosLibres(cita.getServicio().getIdServicio(), idMecanico, req.getFecha(),
+                        cita.getCliente().getIdUsuario())
                 .stream()
                 .anyMatch(t -> t.getHoraInicio().equals(req.getHoraInicio()));
         if (!libre) {
@@ -242,7 +249,6 @@ public class CitaService {
             throw new ForbiddenException("Solo el mecanico asignado puede ver esta cita");
         }
         return mapear(cita);
-
     }
 
     private CitaDetalleResponse mapear(Cita c) {

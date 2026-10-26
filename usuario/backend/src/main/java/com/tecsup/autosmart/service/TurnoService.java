@@ -3,6 +3,7 @@ package com.tecsup.autosmart.service;
 import com.tecsup.autosmart.dto.TurnoResponse;
 import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.NotFoundException;
+import com.tecsup.autosmart.model.BloqueoTurno;
 import com.tecsup.autosmart.model.Cita;
 import com.tecsup.autosmart.model.ConfiguracionTaller;
 import com.tecsup.autosmart.model.Especialidad;
@@ -11,6 +12,7 @@ import com.tecsup.autosmart.model.HorarioMecanico;
 import com.tecsup.autosmart.model.PerfilMecanico;
 import com.tecsup.autosmart.model.Servicio;
 import com.tecsup.autosmart.model.Usuario;
+import com.tecsup.autosmart.repository.BloqueoTurnoRepository;
 import com.tecsup.autosmart.repository.CitaRepository;
 import com.tecsup.autosmart.repository.FechaBloqueadaRepository;
 import com.tecsup.autosmart.repository.HorarioMecanicoRepository;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -36,24 +39,32 @@ public class TurnoService {
     private final FechaBloqueadaRepository fechaBloqueadaRepository;
     private final CitaRepository citaRepository;
     private final ConfiguracionTallerService tallerService;
+    private final BloqueoTurnoRepository bloqueoRepository;
 
     public TurnoService(ServicioRepository servicioRepository,
                         PerfilMecanicoRepository perfilRepository,
                         HorarioMecanicoRepository horarioRepository,
                         FechaBloqueadaRepository fechaBloqueadaRepository,
                         CitaRepository citaRepository,
-                        ConfiguracionTallerService tallerService) {
+                        ConfiguracionTallerService tallerService,
+                        BloqueoTurnoRepository bloqueoRepository) {
         this.servicioRepository = servicioRepository;
         this.perfilRepository = perfilRepository;
         this.horarioRepository = horarioRepository;
         this.fechaBloqueadaRepository = fechaBloqueadaRepository;
         this.citaRepository = citaRepository;
         this.tallerService = tallerService;
+        this.bloqueoRepository = bloqueoRepository;
     }
 
-    // Turnos libres de un mecanico para un servicio en una fecha
     @Transactional(readOnly = true)
     public List<TurnoResponse> turnosLibres(Long idServicio, Integer idMecanico, LocalDate fecha) {
+        return turnosLibres(idServicio, idMecanico, fecha, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TurnoResponse> turnosLibres(Long idServicio, Integer idMecanico, LocalDate fecha,
+                                            Integer idClienteQueConsulta) {
         Servicio servicio = servicioRepository.findByIdServicioAndActivoTrue(idServicio)
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
@@ -78,7 +89,6 @@ public class TurnoService {
 
         Usuario mecanico = perfil.getUsuario();
 
-        // Horario del taller (T40.1): feriados y dias cerrados no tienen turnos
         ConfiguracionTaller taller = tallerService.obtenerDia(fecha.getDayOfWeek().getValue());
         if (tallerService.esFeriado(fecha) || !Boolean.TRUE.equals(taller.getAbierto())) {
             return List.of();
@@ -90,6 +100,10 @@ public class TurnoService {
 
         List<Cita> ocupadas = citaRepository.buscarActivasDelDia(
                 mecanico, fecha, List.of(EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA));
+
+        int excluir = idClienteQueConsulta == null ? 0 : idClienteQueConsulta;
+        List<BloqueoTurno> bloqueos = bloqueoRepository.buscarVigentes(
+                mecanico, fecha, LocalDateTime.now(LIMA), excluir);
 
         LocalTime ahora = LocalTime.now(LIMA);
         int duracion = servicio.getDuracionMinutos();
@@ -107,7 +121,9 @@ public class TurnoService {
                 boolean dentroDelTaller = !ini.isBefore(taller.getHoraApertura())
                         && !fin.isAfter(taller.getHoraCierre());
                 boolean seCruza = ocupadas.stream()
-                        .anyMatch(c -> ini.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()));
+                        .anyMatch(c -> ini.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()))
+                        || bloqueos.stream()
+                        .anyMatch(b -> ini.isBefore(b.getHoraFin()) && fin.isAfter(b.getHoraInicio()));
                 if (!yaPaso && dentroDelTaller && !seCruza) {
                     libres.add(new TurnoResponse(ini, fin));
                 }
@@ -117,8 +133,6 @@ public class TurnoService {
         return libres;
     }
 
-    // Un mecanico esta libre si el taller atiende, trabaja ese dia en ese rango,
-    // la fecha no esta bloqueada y no tiene otra cita activa que se cruce
     @Transactional(readOnly = true)
     public boolean mecanicoLibre(Usuario mecanico, LocalDate fecha, LocalTime inicio, LocalTime fin) {
         ConfiguracionTaller taller = tallerService.obtenerDia(fecha.getDayOfWeek().getValue());
@@ -136,9 +150,15 @@ public class TurnoService {
         if (!trabaja) {
             return false;
         }
-        return citaRepository.buscarActivasDelDia(
+        boolean citaCruzada = citaRepository.buscarActivasDelDia(
                         mecanico, fecha, List.of(EstadoCita.PENDIENTE, EstadoCita.CONFIRMADA))
                 .stream()
-                .noneMatch(c -> inicio.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()));
+                .anyMatch(c -> inicio.isBefore(c.getHoraFin()) && fin.isAfter(c.getHoraInicio()));
+        if (citaCruzada) {
+            return false;
+        }
+        return bloqueoRepository.buscarVigentes(mecanico, fecha, LocalDateTime.now(LIMA), 0)
+                .stream()
+                .noneMatch(b -> inicio.isBefore(b.getHoraFin()) && fin.isAfter(b.getHoraInicio()));
     }
 }
