@@ -101,6 +101,14 @@ public class ServicioService {
         return servicios.stream().map(this::mapearADTO).collect(Collectors.toList());
     }
 
+    // Catalogo para el administrador: activos e inactivos
+    @Transactional(readOnly = true)
+    public List<ServicioResponse> listarTodos() {
+        return servicioRepository.findAllByOrderByNombreAsc().stream()
+                .map(this::mapearADTO)
+                .collect(Collectors.toList());
+    }
+
     // Detalle: un servicio desactivado se trata como inexistente para el usuario
     @Transactional(readOnly = true)
     public ServicioResponse obtenerActivo(Long id) {

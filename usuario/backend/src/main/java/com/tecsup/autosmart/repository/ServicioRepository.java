@@ -16,4 +16,6 @@ public interface ServicioRepository extends JpaRepository<Servicio, Long> {
 
     List<Servicio> findByActivoTrueAndNombreContainingIgnoreCaseAndCategoriaOrderByNombreAsc(
             String nombre, CategoriaServicio categoria);
+
+    List<Servicio> findAllByOrderByNombreAsc();
 }

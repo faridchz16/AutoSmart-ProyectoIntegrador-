@@ -41,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/appointments/mine").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.PUT, "/appointments/*/accept", "/appointments/*/reject").hasRole("MECANICO")
                         .requestMatchers(HttpMethod.PUT, "/appointments/*/cancel").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.PUT, "/appointments/*/reschedule").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.POST, "/appointments/holds").hasRole("CLIENTE")
+                        .requestMatchers(HttpMethod.DELETE, "/appointments/holds/*").hasRole("CLIENTE")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(e -> e

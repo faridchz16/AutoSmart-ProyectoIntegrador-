@@ -11,6 +11,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import com.tecsup.autosmart.dto.RechazoRequest;
+import com.tecsup.autosmart.dto.ReprogramarRequest;
 
 @RestController
 @RequestMapping("/appointments")
@@ -56,5 +57,12 @@ public class CitaController {
     @PutMapping("/{id}/cancel")
     public ResponseEntity<CitaCreadaResponse> cancelar(@PathVariable Long id, Authentication auth) {
         return ResponseEntity.ok(citaService.cancelar(auth.getName(), id));
+    }
+
+    @PutMapping("/{id}/reschedule")
+    public ResponseEntity<CitaCreadaResponse> reprogramar(@PathVariable Long id,
+                                                          @Valid @RequestBody ReprogramarRequest request,
+                                                          Authentication auth) {
+        return ResponseEntity.ok(citaService.reprogramar(auth.getName(), id, request));
     }
 }
