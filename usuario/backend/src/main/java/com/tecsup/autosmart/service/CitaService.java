@@ -4,6 +4,7 @@ import com.tecsup.autosmart.dto.CitaCreadaResponse;
 import com.tecsup.autosmart.dto.CitaDetalleResponse;
 import com.tecsup.autosmart.dto.CitaRequest;
 import com.tecsup.autosmart.dto.ReprogramarRequest;
+import com.tecsup.autosmart.event.CitaReservadaEvent;
 import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.ForbiddenException;
@@ -18,6 +19,7 @@ import com.tecsup.autosmart.repository.CitaRepository;
 import com.tecsup.autosmart.repository.ServicioRepository;
 import com.tecsup.autosmart.repository.UsuarioRepository;
 import com.tecsup.autosmart.repository.VehiculoRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,19 +41,22 @@ public class CitaService {
     private final VehiculoRepository vehiculoRepository;
     private final TurnoService turnoService;
     private final BloqueoTurnoRepository bloqueoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CitaService(CitaRepository citaRepository,
                        UsuarioRepository usuarioRepository,
                        ServicioRepository servicioRepository,
                        VehiculoRepository vehiculoRepository,
                        TurnoService turnoService,
-                       BloqueoTurnoRepository bloqueoRepository) {
+                       BloqueoTurnoRepository bloqueoRepository,
+                       ApplicationEventPublisher eventPublisher) {
         this.citaRepository = citaRepository;
         this.usuarioRepository = usuarioRepository;
         this.servicioRepository = servicioRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.turnoService = turnoService;
         this.bloqueoRepository = bloqueoRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -74,7 +79,6 @@ public class CitaService {
             throw new ForbiddenException("El vehiculo no te pertenece");
         }
 
-        // El bloqueo propio del cliente no le estorba; el de otros clientes si
         boolean libre = turnoService.turnosLibres(req.getIdServicio(), req.getIdMecanico(), req.getFecha(),
                         cliente.getIdUsuario())
                 .stream()
@@ -98,12 +102,10 @@ public class CitaService {
         cita.setPrecio(servicio.getPrecioBase());
         cita = citaRepository.saveAndFlush(cita);
 
-        // Ticket definitivo a partir del id generado
         int anio = LocalDate.now(LIMA).getYear();
         cita.setTicket(String.format("AS-%d-%05d", anio, cita.getIdCita()));
         cita = citaRepository.save(cita);
 
-        // La reserva consume el bloqueo temporal del cliente (T33.1)
         bloqueoRepository.liberarDelCliente(cliente);
 
         CitaCreadaResponse res = new CitaCreadaResponse();
@@ -117,6 +119,13 @@ public class CitaService {
         res.setServicio(servicio.getNombre());
         res.setMecanico(mecanico.getNombre());
         res.setPlaca(vehiculo.getPlaca());
+
+
+        eventPublisher.publishEvent(new CitaReservadaEvent(
+                cliente.getCorreo(), cliente.getNombre(), cita.getTicket(), servicio.getNombre(),
+                mecanico.getNombre(), vehiculo.getPlaca(), res.getFecha(), res.getHoraInicio(),
+                res.getHoraFin(), cita.getPrecio()));
+
         return res;
     }
 
@@ -171,7 +180,8 @@ public class CitaService {
 
     @Transactional
     public CitaCreadaResponse reprogramar(String correoCliente, Long idCita, ReprogramarRequest req) {
-        
+
+        // Primero se bloquea la cita y luego al mecanico, para no chocar con otras reservas
         Integer idMecanico = citaRepository.bloquearMecanicoDeCita(idCita)
                 .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
         usuarioRepository.buscarParaReserva(idMecanico)
@@ -196,6 +206,7 @@ public class CitaService {
             throw new ConflictException("La cita ya esta en ese turno");
         }
 
+        // El bloqueo propio del cliente no le estorba (T33.1)
         boolean libre = turnoService
                 .turnosLibres(cita.getServicio().getIdServicio(), idMecanico, req.getFecha(),
                         cita.getCliente().getIdUsuario())
