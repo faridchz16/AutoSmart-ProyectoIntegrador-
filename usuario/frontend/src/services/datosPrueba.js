@@ -413,3 +413,48 @@ export async function listarReservas({ desde, hasta, estado, idMecanico, q, pagi
     totalPaginas: Math.max(1, Math.ceil(filtradas.length / tamano)),
   };
 }
+
+/* ---------- Reasignar una reserva (T39.2) ---------- */
+
+const ESPECIALIDADES_PRUEBA = ["Frenos", "Motor", "Suspensión", "Electricidad automotriz", "Mecánica general"];
+const seCruzan = (a, b) => a.fecha === b.fecha && a.horaInicio < b.horaFin && b.horaInicio < a.horaFin;
+
+function reservaReasignable(idCita) {
+  const reserva = reservasPrueba.find((r) => r.idCita === Number(idCita));
+  if (!reserva) throw new Error("Cita no encontrada");
+  if (["CANCELADA", "RECHAZADA"].includes(reserva.estado)) throw new Error("La cita ya esta cancelada o rechazada");
+  if (reserva.fecha < fechaRelativa(0)) throw new Error("La cita ya paso");
+  return reserva;
+}
+
+// Libres = mecánicos activos, distintos del actual, sin otra reserva activa que se cruce
+export async function listarMecanicosLibres(idCita) {
+  await esperar(400);
+  const reserva = reservaReasignable(idCita);
+  return usuarios
+    .filter((u) => u.rol === "MECANICO" && u.activo && u.id !== reserva.idMecanico)
+    .filter(
+      (u) =>
+        !reservasPrueba.some(
+          (r) => r.idMecanico === u.id && ["PENDIENTE", "CONFIRMADA"].includes(r.estado) && seCruzan(r, reserva)
+        )
+    )
+    .map((u, i) => ({
+      idUsuario: u.id,
+      nombre: u.nombre,
+      especialidades: [ESPECIALIDADES_PRUEBA[u.id % 5], ESPECIALIDADES_PRUEBA[(u.id + i + 2) % 5]].filter(
+        (e, j, lista) => lista.indexOf(e) === j
+      ),
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+export async function reasignarReserva(idCita, idMecanico) {
+  await esperar(450);
+  const reserva = reservaReasignable(idCita);
+  const nuevo = usuarios.find((u) => u.id === idMecanico && u.rol === "MECANICO");
+  if (!nuevo) throw new Error("Mecanico no encontrado");
+  if (nuevo.id === reserva.idMecanico) throw new Error("La cita ya esta asignada a ese mecanico");
+  Object.assign(reserva, { idMecanico: nuevo.id, mecanico: nuevo.nombre, estado: "PENDIENTE" });
+  return { ...reserva };
+}

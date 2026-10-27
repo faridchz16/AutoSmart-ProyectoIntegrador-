@@ -2,14 +2,18 @@ import { apiFetch } from "./api";
 import { listarUsuarios } from "./usuariosService";
 import * as prueba from "./datosPrueba";
 
-/* Reservas del taller para el administrador (T38.2).
-   Contrato propuesto a Farid para T38.1 (aún no está en main):
-     GET /admin/appointments?desde=&hasta=&estado=&idMecanico=&q=&page=&size=
+/* Reservas del taller para el administrador – backend de Farid (rama main):
+     GET /admin/appointments?desde=&hasta=&estado=&idMecanico=&q=&page=&size=      (T38.1)
        -> { contenido: [{ idCita, ticket, fecha, horaInicio, horaFin, estado, servicio, precio,
                           cliente, placa, idMecanico, mecanico }],
             pagina, tamano, totalElementos, totalPaginas }
-   q busca por ticket, cliente o placa. Todos los filtros son opcionales.
-   Si el backend usa otros nombres, solo hay que ajustar este archivo. */
+       q busca por ticket, cliente o placa. Todos los filtros son opcionales (size máx. 50).
+     GET /admin/appointments/{id}/available-mechanics -> [{ idUsuario, nombre, especialidades }]  (T39.1)
+       Mecánicos con la especialidad del servicio, libres en ese horario y sin contar al actual.
+     PUT /admin/appointments/{id}/reassign  { idMecanico }  -> la reserva actualizada              (T39.1)
+       La cita vuelve a quedar PENDIENTE hasta que el nuevo mecánico la acepte.
+       Errores: 409 si no está libre, si ya es su mecánico, o si la cita está cancelada, rechazada o ya pasó;
+                400 si no tiene la especialidad; 404 si la cita o el mecánico no existen. */
 
 const RUTA = "/admin/appointments";
 
@@ -71,4 +75,29 @@ export async function listarReservas({ desde, hasta, estado = "", idMecanico = "
 export async function listarMecanicos() {
   const { usuarios } = await listarUsuarios({ rol: "MECANICO", tamano: 100 });
   return usuarios.map((u) => ({ id: u.id, nombre: u.nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+/* ---------- Reasignar (T39.2) ---------- */
+
+// Solo se reasignan citas activas (pendientes o confirmadas) de hoy en adelante
+export const esReasignable = (reserva, hoy) =>
+  ["PENDIENTE", "CONFIRMADA"].includes(reserva.estado) && reserva.fecha >= hoy;
+
+export async function listarMecanicosLibres(idCita) {
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.listarMecanicosLibres(idCita)
+    : await apiFetch(`${RUTA}/${idCita}/available-mechanics`);
+  return (Array.isArray(datos) ? datos : []).map((m) => ({
+    id: m.idUsuario ?? m.idMecanico ?? m.id,
+    nombre: m.nombre ?? "",
+    especialidades: Array.isArray(m.especialidades) ? m.especialidades : [],
+  }));
+}
+
+export async function reasignarReserva(idCita, idMecanico) {
+  const cuerpo = { idMecanico: Number(idMecanico) };
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.reasignarReserva(idCita, cuerpo.idMecanico)
+    : await apiFetch(`${RUTA}/${idCita}/reassign`, { metodo: "PUT", cuerpo });
+  return normalizar(datos);
 }

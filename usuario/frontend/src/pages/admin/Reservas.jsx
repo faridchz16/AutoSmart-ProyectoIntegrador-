@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
-import { listarReservas, listarMecanicos } from "../../services/reservasService";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { listarReservas, listarMecanicos, esReasignable } from "../../services/reservasService";
 import { ESTADOS_CITA } from "../../services/agendaService";
 import { hoyLima, isoDe, aFecha } from "../../services/bloqueosService";
 import { formatoPrecio } from "../../services/serviciosService";
 import Paginacion from "../../components/admin/Paginacion";
+import Aviso from "../../components/admin/Aviso";
+import ReasignarReserva from "./ReasignarReserva";
 import "../../components/admin/admin-ui.css";
 import "./Reservas.css";
 
 /* T38.2 – Tabla de reservas del taller para el administrador:
    filtros por periodo, estado y mecánico, búsqueda por ticket, cliente o placa, y paginación.
-   Usa GET /admin/appointments (T38.1, contrato propuesto; ver reservasService.js). */
+   Usa GET /admin/appointments (T38.1).
+   T39.2 – Botón "Reasignar" en las citas activas de hoy en adelante (ver ReasignarReserva.jsx). */
 
 const TAMANO = 10;
 
@@ -57,6 +60,10 @@ function Reservas() {
   const [recarga, setRecarga] = useState(0);
   const [mecanicos, setMecanicos] = useState([]);
   const [resultado, setResultado] = useState({ clave: null, reservas: [], total: 0, paginas: 1, error: "", pendiente: false });
+  const [porReasignar, setPorReasignar] = useState(null);
+  const [aviso, setAviso] = useState(null);
+  const contadorAvisos = useRef(0);
+  const cerrarAviso = useCallback(() => setAviso(null), []);
 
   const rangoValido = !!rango.desde && !!rango.hasta && rango.desde <= rango.hasta;
   const clave = `${rango.desde}|${rango.hasta}|${estado}|${idMecanico}|${q}|${pagina}|${recarga}`;
@@ -119,7 +126,24 @@ function Reservas() {
     setQ("");
   };
 
+  // Tras reasignar: se actualiza la fila al instante y luego se recarga (por si sale del filtro de mecánico)
+  const alReasignar = (actualizada) => {
+    setPorReasignar(null);
+    setResultado((r) => ({
+      ...r,
+      reservas: r.reservas.map((x) => (x.id === actualizada.id ? { ...x, ...actualizada } : x)),
+    }));
+    setRecarga((n) => n + 1);
+    contadorAvisos.current += 1;
+    setAviso({
+      tipo: "ok",
+      texto: `La reserva ${actualizada.ticket} ahora es de ${actualizada.mecanico}. Queda pendiente hasta que la acepte.`,
+      id: contadorAvisos.current,
+    });
+  };
+
   const { reservas, total, paginas, error, pendiente } = resultado;
+  const conAcciones = reservas.some((r) => esReasignable(r, hoy));
   const paginaActual = Math.min(pagina, paginas - 1);
 
   return (
@@ -275,6 +299,7 @@ function Reservas() {
                 <th scope="col">Mecánico</th>
                 <th scope="col" className="col-num">Precio</th>
                 <th scope="col">Estado</th>
+                <th scope="col"><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
@@ -287,6 +312,7 @@ function Reservas() {
                       <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
                       <td><span className="esq" /></td>
+                      <td />
                     </tr>
                   ))
                 : reservas.map((r) => (
@@ -313,6 +339,21 @@ function Reservas() {
                       <td data-label="Estado">
                         <span className={`insignia rs-est-${r.estado}`}>{ESTADOS_CITA[r.estado] ?? r.estado}</span>
                       </td>
+                      <td data-label="Acciones" className={conAcciones ? "col-acciones" : "col-acciones rs-sin-acciones"}>
+                        {esReasignable(r, hoy) && (
+                          <button
+                            type="button"
+                            className="btn-icono"
+                            onClick={() => setPorReasignar(r)}
+                            aria-label={`Reasignar ${r.ticket}`}
+                          >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M4 7h13l-3-3M20 17H7l3 3" />
+                            </svg>
+                            <span>Reasignar</span>
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
             </tbody>
@@ -323,6 +364,14 @@ function Reservas() {
       {!error && rangoValido && (
         <Paginacion pagina={paginaActual} paginas={paginas} total={total} tamano={TAMANO} alCambiar={setPagina} />
       )}
+
+      <ReasignarReserva
+        reserva={porReasignar}
+        alCerrar={() => setPorReasignar(null)}
+        alReasignar={alReasignar}
+        alDesactualizar={() => setRecarga((n) => n + 1)}
+      />
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>
   );
 }
