@@ -35,6 +35,13 @@ import com.tecsup.autosmart.ui.screens.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tecsup.autosmart.ui.screens.ServicioDetalleScreen
+import com.tecsup.autosmart.ui.screens.ServiciosScreen
+import com.tecsup.autosmart.viewmodel.ServiciosViewModel
+import com.tecsup.autosmart.ui.screens.OlvideContrasenaScreen
+import com.tecsup.autosmart.ui.screens.NuevaContrasenaScreen
+import com.tecsup.autosmart.viewmodel.RecuperacionViewModel
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -49,8 +56,11 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by rememberSaveable { mutableStateOf("loading") }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
+                val serviciosVm: ServiciosViewModel = viewModel()
+                val recuperacionVm: RecuperacionViewModel = viewModel()
+                var correoRecuperacion by rememberSaveable { mutableStateOf("") }
 
-                // Lógica de inicio (Welcome por defecto)
+
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()
 
@@ -63,14 +73,16 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Manejo del botón 'Atrás'
+
                 BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
                     currentScreen = "welcome"
                 }
 
-                BackHandler(enabled = currentScreen == "reserva") {
-                    currentScreen = "vehiculos"
-                }
+                BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
+                BackHandler(enabled = currentScreen == "servicio_detalle") { currentScreen = "servicios" }
+                BackHandler(enabled = currentScreen == "reserva") { currentScreen = "servicio_detalle" }
+                BackHandler(enabled = currentScreen == "olvide") { currentScreen = "login" }
+                BackHandler(enabled = currentScreen == "nueva_password") { currentScreen = "olvide" }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -153,6 +165,10 @@ class MainActivity : ComponentActivity() {
                                                 GoogleResultado.Cancelado -> {}
                                             }
                                         }
+                                    },
+                                            onForgotPasswordClick = {
+                                        recuperacionVm.reiniciar()
+                                        currentScreen = "olvide"
                                     }
                                 )
                             }
@@ -189,14 +205,33 @@ class MainActivity : ComponentActivity() {
                                         }
                                     },
                                     onNavigateToReserva = {
-                                        currentScreen = "reserva"
+                                        currentScreen = "servicios"
                                     }
+                                )
+                            }
+
+                            "servicios" -> {
+                                ServiciosScreen(
+                                    vm = serviciosVm,
+                                    onVerDetalle = { id ->
+                                        selectedServiceId = id
+                                        currentScreen = "servicio_detalle"
+                                    },
+                                    onBack = { currentScreen = "vehiculos" }
+                                )
+                            }
+                            "servicio_detalle" -> {
+                                ServicioDetalleScreen(
+                                    idServicio = selectedServiceId,
+                                    vm = serviciosVm,
+                                    onReservar = { currentScreen = "reserva" },
+                                    onBack = { currentScreen = "servicios" }
                                 )
                             }
                             "reserva" -> {
                                 ReservaScreen(
                                     idServicio = selectedServiceId,
-                                    onNavigateBack = { currentScreen = "vehiculos" }
+                                    onNavigateBack = { currentScreen = "servicio_detalle" }
                                 )
                             }
                             "mecanico" -> {
@@ -208,6 +243,32 @@ class MainActivity : ComponentActivity() {
                                             currentScreen = "welcome"
                                         }
                                     }
+                                )
+                            }
+
+                            "olvide" -> {
+                                OlvideContrasenaScreen(
+                                    vm = recuperacionVm,
+                                    onCodigoEnviado = { correo ->
+                                        correoRecuperacion = correo
+                                        currentScreen = "nueva_password"
+                                    },
+                                    onBack = { currentScreen = "login" }
+                                )
+                            }
+                            "nueva_password" -> {
+                                NuevaContrasenaScreen(
+                                    vm = recuperacionVm,
+                                    correo = correoRecuperacion,
+                                    onActualizada = {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "Contraseña actualizada. Inicia sesión con tu nueva contraseña",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        currentScreen = "login"
+                                    },
+                                    onBack = { currentScreen = "olvide" }
                                 )
                             }
                         }

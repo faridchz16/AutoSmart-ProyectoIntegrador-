@@ -50,7 +50,7 @@ fun WelcomeScreen(
             )
     ) {
         if (isLandscape) {
-            // HORIZONTAL: izquierda logo + frase, derecha botones
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -82,7 +82,7 @@ fun WelcomeScreen(
                 }
             }
         } else {
-            // VERTICAL: logo y frase al centro, botones abajo
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()

@@ -134,7 +134,8 @@ private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
 fun LoginScreen(
     onLoginClick: (String, String) -> Unit,
     onNavigateToRegister: () -> Unit,
-    onGoogleClick: () -> Unit = {}
+    onGoogleClick: () -> Unit = {},
+    onForgotPasswordClick: () -> Unit = {}
 ) {
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -295,15 +296,13 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 12.dp))
 
-        // Botón Google
+
         botonGoogle()
     }
 
-    // Parte de abajo estilo Instagram: "¿Olvidaste tu contraseña?" y "Registrarse"
+
     val colorAzul = Color(0xFF3B82F6)
-    val avisoOlvido = {
-        Toast.makeText(context, "Recuperar contraseña estará disponible pronto", Toast.LENGTH_SHORT).show()
-    }
+    val avisoOlvido = onForgotPasswordClick
 
     val olvidoPassword: @Composable () -> Unit = {
         TextButton(onClick = avisoOlvido, enabled = !isLoading) {
