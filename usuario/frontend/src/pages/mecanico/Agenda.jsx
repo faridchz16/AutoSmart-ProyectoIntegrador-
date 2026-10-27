@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listarAgenda, ESTADOS_CITA } from "../../services/agendaService";
 import { listarBloqueos, hoyLima, isoDe, aFecha } from "../../services/bloqueosService";
 import { listarHorarios } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
+import DetalleCita from "./DetalleCita";
+import Aviso from "../../components/admin/Aviso";
+import { mensajeRespuesta } from "../../services/citasService";
 
 /* T23.2 – Agenda semanal del mecánico: citas de lunes a domingo,
    con navegación entre semanas (usa /mechanics/me/appointments, T23.1).
-   También marca los días bloqueados y los días sin horario de atención. */
+   También marca los días bloqueados y los días sin horario de atención.
+   T35.2: al hacer clic en una cita se abre su detalle; T36.2: desde ahí se acepta o rechaza. */
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
@@ -45,6 +49,18 @@ function Agenda() {
   const [lunes, setLunes] = useState(() => lunesDe(hoy));
   const [verTodas, setVerTodas] = useState(false);
   const [recarga, setRecarga] = useState(0);
+  const [abierta, setAbierta] = useState(null);
+
+  // T36.2: al aceptar o rechazar se actualiza la cita en la lista y se muestra un aviso
+  const [aviso, setAviso] = useState(null);
+  const contadorAvisos = useRef(0);
+  const cerrarAviso = useCallback(() => setAviso(null), []);
+  const alResponder = (cita, estado) => {
+    setAbierta(null);
+    setResultado((r) => ({ ...r, citas: r.citas.map((x) => (x.id === cita.id ? { ...x, estado } : x)) }));
+    contadorAvisos.current += 1;
+    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado), id: contadorAvisos.current });
+  };
   const [resultado, setResultado] = useState({ clave: null, citas: [], bloqueadas: [], laborables: null, error: "" });
 
   const domingo = sumarDias(lunes, 6);
@@ -154,7 +170,13 @@ function Agenda() {
                       {bloqueado && <p className="ag-marca bloqueado">Día bloqueado</p>}
                       {!bloqueado && sinHorario && delDia.length === 0 && <p className="ag-marca">Sin horario</p>}
                       {delDia.map((c) => (
-                        <div key={c.id} className={`ag-cita est-${c.estado}`} title={`Ticket ${c.ticket}`}>
+                        <button
+                          key={c.id}
+                          type="button"
+                          className={`ag-cita est-${c.estado}`}
+                          title={`Ticket ${c.ticket}`}
+                          onClick={() => setAbierta(c)}
+                        >
                           <span className="ag-cita-hora">
                             {c.horaInicio} – {c.horaFin}
                           </span>
@@ -164,7 +186,7 @@ function Agenda() {
                             <span className="ag-placa">{c.placa}</span>
                             <span className={`insignia-estado est-${c.estado}`}>{ESTADOS_CITA[c.estado] ?? c.estado}</span>
                           </span>
-                        </div>
+                        </button>
                       ))}
                       {delDia.length === 0 && !bloqueado && !sinHorario && <p className="ag-libre">Sin citas</p>}
                     </>
@@ -181,6 +203,14 @@ function Agenda() {
           No tienes citas esta semana. Las reservas que hagan los clientes desde la app aparecerán aquí.
         </p>
       )}
+
+      <DetalleCita
+        cita={abierta}
+        alCerrar={() => setAbierta(null)}
+        alResponder={alResponder}
+        alDesactualizar={() => setRecarga((n) => n + 1)}
+      />
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>
   );
 }

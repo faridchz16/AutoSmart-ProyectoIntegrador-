@@ -303,3 +303,207 @@ export async function guardarPerfilMecanico({ aniosExperiencia, especialidades }
   };
   return obtenerPerfilMecanico();
 }
+
+/* ---------- Detalle de una cita (vehículo, teléfono y precio de ejemplo) ---------- */
+
+const VEHICULOS = [
+  ["Toyota", "Yaris", 2019, 58200],
+  ["Hyundai", "Accent", 2021, 31450],
+  ["Kia", "Rio", 2018, 74900],
+  ["Nissan", "Sentra", 2020, 46300],
+  ["Chevrolet", "Sail", 2017, 98120],
+  ["Suzuki", "Swift", 2022, 18750],
+];
+const PRECIOS = [90, 120, 80, 70, 150, 220, 95, 80, 110, 30];
+
+export async function obtenerCita(id) {
+  await esperar(400);
+  const i = citasPrueba.findIndex((c) => c.idCita === Number(id));
+  if (i === -1) throw new Error("Cita no encontrada");
+  const c = citasPrueba[i];
+  const [marca, modelo, anio, kilometraje] = VEHICULOS[i % VEHICULOS.length];
+  const [h1, m1] = c.horaInicio.split(":").map(Number);
+  const [h2, m2] = c.horaFin.split(":").map(Number);
+  return {
+    ...c,
+    precio: PRECIOS[i % PRECIOS.length],
+    duracionMinutos: h2 * 60 + m2 - (h1 * 60 + m1),
+    telefonoCliente: i % 4 === 3 ? null : `9${String(87654321 - i * 1111111).padStart(8, "0")}`,
+    marca,
+    modelo,
+    anio,
+    kilometraje,
+  };
+}
+
+// Aceptar o rechazar (T36.1): solo citas pendientes
+export async function responderCita(id, estado, motivo) {
+  await esperar(450);
+  const cita = citasPrueba.find((c) => c.idCita === Number(id));
+  if (!cita) throw new Error("Cita no encontrada");
+  if (cita.estado !== "PENDIENTE") throw new Error(`La cita ya no esta pendiente (estado: ${cita.estado})`);
+  cita.estado = estado;
+  if (motivo) cita.motivoRechazo = motivo;
+  return { ...cita };
+}
+
+/* ---------- Reservas del taller para el administrador (T38.2) ---------- */
+
+const SERVICIOS_RESERVA = [
+  ["Cambio de aceite y filtro", 120, 45],
+  ["Alineamiento y balanceo", 90, 60],
+  ["Revisión de frenos", 80, 60],
+  ["Diagnóstico con escáner", 70, 40],
+  ["Afinamiento de motor", 220, 120],
+  ["Cambio de pastillas de freno", 150, 90],
+];
+const HORAS_RESERVA = ["08:00", "09:00", "10:30", "11:00", "14:00", "15:30", "16:00"];
+const PLACAS = ["ABC-123", "BCD-456", "CDE-789", "DEF-321", "EFG-654", "FGH-987", "GHI-246", "HIJ-135", "JKL-482"];
+
+const sumarMinutos = (h, min) => {
+  const [hh, mm] = h.split(":").map(Number);
+  const t = hh * 60 + mm + min;
+  return `${dosCifras(Math.floor(t / 60))}:${dosCifras(t % 60)}`;
+};
+
+const reservasPrueba = (() => {
+  const mecanicos = usuarios.filter((u) => u.rol === "MECANICO");
+  const clientes = usuarios.filter((u) => u.rol === "CLIENTE");
+  const lista = [];
+  for (let i = 0; i < 54; i++) {
+    const dias = (i % 41) - 20; // de 20 días atrás a 20 días adelante
+    const [servicio, precio, duracion] = SERVICIOS_RESERVA[i % SERVICIOS_RESERVA.length];
+    const horaInicio = HORAS_RESERVA[(i * 3) % HORAS_RESERVA.length];
+    const mecanico = mecanicos[(i * 7) % mecanicos.length];
+    const pasada = dias < 0;
+    const estado =
+      i % 9 === 4 ? "CANCELADA" : i % 11 === 7 ? "RECHAZADA" : pasada || i % 3 === 0 ? "CONFIRMADA" : "PENDIENTE";
+    lista.push({
+      idCita: 500 + i,
+      ticket: `AS-2026-${String(200 + i).padStart(5, "0")}`,
+      fecha: fechaRelativa(dias),
+      horaInicio,
+      horaFin: sumarMinutos(horaInicio, duracion),
+      estado,
+      servicio,
+      precio,
+      cliente: clientes[(i * 5) % clientes.length].nombre,
+      placa: PLACAS[i % PLACAS.length],
+      idMecanico: mecanico.id,
+      mecanico: mecanico.nombre,
+    });
+  }
+  return lista;
+})();
+
+export async function listarReservas({ desde, hasta, estado, idMecanico, q, pagina, tamano }) {
+  await esperar();
+  const texto = sinTildes(q.trim().toLowerCase());
+  const filtradas = reservasPrueba
+    .filter((r) => (!desde || r.fecha >= desde) && (!hasta || r.fecha <= hasta))
+    .filter((r) => !estado || r.estado === estado)
+    .filter((r) => !idMecanico || r.idMecanico === Number(idMecanico))
+    .filter((r) => !texto || sinTildes(`${r.ticket} ${r.cliente} ${r.placa}`.toLowerCase()).includes(texto))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.horaInicio.localeCompare(b.horaInicio));
+  return {
+    contenido: filtradas.slice(pagina * tamano, pagina * tamano + tamano).map((r) => ({ ...r })),
+    pagina,
+    tamano,
+    totalElementos: filtradas.length,
+    totalPaginas: Math.max(1, Math.ceil(filtradas.length / tamano)),
+  };
+}
+
+/* ---------- Reasignar una reserva (T39.2) ---------- */
+
+const ESPECIALIDADES_PRUEBA = ["Frenos", "Motor", "Suspensión", "Electricidad automotriz", "Mecánica general"];
+const seCruzan = (a, b) => a.fecha === b.fecha && a.horaInicio < b.horaFin && b.horaInicio < a.horaFin;
+
+function reservaReasignable(idCita) {
+  const reserva = reservasPrueba.find((r) => r.idCita === Number(idCita));
+  if (!reserva) throw new Error("Cita no encontrada");
+  if (["CANCELADA", "RECHAZADA"].includes(reserva.estado)) throw new Error("La cita ya esta cancelada o rechazada");
+  if (reserva.fecha < fechaRelativa(0)) throw new Error("La cita ya paso");
+  return reserva;
+}
+
+// Libres = mecánicos activos, distintos del actual, sin otra reserva activa que se cruce
+export async function listarMecanicosLibres(idCita) {
+  await esperar(400);
+  const reserva = reservaReasignable(idCita);
+  return usuarios
+    .filter((u) => u.rol === "MECANICO" && u.activo && u.id !== reserva.idMecanico)
+    .filter(
+      (u) =>
+        !reservasPrueba.some(
+          (r) => r.idMecanico === u.id && ["PENDIENTE", "CONFIRMADA"].includes(r.estado) && seCruzan(r, reserva)
+        )
+    )
+    .map((u, i) => ({
+      idUsuario: u.id,
+      nombre: u.nombre,
+      especialidades: [ESPECIALIDADES_PRUEBA[u.id % 5], ESPECIALIDADES_PRUEBA[(u.id + i + 2) % 5]].filter(
+        (e, j, lista) => lista.indexOf(e) === j
+      ),
+    }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+export async function reasignarReserva(idCita, idMecanico) {
+  await esperar(450);
+  const reserva = reservaReasignable(idCita);
+  const nuevo = usuarios.find((u) => u.id === idMecanico && u.rol === "MECANICO");
+  if (!nuevo) throw new Error("Mecanico no encontrado");
+  if (nuevo.id === reserva.idMecanico) throw new Error("La cita ya esta asignada a ese mecanico");
+  Object.assign(reserva, { idMecanico: nuevo.id, mecanico: nuevo.nombre, estado: "PENDIENTE" });
+  return { ...reserva };
+}
+
+/* ---------- Horario del taller y feriados (T40.2) ---------- */
+
+let horarioTaller = [1, 2, 3, 4, 5, 6, 7].map((dia) => ({
+  diaSemana: dia,
+  abierto: dia <= 6,
+  horaApertura: "08:00",
+  horaCierre: dia === 6 ? "13:00" : "18:00",
+}));
+
+let feriados = [
+  { idFeriado: 1, fecha: "2026-10-08", descripcion: "Combate de Angamos" },
+  { idFeriado: 2, fecha: "2026-11-01", descripcion: "Día de Todos los Santos" },
+  { idFeriado: 3, fecha: "2026-12-08", descripcion: "Inmaculada Concepción" },
+  { idFeriado: 4, fecha: "2026-12-25", descripcion: "Navidad" },
+];
+let siguienteFeriado = 5;
+
+export async function obtenerHorarioTaller() {
+  await esperar();
+  return horarioTaller.map((d) => ({ ...d }));
+}
+
+export async function guardarHorarioTaller(dias) {
+  await esperar(450);
+  if (dias.length !== 7) throw new Error("Debes enviar los 7 dias de la semana");
+  const malo = dias.find((d) => d.abierto && d.horaApertura >= d.horaCierre);
+  if (malo) throw new Error(`La hora de apertura debe ser anterior a la de cierre (dia ${malo.diaSemana})`);
+  horarioTaller = dias.map((d) => ({ ...d }));
+  return obtenerHorarioTaller();
+}
+
+export async function listarFeriados(anio) {
+  await esperar();
+  return feriados.filter((f) => f.fecha.startsWith(String(anio))).map((f) => ({ ...f }));
+}
+
+export async function crearFeriado({ fecha, descripcion }) {
+  await esperar(350);
+  if (feriados.some((f) => f.fecha === fecha)) throw new Error("Ya existe un feriado en esa fecha");
+  const nuevo = { idFeriado: siguienteFeriado++, fecha, descripcion };
+  feriados = [...feriados, nuevo];
+  return { ...nuevo };
+}
+
+export async function eliminarFeriado(id) {
+  await esperar(250);
+  feriados = feriados.filter((f) => f.idFeriado !== id);
+}

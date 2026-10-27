@@ -1,0 +1,220 @@
+/* ===== Horario del taller y feriados (T40.2) ===== */
+
+.tl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.tl-caja {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.tl-caja-cab {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+
+.tl-caja-cab h3 { margin: 0; font-family: "Sora", "Manrope", sans-serif; font-size: 1.08rem; color: #0b1b3a; }
+.tl-resumen { margin: 4px 0 0; color: #5b6b88; font-size: 0.86rem; }
+.tl-resumen strong { color: #1150e8; }
+
+.tl-enlace {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tl-enlace:hover:not(:disabled) { text-decoration: underline; }
+.tl-enlace:disabled { opacity: 0.5; cursor: default; }
+.tl-enlace:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; border-radius: 6px; }
+
+.tl-esqueleto { display: grid; gap: 14px; padding: 6px 0; }
+
+.tl-error {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #be123c;
+  font-size: 0.9rem;
+}
+
+.tl-error p { margin: 0; }
+
+/* ---------- Días de la semana ---------- */
+.tl-dias { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.tl-dia {
+  display: grid;
+  grid-template-columns: 96px 128px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  border: 1px solid #eef2f9;
+  border-radius: 12px;
+  background: #f9fbff;
+  transition: background 0.2s;
+}
+
+.tl-dia.cerrado { background: #fafafa; }
+.tl-dia-nombre { color: #0b1b3a; font-weight: 800; }
+.tl-dia.cerrado .tl-dia-nombre { color: #7a8aa6; }
+
+.tl-horas { display: flex; align-items: center; gap: 6px; color: #7a8aa6; font-size: 0.84rem; }
+
+.tl-horas input,
+.tl-campo input {
+  padding: 8px 10px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #0b1b3a;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.tl-horas input:disabled { opacity: 0.45; background: #f3f5f9; }
+.tl-horas input[aria-invalid="true"] { border-color: #e11d48; }
+
+.tl-horas input:focus,
+.tl-campo input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+
+.tl-dia-info { justify-self: end; color: #5b6b88; font-size: 0.82rem; font-weight: 700; text-align: right; white-space: nowrap; }
+.tl-dia.cerrado .tl-dia-info { color: #9aa7bf; font-weight: 600; }
+.tl-dia-info.con-error { color: #e11d48; }
+
+.tl-dia .switch:not(.on) .switch-texto { color: #7a8aa6; }
+
+/* ---------- Año ---------- */
+.tl-anio { display: flex; align-items: center; gap: 6px; }
+.tl-anio strong { min-width: 46px; color: #0b1b3a; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums; }
+
+.tl-anio-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1b3a;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.tl-anio-btn:hover { border-color: #3b82f6; color: #1150e8; }
+.tl-anio-btn:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+/* ---------- Formulario de feriado ---------- */
+.tl-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.tl-campo { display: grid; gap: 5px; color: #0b1b3a; font-size: 0.82rem; font-weight: 700; }
+.tl-campo > span { display: flex; justify-content: space-between; gap: 8px; }
+.tl-campo-largo { flex: 1 1 180px; }
+.tl-campo-largo input { width: 100%; }
+.tl-form .btn { padding-top: 9px; padding-bottom: 9px; }
+.tl-form-error { margin-top: -6px; }
+
+/* ---------- Lista de feriados ---------- */
+.tl-feriados { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; transition: opacity 0.2s; }
+.tl-feriados.actualizando { opacity: 0.5; }
+
+.tl-feriado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px 8px 8px;
+  border: 1px solid #eef2f9;
+  border-radius: 12px;
+  animation: tl-entra 0.25s ease both;
+}
+
+@keyframes tl-entra {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.tl-fecha {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  padding: 4px 0;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #be123c;
+  line-height: 1.1;
+}
+
+.tl-fecha strong { font-size: 1.1rem; }
+.tl-fecha small { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
+
+.tl-feriado-texto { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.tl-feriado-texto strong { color: #0b1b3a; overflow-wrap: anywhere; }
+.tl-feriado-texto small { color: #7a8aa6; font-size: 0.8rem; }
+.tl-feriado-texto small::first-letter { text-transform: uppercase; }
+.tl-feriado-texto small { display: block; }
+
+.tl-feriado.pasado { opacity: 0.6; }
+.tl-feriado.pasado .tl-fecha { background: #f1f5f9; color: #64748b; }
+
+.tl-quitar { color: #be123c; }
+
+.tl-vacio {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed #d6e0f2;
+  border-radius: 12px;
+  color: #7a8aa6;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ---------- Pantallas medianas y celular ---------- */
+/* En pantallas muy anchas, horario y feriados lado a lado */
+@media (min-width: 1500px) {
+  .tl { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+  .tl-dia { grid-template-columns: 1fr auto; }
+  .tl-horas { grid-column: 1 / -1; }
+  .tl-dia-info { grid-column: 1 / -1; justify-self: start; text-align: left; }
+}
+
+@media (max-width: 560px) {
+  .tl-caja { padding: 14px; }
+  .tl-dia { grid-template-columns: 1fr auto; }
+  .tl-horas { grid-column: 1 / -1; }
+  .tl-horas label { flex: 1; }
+  .tl-horas input { width: 100%; }
+  .tl-dia-info { grid-column: 1 / -1; justify-self: start; text-align: left; }
+  .tl-form .tl-campo:first-child { flex: 1 1 100%; }
+  .tl-form .tl-campo:first-child input { width: 100%; }
+  .tl-form .btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-feriado { animation: none; }
+}

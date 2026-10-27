@@ -1,0 +1,212 @@
+/* ===== Reservas del taller (T38.2) ===== */
+
+.rs-rango { font-weight: 700; color: #0b1b3a; }
+.rs-rango::first-letter { text-transform: uppercase; }
+
+.rs-fechas { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.rs-fechas label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5b6b88;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.rs-fechas input,
+.rs-select select {
+  padding: 9px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #0b1b3a;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.rs-select select {
+  min-width: 190px;
+  padding-right: 34px;
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a8aa6' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 10px center / 18px;
+  appearance: none;
+  cursor: pointer;
+}
+
+.rs-fechas input:focus,
+.rs-select select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+
+.rs-limpiar {
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rs-limpiar:hover { text-decoration: underline; }
+.rs-limpiar:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; border-radius: 6px; }
+
+.rs-ayuda { font-size: 0.86rem; }
+.rs-ayuda code { margin: 0 2px; }
+
+/* ---------- Celdas ---------- */
+.rs-cuando, .rs-cliente { display: flex; flex-direction: column; gap: 3px; }
+
+.rs-cuando strong { color: #0b1b3a; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rs-cuando strong::first-letter { text-transform: uppercase; }
+.rs-cuando strong.rs-hoy { color: #1150e8; }
+
+.rs-ticket { color: #7a8aa6; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.78rem; }
+
+.rs-placa {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.insignia.rs-est-PENDIENTE { background: #fef3c7; color: #92400e; }
+.insignia.rs-est-CONFIRMADA { background: #d1fae5; color: #065f46; }
+.insignia.rs-est-RECHAZADA { background: #ffe4e6; color: #9f1239; }
+.insignia.rs-est-CANCELADA { background: #e2e8f0; color: #475569; }
+
+.rs-tabla .fila-inactiva td:not([data-label="Estado"]) { opacity: 0.6; }
+
+/* ---------- Celular: la primera celda hace de título de la tarjeta ---------- */
+@media (max-width: 720px) {
+  .rs-fechas, .rs-select { flex: 1 1 100%; }
+  .rs-fechas label { flex: 1; }
+  .rs-fechas input, .rs-select select { width: 100%; }
+  .rs-cliente { align-items: flex-end; text-align: right; }
+  .rs-cliente .rs-placa { align-self: flex-end; }
+  .tabla td[data-label="Reserva"] { padding-bottom: 10px; border-bottom: 1px solid #eef2f9; }
+  .tabla td[data-label="Reserva"]::before { display: none; }
+  .rs-cuando { flex-direction: row; justify-content: space-between; width: 100%; }
+  /* En esta tabla "Servicio" es una fila normal (con su etiqueta), no el título de la tarjeta */
+  .rs-tabla td[data-label="Servicio"] { padding-bottom: 8px; border-bottom: 0; text-align: right; }
+  .rs-tabla td[data-label="Servicio"]::before { display: block; }
+}
+
+/* ---------- Reasignar (T39.2) ---------- */
+.rs-tabla .col-acciones { width: 1%; }
+.rs-tabla .rs-sin-acciones { padding: 0; }
+
+.rr { display: grid; gap: 14px; }
+
+.rr-cita {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f4f8ff;
+  color: #3b4a66;
+  font-size: 0.9rem;
+}
+
+.rr-cita-fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rr-cita > strong { color: #0b1b3a; font-size: 1.02rem; }
+.rr-fecha { display: inline-block; }
+.rr-fecha::first-letter { text-transform: uppercase; }
+.rr-cuando { font-variant-numeric: tabular-nums; }
+.rr-cliente { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rr-actual { margin: 6px 0 0; padding-top: 8px; border-top: 1px dashed #cfdcf3; }
+.rr-actual strong { color: #0b1b3a; }
+
+.rr-lista { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.rr-lista legend { margin-bottom: 8px; padding: 0; color: #0b1b3a; font-size: 0.88rem; font-weight: 800; }
+.rr-cargando { display: grid; gap: 10px; padding: 6px 0; }
+
+.rr-opciones { display: grid; gap: 8px; max-height: 300px; overflow-y: auto; padding: 2px; transition: opacity 0.2s; }
+.rr-opciones.actualizando { opacity: 0.5; }
+
+.rr-opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.rr-opcion:hover { border-color: #93b4ff; }
+.rr-opcion.elegida { border-color: #1150e8; background: #f1f6ff; box-shadow: 0 0 0 1px #1150e8; }
+.rr-opcion input { position: absolute; opacity: 0; pointer-events: none; }
+.rr-opcion:has(input:focus-visible) { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3); }
+.rr-lista:disabled .rr-opcion { cursor: default; opacity: 0.7; }
+
+.rr-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #fff1db;
+  color: #a35a00;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.rr-opcion.elegida .rr-avatar { background: #1150e8; color: #fff; }
+
+.rr-datos { display: grid; gap: 4px; min-width: 0; }
+.rr-datos strong { color: #0b1b3a; }
+.rr-datos small { color: #9aa7bf; font-size: 0.8rem; }
+.rr-esps { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.rr-esps span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #e6f0ff;
+  color: #1150e8;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.rr-vacio {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px dashed #d6e0f2;
+  border-radius: 12px;
+  color: #5b6b88;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.rr-vacio p { margin: 0; }
+.rr-vacio-titulo { color: #0b1b3a; font-weight: 800; }
+.rr-error { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+
+.rr-nota {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .rs-tabla .rs-sin-acciones { display: none; }
+}
+
+@media (max-width: 720px) {
+  .rs-tabla td[data-label="Acciones"]:empty { display: none; }
+}

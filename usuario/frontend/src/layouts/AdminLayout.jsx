@@ -17,6 +17,17 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/reservas",
+    texto: "Reservas",
+    icono: (
+      <Icono>
+        <rect x="3.5" y="5" width="17" height="15" rx="2" />
+        <path d="M3.5 9.5h17M8 3v4M16 3v4" />
+        <path d="m9 14.5 2 2 4-4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/usuarios",
     texto: "Usuarios",
     icono: (
@@ -34,6 +45,16 @@ const ENLACES = [
     icono: (
       <Icono>
         <path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L3.5 17.2a1.8 1.8 0 0 0 2.6 2.6l5.8-5.8a4 4 0 0 0 5.1-5.4l-2.5 2.5-2.3-.5-.5-2.3 2.5-2.5Z" />
+      </Icono>
+    ),
+  },
+  {
+    to: "/admin/taller",
+    texto: "Horario del taller",
+    icono: (
+      <Icono>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 7.5V12l3 2" />
       </Icono>
     ),
   },
