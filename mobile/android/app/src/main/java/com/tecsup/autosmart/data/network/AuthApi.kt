@@ -8,6 +8,8 @@ import com.tecsup.autosmart.data.model.GoogleLoginRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
+import com.tecsup.autosmart.data.model.ForgotPasswordRequest
+import com.tecsup.autosmart.data.model.ResetPasswordRequest
 
 interface AuthApi {
 
@@ -19,4 +21,10 @@ interface AuthApi {
 
     @POST("auth/google")
     suspend fun loginConGoogle(@Body request: GoogleLoginRequest): Response<AuthResponse>
+
+    @POST("auth/forgot-password")
+    suspend fun olvideContrasena(@Body request: ForgotPasswordRequest): Response<Unit>
+
+    @POST("auth/reset-password")
+    suspend fun restablecerContrasena(@Body request: ResetPasswordRequest): Response<Unit>
 }

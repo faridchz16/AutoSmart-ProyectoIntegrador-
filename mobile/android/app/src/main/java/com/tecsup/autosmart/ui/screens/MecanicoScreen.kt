@@ -62,7 +62,7 @@ fun MecanicoScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_autosmart_logo),
+                        painter = painterResource(id = R.drawable.xd),
                         contentDescription = "Logo AutoSmart",
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(44.dp)

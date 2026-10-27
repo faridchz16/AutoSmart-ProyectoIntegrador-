@@ -63,4 +63,13 @@ object RetrofitClient {
             .build()
             .create(ReservaApi::class.java)
     }
+
+    val servicioApi: ServicioApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ServicioApi::class.java)
+    }
 }
