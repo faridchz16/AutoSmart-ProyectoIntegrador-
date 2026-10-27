@@ -67,12 +67,9 @@ public class VehiculoService {
     public VehiculoResponse actualizarVehiculo(Long id, VehiculoRequest request, String correoCliente) {
         Vehiculo vehiculo = buscarDelCliente(id, correoCliente);
 
-        String placa = request.getPlaca() == null ? "" : request.getPlaca().trim().toUpperCase();
-        if (!placa.matches(FORMATO_PLACA)) {
-            throw new BadRequestException("Formato de placa inválido. Usa el formato ABC-123");
-        }
-        if (vehiculoRepository.existsByPlacaAndIdVehiculoNot(placa, id)) {
-            throw new ConflictException("La placa ya se encuentra registrada en el sistema");
+        if (request.getPlaca() != null && !request.getPlaca().isBlank()
+                && !request.getPlaca().trim().equalsIgnoreCase(vehiculo.getPlaca())) {
+            throw new BadRequestException("La placa no se puede modificar");
         }
 
         if (request.getMarca() == null || request.getMarca().isBlank()) {
@@ -85,7 +82,6 @@ public class VehiculoService {
             throw new BadRequestException("El año es obligatorio");
         }
 
-        // El kilometraje solo puede mantenerse o aumentar
         int actual = vehiculo.getKilometraje() != null ? vehiculo.getKilometraje() : 0;
         int nuevo = request.getKilometraje() != null ? request.getKilometraje() : actual;
         if (nuevo < 0) {
@@ -95,7 +91,6 @@ public class VehiculoService {
             throw new BadRequestException("El kilometraje no puede ser menor al registrado (" + actual + " km)");
         }
 
-        vehiculo.setPlaca(placa);
         vehiculo.setMarca(request.getMarca().trim());
         vehiculo.setModelo(request.getModelo().trim());
         vehiculo.setAnio(request.getAnio());

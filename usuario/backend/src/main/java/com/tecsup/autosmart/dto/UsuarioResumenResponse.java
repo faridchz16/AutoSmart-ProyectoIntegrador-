@@ -7,6 +7,8 @@ public class UsuarioResumenResponse {
     private String correo;
     private String rol;
     private Boolean activo;
+    private String creadoEn;
+    private String estadoCambiadoEn;
 
     public Integer getIdUsuario() { return idUsuario; }
     public void setIdUsuario(Integer idUsuario) { this.idUsuario = idUsuario; }
@@ -22,4 +24,10 @@ public class UsuarioResumenResponse {
 
     public Boolean getActivo() { return activo; }
     public void setActivo(Boolean activo) { this.activo = activo; }
+
+    public String getCreadoEn() { return creadoEn; }
+    public void setCreadoEn(String creadoEn) { this.creadoEn = creadoEn; }
+
+    public String getEstadoCambiadoEn() { return estadoCambiadoEn; }
+    public void setEstadoCambiadoEn(String estadoCambiadoEn) { this.estadoCambiadoEn = estadoCambiadoEn; }
 }

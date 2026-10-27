@@ -34,6 +34,9 @@ public class Usuario {
     @Column(name = "telefono", length = 15)
     private String telefono;
 
+    @Column(name = "estado_cambiado_en")
+    private LocalDateTime estadoCambiadoEn;
+
     public Usuario() {}
 
     public Usuario(String nombre, String correo, String passwordHash, Rol rol) {
@@ -59,4 +62,6 @@ public class Usuario {
     public void setActivo(Boolean activo) { this.activo = activo; }
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
+    public LocalDateTime getEstadoCambiadoEn() { return estadoCambiadoEn; }
+    public void setEstadoCambiadoEn(LocalDateTime estadoCambiadoEn) { this.estadoCambiadoEn = estadoCambiadoEn; }
 }
