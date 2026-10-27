@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "4609f862-813a-4e60-b01d-998e7187441c",
-    "name": "AutoSmart – Sprint 1",
-    "description": "Pruebas de la API de AutoSmart (Sprint 1, TEC.4).\n\nAntes de ejecutar:\n1. Enciende MySQL (XAMPP) y el backend en el puerto 8081.\n2. En la pestaña Variables de la colección, completa correoAdmin y passwordAdmin con una cuenta que tenga rol ADMIN.\n3. Ejecuta la colección completa con Run (las carpetas van en orden: primero Autenticación, que guarda los tokens).\n\nLas pruebas de endpoints que aún no existen fallarán con 404 hasta que se implementen; eso es esperado.",
+    "_postman_id": "c76a7d68-e461-4baa-b338-d2078d62dc7b",
+    "name": "AutoSmart – API (Sprints 1 y 2)",
+    "description": "Pruebas de la API de AutoSmart: Sprint 1 (TEC.4, carpetas 1 a 5) y Sprint 2 (TEC2.5, carpetas 6 a 12).\n\nAntes de ejecutar:\n1. Enciende MySQL (XAMPP) y el backend en el puerto 8081.\n2. En la pestaña Variables de la colección, completa correoAdmin y passwordAdmin con una cuenta que tenga rol ADMIN.\n3. Ejecuta la colección completa con Run, en orden: las primeras carpetas guardan los tokens, el vehículo y las fechas que usan las siguientes.\n\nEl Sprint 2 crea dos mecánicos, un servicio y tres citas de prueba en un día en que el taller abre (desde 3 días adelante) y al final los cancela o desactiva (carpeta 12).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1155,7 +1155,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Vehículo registrado (200/201)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                  "pm.test(\"Vehículo registrado (200/201)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "const v = pm.response.json();",
+                  "pm.collectionVariables.set(\"idVehiculo\", v.idVehiculo ?? v.id);"
                 ]
               }
             }
@@ -1287,6 +1289,3229 @@
           ]
         }
       ]
+    },
+    {
+      "name": "6. Taller y feriados (Sprint 2)",
+      "item": [
+        {
+          "name": "Horario del taller (T40.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/shop-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "shop-hours"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const dias = pm.response.json();",
+                  "pm.test(\"Devuelve los 7 días\", () => pm.expect(dias).to.have.lengthOf(7));",
+                  "pm.test(\"Cada día trae abierto, apertura y cierre\", () => dias.forEach(d => {",
+                  "  pm.expect(d).to.have.property(\"abierto\");",
+                  "  pm.expect(d.horaApertura).to.match(/^\\d{2}:\\d{2}/);",
+                  "  pm.expect(d.horaCierre).to.match(/^\\d{2}:\\d{2}/);",
+                  "}));",
+                  "pm.collectionVariables.set(\"horarioActual\", JSON.stringify(dias));",
+                  "// Para la prueba de validación: el primer día abierto con la apertura después del cierre",
+                  "const malo = dias.map(d => ({ ...d }));",
+                  "const abierto = malo.find(d => d.abierto) ?? malo[0];",
+                  "abierto.abierto = true; abierto.horaApertura = \"18:00\"; abierto.horaCierre = \"08:00\";",
+                  "pm.collectionVariables.set(\"horarioInvalido\", JSON.stringify(malo));",
+                  "pm.collectionVariables.set(\"horarioIncompleto\", JSON.stringify(dias.slice(0, 6)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar horario con 6 días (T40.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/shop-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "shop-hours"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{horarioIncompleto}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Exige los 7 días de la semana (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar horario con apertura después del cierre (T40.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/shop-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "shop-hours"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{horarioInvalido}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza apertura posterior al cierre (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar el mismo horario (T40.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/shop-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "shop-hours"
+              ]
+            },
+            "description": "Vuelve a guardar el horario que ya tenía el taller: comprueba que el PUT funciona sin cambiar la configuración.",
+            "body": {
+              "mode": "raw",
+              "raw": "{{horarioActual}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve los 7 días guardados\", () => pm.expect(pm.response.json()).to.have.lengthOf(7));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Feriados del año (T40.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays?anio={{anioActual}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays"
+              ],
+              "query": [
+                {
+                  "key": "anio",
+                  "value": "{{anioActual}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const hoy = new Date(new Date().toLocaleString(\"en-US\", { timeZone: \"America/Lima\" }));",
+                  "pm.collectionVariables.set(\"anioActual\", hoy.getFullYear());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const feriados = pm.response.json();",
+                  "pm.test(\"Devuelve una lista\", () => pm.expect(feriados).to.be.an(\"array\"));",
+                  "// Elige el día de las reservas de prueba: desde 3 días adelante, el taller abierto",
+                  "// al menos 4 horas y sin feriado. También calcula ayer y la fecha a bloquear.",
+                  "const fechas = feriados.map(f => f.fecha);",
+                  "const dias = JSON.parse(pm.collectionVariables.get(\"horarioActual\"));",
+                  "const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, \"0\")}-${String(d.getDate()).padStart(2, \"0\")}`;",
+                  "const min = h => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));",
+                  "const hoy = new Date(new Date().toLocaleString(\"en-US\", { timeZone: \"America/Lima\" }));",
+                  "let elegido = null;",
+                  "for (let i = 3; i < 60 && !elegido; i++) {",
+                  "  const d = new Date(hoy); d.setDate(d.getDate() + i);",
+                  "  const t = dias.find(x => x.diaSemana === (d.getDay() || 7));",
+                  "  if (t && t.abierto && !fechas.includes(iso(d)) && min(t.horaCierre) - min(t.horaApertura) >= 240) elegido = { d, t };",
+                  "}",
+                  "pm.test(\"Hay un día abierto para las reservas de prueba\", () => pm.expect(elegido).to.not.be.null);",
+                  "const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);",
+                  "const bloqueo = new Date(elegido.d); bloqueo.setDate(bloqueo.getDate() + 7);",
+                  "pm.collectionVariables.set(\"fechaReserva\", iso(elegido.d));",
+                  "pm.collectionVariables.set(\"diaReserva\", elegido.d.getDay() || 7);",
+                  "pm.collectionVariables.set(\"aperturaReserva\", elegido.t.horaApertura.slice(0, 5));",
+                  "pm.collectionVariables.set(\"cierreReserva\", elegido.t.horaCierre.slice(0, 5));",
+                  "pm.collectionVariables.set(\"fechaPasada\", iso(ayer));",
+                  "pm.collectionVariables.set(\"fechaBloqueo\", iso(bloqueo));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar feriado (T40.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays"
+              ]
+            },
+            "description": "Usa una fecha del año 2099 para no afectar las reservas reales.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaFeriado}}\",\n  \"descripcion\": \"Feriado de prueba Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fecha al azar en 2099 (no choca con reservas reales)",
+                  "const mes = 1 + Math.floor(Math.random() * 12), dia = 1 + Math.floor(Math.random() * 28);",
+                  "pm.collectionVariables.set(\"fechaFeriado\", `2099-${String(mes).padStart(2, \"0\")}-${String(dia).padStart(2, \"0\")}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Feriado creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const f = pm.response.json();",
+                  "pm.test(\"Devuelve el id y la fecha\", () => {",
+                  "  pm.expect(f.idFeriado).to.exist;",
+                  "  pm.expect(f.fecha).to.eql(pm.collectionVariables.get(\"fechaFeriado\"));",
+                  "});",
+                  "pm.collectionVariables.set(\"idFeriado\", f.idFeriado);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar feriado repetido (T40.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaFeriado}}\",\n  \"descripcion\": \"Otra vez\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza dos feriados el mismo día (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar feriado sin descripción (T40.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"2099-12-31\",\n  \"descripcion\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"La descripción es obligatoria (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar feriado (T40.1)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays/{{idFeriado}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays",
+                "{{idFeriado}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Feriado eliminado (204)\", () => pm.expect(pm.response.code).to.be.oneOf([204]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Feriados de 2099 sin el eliminado (T40.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/holidays?anio=2099",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "holidays"
+              ],
+              "query": [
+                {
+                  "key": "anio",
+                  "value": "2099"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Ya no aparece el feriado eliminado\", () =>",
+                  "  pm.expect(pm.response.json().some(f => f.fecha === pm.collectionVariables.get(\"fechaFeriado\"))).to.be.false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Horario del taller con token de cliente (T40.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/shop-hours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "shop-hours"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo el administrador lo ve (403)\", () => pm.expect(pm.response.code).to.be.oneOf([403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Mecánicos – perfil, horarios y bloqueos (Sprint 2)",
+      "item": [
+        {
+          "name": "Crear mecánico A (HU-15)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/mechanics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "mechanics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mecánico A Postman\",\n  \"correo\": \"{{correoMecA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"correoMecA\", `mecanicoa${Date.now()}@prueba.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mecánico creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const m = pm.response.json();",
+                  "pm.collectionVariables.set(\"idMecA\", m.idUsuario);",
+                  "pm.collectionVariables.set(\"passMecA\", m.passwordTemporal);",
+                  "pm.test(\"Devuelve la contraseña temporal\", () => pm.expect(m.passwordTemporal).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear mecánico B (HU-15)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/mechanics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "mechanics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Mecánico B Postman\",\n  \"correo\": \"{{correoMecB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"correoMecB\", `mecanicob${Date.now()}@prueba.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mecánico creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const m = pm.response.json();",
+                  "pm.collectionVariables.set(\"idMecB\", m.idUsuario);",
+                  "pm.collectionVariables.set(\"passMecB\", m.passwordTemporal);",
+                  "pm.test(\"Devuelve la contraseña temporal\", () => pm.expect(m.passwordTemporal).to.be.a(\"string\").and.not.empty);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login del mecánico A (HU-02)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoMecA}}\",\n  \"password\": \"{{passMecA}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json();",
+                  "pm.test(\"Rol MECANICO\", () => pm.expect(String(datos.rol).toUpperCase()).to.include(\"MECANICO\"));",
+                  "pm.collectionVariables.set(\"tokenMecA\", datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login del mecánico B (HU-02)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"{{correoMecB}}\",\n  \"password\": \"{{passMecB}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json();",
+                  "pm.test(\"Rol MECANICO\", () => pm.expect(String(datos.rol).toUpperCase()).to.include(\"MECANICO\"));",
+                  "pm.collectionVariables.set(\"tokenMecB\", datos.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Perfil de un mecánico nuevo (T13.2)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Empieza con 0 años y sin especialidades\", () => {",
+                  "  pm.expect(p.aniosExperiencia).to.eql(0);",
+                  "  pm.expect(p.especialidades).to.be.an(\"array\").that.is.empty;",
+                  "});",
+                  "pm.test(\"Trae su nombre y correo\", () => pm.expect(p.correo).to.eql(pm.collectionVariables.get(\"correoMecA\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Perfil con más de 60 años de experiencia (T14.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aniosExperiencia\": 61,\n  \"especialidades\": [\n    \"Frenos\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza más de 60 años (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar perfil del mecánico A (T14.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aniosExperiencia\": 5,\n  \"especialidades\": [\n    \"{{especialidadPrueba}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Guarda los años\", () => pm.expect(p.aniosExperiencia).to.eql(5));",
+                  "pm.test(\"Guarda la especialidad\", () => pm.expect(p.especialidades.map(e => e.toLowerCase()))",
+                  "  .to.include(pm.collectionVariables.get(\"especialidadPrueba\").toLowerCase()));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Guardar perfil del mecánico B (T14.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"aniosExperiencia\": 5,\n  \"especialidades\": [\n    \"{{especialidadPrueba}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Guarda los años\", () => pm.expect(p.aniosExperiencia).to.eql(5));",
+                  "pm.test(\"Guarda la especialidad\", () => pm.expect(p.especialidades.map(e => e.toLowerCase()))",
+                  "  .to.include(pm.collectionVariables.get(\"especialidadPrueba\").toLowerCase()));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar horario del mecánico A (T21.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "schedule"
+              ]
+            },
+            "description": "Atiende el día elegido para las reservas de prueba, en el mismo horario del taller.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diaSemana\": {{diaReserva}},\n  \"horaInicio\": \"{{aperturaReserva}}\",\n  \"horaFin\": \"{{cierreReserva}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Horario creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const h = pm.response.json();",
+                  "pm.test(\"Guarda el día\", () => pm.expect(h.diaSemana).to.eql(Number(pm.collectionVariables.get(\"diaReserva\"))));",
+                  "pm.collectionVariables.set(\"idHorarioA\", h.idHorario);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Horario que se cruza con otro (T21.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "schedule"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diaSemana\": {{diaReserva}},\n  \"horaInicio\": \"{{aperturaReserva}}\",\n  \"horaFin\": \"{{cierreReserva}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza rangos que se cruzan el mismo día (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Horario con fin antes del inicio (T21.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "schedule"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diaSemana\": 1,\n  \"horaInicio\": \"12:00\",\n  \"horaFin\": \"10:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza fin anterior al inicio (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar horario del mecánico B (T21.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "schedule"
+              ]
+            },
+            "description": "Atiende el día elegido para las reservas de prueba, en el mismo horario del taller.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diaSemana\": {{diaReserva}},\n  \"horaInicio\": \"{{aperturaReserva}}\",\n  \"horaFin\": \"{{cierreReserva}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Horario creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const h = pm.response.json();",
+                  "pm.test(\"Guarda el día\", () => pm.expect(h.diaSemana).to.eql(Number(pm.collectionVariables.get(\"diaReserva\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis horarios (T21.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "schedule"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye el horario registrado\", () =>",
+                  "  pm.expect(pm.response.json().some(h => h.idHorario === Number(pm.collectionVariables.get(\"idHorarioA\")))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bloquear una fecha pasada (T22.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaPasada}}\",\n  \"motivo\": \"Prueba\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"No se puede bloquear una fecha pasada (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bloquear una fecha (T22.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaBloqueo}}\",\n  \"motivo\": \"Capacitación\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Fecha bloqueada (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "pm.collectionVariables.set(\"idBloqueo\", pm.response.json().idBloqueo);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bloquear la misma fecha otra vez (T22.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaBloqueo}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza una fecha ya bloqueada (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis fechas bloqueadas (T22.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates?desde={{fechaBloqueo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaBloqueo}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Incluye la fecha bloqueada con su motivo\", () => {",
+                  "  const b = pm.response.json().find(x => x.fecha === pm.collectionVariables.get(\"fechaBloqueo\"));",
+                  "  pm.expect(b).to.exist;",
+                  "  pm.expect(b.motivo).to.eql(\"Capacitación\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desbloquear la fecha (T22.1)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates/{{idBloqueo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates",
+                "{{idBloqueo}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Fecha desbloqueada (204)\", () => pm.expect(pm.response.code).to.be.oneOf([204]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Panel del mecánico con token de cliente (TEC2.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Un cliente no entra al panel del mecánico (403)\", () => pm.expect(pm.response.code).to.be.oneOf([403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Catálogo y turnos libres (Sprint 2)",
+      "item": [
+        {
+          "name": "Crear servicio correctivo con especialidad (T37.1, T24.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "services"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"{{nombreServicio2}}\",\n  \"descripcion\": \"Servicio del Sprint 2 creado desde Postman\",\n  \"precioBase\": 120,\n  \"duracionMinutos\": 60,\n  \"categoria\": \"CORRECTIVO\",\n  \"especialidad\": \"{{especialidadPrueba}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"nombreServicio2\", `Correctivo de prueba ${Date.now()}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Servicio creado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const s = pm.response.json();",
+                  "pm.collectionVariables.set(\"idServicio2\", s.idServicio ?? s.id);",
+                  "pm.test(\"Categoría CORRECTIVO\", () => pm.expect(s.categoria).to.eql(\"CORRECTIVO\"));",
+                  "pm.test(\"Especialidad requerida\", () => pm.expect(String(s.especialidad).toLowerCase())",
+                  "  .to.eql(pm.collectionVariables.get(\"especialidadPrueba\").toLowerCase()));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear servicio con categoría inválida (T37.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "services"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Categoría inválida {{$timestamp}}\",\n  \"precioBase\": 50,\n  \"duracionMinutos\": 30,\n  \"categoria\": \"OTRA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo acepta PREVENTIVO o CORRECTIVO (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Servicios del admin, activos e inactivos (TEC2.4)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "services"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const lista = Array.isArray(pm.response.json()) ? pm.response.json() : (pm.response.json().contenido ?? pm.response.json().content ?? []);",
+                  "pm.test(\"Incluye el servicio creado\", () =>",
+                  "  pm.expect(lista.some(s => Number(s.idServicio ?? s.id) === Number(pm.collectionVariables.get(\"idServicio2\")))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catálogo filtrado por categoría (T37.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services?categoria=CORRECTIVO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "CORRECTIVO"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const lista = Array.isArray(pm.response.json()) ? pm.response.json() : (pm.response.json().contenido ?? pm.response.json().content ?? []);",
+                  "pm.test(\"Todos son CORRECTIVO\", () => lista.forEach(s => pm.expect(s.categoria).to.eql(\"CORRECTIVO\")));",
+                  "pm.test(\"Incluye el servicio creado\", () =>",
+                  "  pm.expect(lista.some(s => Number(s.idServicio ?? s.id) === Number(pm.collectionVariables.get(\"idServicio2\")))).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mecánicos que atienden el servicio (T24.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{idServicio2}}/mechanics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{idServicio2}}",
+                "mechanics"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(m => Number(m.idMecanico ?? m.idUsuario));",
+                  "pm.test(\"Incluye a los mecánicos A y B (tienen la especialidad)\", () => {",
+                  "  pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"idMecA\")));",
+                  "  pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"idMecB\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turnos libres del mecánico A (T25.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{idServicio2}}/slots?mecanico={{idMecA}}&fecha={{fechaReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{idServicio2}}",
+                "slots"
+              ],
+              "query": [
+                {
+                  "key": "mecanico",
+                  "value": "{{idMecA}}"
+                },
+                {
+                  "key": "fecha",
+                  "value": "{{fechaReserva}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const turnos = pm.response.json();",
+                  "pm.test(\"Hay al menos 4 turnos libres\", () => pm.expect(turnos.length).to.be.at.least(4));",
+                  "pm.test(\"Cada turno dura 60 minutos\", () => turnos.forEach(t => {",
+                  "  const m = h => Number(String(h).slice(0, 2)) * 60 + Number(String(h).slice(3, 5));",
+                  "  pm.expect(m(t.horaFin) - m(t.horaInicio)).to.eql(60);",
+                  "}));",
+                  "[0, 1, 2, 3].forEach(i => pm.collectionVariables.set(`turno${i + 1}`, String(turnos[i].horaInicio).slice(0, 5)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Turnos de una fecha pasada (T25.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/services/{{idServicio2}}/slots?mecanico={{idMecA}}&fecha={{fechaPasada}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "{{idServicio2}}",
+                "slots"
+              ],
+              "query": [
+                {
+                  "key": "mecanico",
+                  "value": "{{idMecA}}"
+                },
+                {
+                  "key": "fecha",
+                  "value": "{{fechaPasada}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"No acepta fechas pasadas (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Reservas del cliente (Sprint 2)",
+      "item": [
+        {
+          "name": "Apartar turno por 10 minutos (T33.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/holds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "holds"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idServicio\": {{idServicio2}},\n  \"idMecanico\": {{idMecA}},\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Turno apartado (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Indica cuánto falta para que expire\", () => pm.expect(b.segundosRestantes).to.be.above(0).and.at.most(600));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar cita 1 (T26.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idServicio\": {{idServicio2}},\n  \"idMecanico\": {{idMecA}},\n  \"idVehiculo\": {{idVehiculo}},\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cita reservada (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const c = pm.response.json();",
+                  "pm.collectionVariables.set(\"idCita1\", c.idCita);",
+                  "pm.test(\"Queda PENDIENTE\", () => pm.expect(c.estado).to.eql(\"PENDIENTE\"));",
+                  "pm.test(\"Ticket con formato AS-AAAA-NNNNN\", () => pm.expect(c.ticket).to.match(/^AS-\\d{4}-\\d{5}$/));",
+                  "pm.test(\"Guarda el precio del servicio\", () => pm.expect(Number(c.precio)).to.eql(120));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar un turno ya ocupado (T26.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idServicio\": {{idServicio2}},\n  \"idMecanico\": {{idMecA}},\n  \"idVehiculo\": {{idVehiculo}},\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El turno ya no está disponible (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar cita 2 (T26.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idServicio\": {{idServicio2}},\n  \"idMecanico\": {{idMecA}},\n  \"idVehiculo\": {{idVehiculo}},\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cita reservada (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const c = pm.response.json();",
+                  "pm.collectionVariables.set(\"idCita2\", c.idCita);",
+                  "pm.test(\"Queda PENDIENTE\", () => pm.expect(c.estado).to.eql(\"PENDIENTE\"));",
+                  "pm.test(\"Ticket con formato AS-AAAA-NNNNN\", () => pm.expect(c.ticket).to.match(/^AS-\\d{4}-\\d{5}$/));",
+                  "pm.test(\"Guarda el precio del servicio\", () => pm.expect(Number(c.precio)).to.eql(120));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservar cita 3 (T26.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idServicio\": {{idServicio2}},\n  \"idMecanico\": {{idMecA}},\n  \"idVehiculo\": {{idVehiculo}},\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno3}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cita reservada (201)\", () => pm.expect(pm.response.code).to.be.oneOf([201]));",
+                  "const c = pm.response.json();",
+                  "pm.collectionVariables.set(\"idCita3\", c.idCita);",
+                  "pm.test(\"Queda PENDIENTE\", () => pm.expect(c.estado).to.eql(\"PENDIENTE\"));",
+                  "pm.test(\"Ticket con formato AS-AAAA-NNNNN\", () => pm.expect(c.ticket).to.match(/^AS-\\d{4}-\\d{5}$/));",
+                  "pm.test(\"Guarda el precio del servicio\", () => pm.expect(Number(c.precio)).to.eql(120));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis citas (T30.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/mine?futuras=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "mine"
+              ],
+              "query": [
+                {
+                  "key": "futuras",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(c => c.idCita);",
+                  "pm.test(\"Incluye las 3 citas reservadas\", () => [1, 2, 3].forEach(n =>",
+                  "  pm.expect(ids).to.include(Number(pm.collectionVariables.get(`idCita${n}`)))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reprogramar la cita 2 (T31.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita2}}/reschedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita2}}",
+                "reschedule"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno4}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Cambia al nuevo turno\", () => pm.expect(pm.response.json().horaInicio.slice(0, 5)).to.eql(pm.collectionVariables.get(\"turno4\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reprogramar al mismo turno (T31.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita2}}/reschedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita2}}",
+                "reschedule"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaReserva}}\",\n  \"horaInicio\": \"{{turno4}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"La cita ya está en ese turno (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10. Citas del mecánico (Sprint 2)",
+      "item": [
+        {
+          "name": "Agenda del mecánico A (T23.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/appointments?desde={{fechaReserva}}&hasta={{fechaReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{fechaReserva}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(c => c.idCita);",
+                  "pm.test(\"Ve las 3 citas del día\", () => [1, 2, 3].forEach(n =>",
+                  "  pm.expect(ids).to.include(Number(pm.collectionVariables.get(`idCita${n}`)))));",
+                  "pm.test(\"Ordenadas por hora\", () => {",
+                  "  const horas = pm.response.json().map(c => c.horaInicio);",
+                  "  pm.expect(horas).to.eql([...horas].sort());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agenda con rango invertido (T23.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/appointments?desde={{fechaReserva}}&hasta={{fechaPasada}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{fechaPasada}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"'hasta' no puede ser anterior a 'desde' (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de la cita 1 (T35.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json();",
+                  "pm.test(\"Trae el vehículo del cliente\", () => {",
+                  "  pm.expect(c.placa).to.eql(pm.collectionVariables.get(\"placa\"));",
+                  "  pm.expect(c.marca).to.eql(\"Toyota\");",
+                  "});",
+                  "pm.test(\"Trae el servicio y la duración\", () => pm.expect(c.duracionMinutos).to.eql(60));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de una cita ajena (T35.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo el mecánico asignado ve el detalle (403)\", () => pm.expect(pm.response.code).to.be.oneOf([403]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aceptar la cita 1 (T36.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}",
+                "accept"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda CONFIRMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CONFIRMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aceptar una cita que ya no está pendiente (T36.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}",
+                "accept"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo se responden citas pendientes (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Bloquear un día con citas confirmadas (T22.1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/blocked-dates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "blocked-dates"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{fechaReserva}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"No deja bloquear un día con citas confirmadas (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechazar sin motivo (T36.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita2}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita2}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"El motivo es obligatorio (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rechazar la cita 2 con motivo (T36.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita2}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita2}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"No hay repuestos disponibles ese día\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda RECHAZADA\", () => pm.expect(pm.response.json().estado).to.eql(\"RECHAZADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar la cita 3 (T32.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita3}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita3}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Queda CANCELADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar una cita ya cancelada (T32.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita3}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita3}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo se cancelan citas activas (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancelar con token de mecánico (T32.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecA}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Solo el cliente puede cancelar (403)\", () => pm.expect(pm.response.code).to.be.oneOf([403]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11. Admin – reservas y reasignación (Sprint 2)",
+      "item": [
+        {
+          "name": "Reservas del mecánico A (T38.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments?desde={{fechaReserva}}&hasta={{fechaReserva}}&idMecanico={{idMecA}}&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "idMecanico",
+                  "value": "{{idMecA}}"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Respuesta paginada\", () => {",
+                  "  pm.expect(p.contenido).to.be.an(\"array\");",
+                  "  pm.expect(p).to.have.property(\"totalElementos\");",
+                  "  pm.expect(p).to.have.property(\"totalPaginas\");",
+                  "});",
+                  "const ids = p.contenido.map(c => c.idCita);",
+                  "pm.test(\"Incluye las 3 citas\", () => [1, 2, 3].forEach(n => pm.expect(ids).to.include(Number(pm.collectionVariables.get(`idCita${n}`)))));",
+                  "pm.test(\"Todas son del mecánico A\", () => p.contenido.forEach(c => pm.expect(c.idMecanico).to.eql(Number(pm.collectionVariables.get(\"idMecA\")))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas confirmadas del mecánico A (T38.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments?desde={{fechaReserva}}&hasta={{fechaReserva}}&idMecanico={{idMecA}}&estado=CONFIRMADA",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "idMecanico",
+                  "value": "{{idMecA}}"
+                },
+                {
+                  "key": "estado",
+                  "value": "CONFIRMADA"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Solo CONFIRMADA\", () => p.contenido.forEach(c => pm.expect(c.estado).to.eql(\"CONFIRMADA\")));",
+                  "pm.test(\"Incluye la cita 1\", () => pm.expect(p.contenido.map(c => c.idCita)).to.include(Number(pm.collectionVariables.get(\"idCita1\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar reserva por placa (T38.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments?q={{placa}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "{{placa}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Todas son del vehículo buscado\", () => pm.response.json().contenido.forEach(c => pm.expect(c.placa).to.eql(pm.collectionVariables.get(\"placa\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reservas con estado inválido (T38.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments?estado=OTRO",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "OTRO"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Rechaza un estado que no existe (400)\", () => pm.expect(pm.response.code).to.be.oneOf([400]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mecánicos libres para la cita 1 (T39.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments/{{idCita1}}/available-mechanics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments",
+                "{{idCita1}}",
+                "available-mechanics"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().map(m => Number(m.idUsuario));",
+                  "pm.test(\"Incluye al mecánico B\", () => pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"idMecB\"))));",
+                  "pm.test(\"No incluye al mecánico actual (A)\", () => pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"idMecA\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reasignar al mismo mecánico (T39.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments/{{idCita1}}/reassign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments",
+                "{{idCita1}}",
+                "reassign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idMecanico\": {{idMecA}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"La cita ya es de ese mecánico (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reasignar la cita 1 al mecánico B (T39.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments/{{idCita1}}/reassign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments",
+                "{{idCita1}}",
+                "reassign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idMecanico\": {{idMecB}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json();",
+                  "pm.test(\"Ahora es del mecánico B\", () => pm.expect(c.idMecanico).to.eql(Number(pm.collectionVariables.get(\"idMecB\"))));",
+                  "pm.test(\"Vuelve a quedar PENDIENTE hasta que B la acepte\", () => pm.expect(c.estado).to.eql(\"PENDIENTE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reasignar una cita rechazada (T39.1)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/appointments/{{idCita2}}/reassign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "appointments",
+                "{{idCita2}}",
+                "reassign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idMecanico\": {{idMecB}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"No se reasignan citas rechazadas o canceladas (409)\", () => pm.expect(pm.response.code).to.be.oneOf([409]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agenda del mecánico B (T39.1, T23.1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenMecB}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mechanics/me/appointments?desde={{fechaReserva}}&hasta={{fechaReserva}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mechanics",
+                "me",
+                "appointments"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "{{fechaReserva}}"
+                },
+                {
+                  "key": "hasta",
+                  "value": "{{fechaReserva}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"El mecánico B ya ve la cita reasignada\", () =>",
+                  "  pm.expect(pm.response.json().map(c => c.idCita)).to.include(Number(pm.collectionVariables.get(\"idCita1\"))));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12. Limpieza (Sprint 2)",
+      "item": [
+        {
+          "name": "Cancelar la cita 1",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenCliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/appointments/{{idCita1}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "appointments",
+                "{{idCita1}}",
+                "cancel"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cita de prueba cancelada (200)\", () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar el servicio de prueba",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/services/{{idServicio2}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "services",
+                "{{idServicio2}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Servicio de prueba desactivado (200)\", () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar al mecánico A",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{idMecA}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{idMecA}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mecánico A desactivado (200)\", () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar al mecánico B",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenAdmin}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/{{idMecB}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "{{idMecB}}",
+                "estado"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Mecánico B desactivado (200)\", () => pm.expect(pm.response.code).to.be.oneOf([200]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -1336,6 +4561,138 @@
     },
     {
       "key": "placa",
+      "value": ""
+    },
+    {
+      "key": "idVehiculo",
+      "value": ""
+    },
+    {
+      "key": "especialidadPrueba",
+      "value": "Frenos"
+    },
+    {
+      "key": "horarioActual",
+      "value": ""
+    },
+    {
+      "key": "horarioInvalido",
+      "value": ""
+    },
+    {
+      "key": "horarioIncompleto",
+      "value": ""
+    },
+    {
+      "key": "anioActual",
+      "value": ""
+    },
+    {
+      "key": "fechaReserva",
+      "value": ""
+    },
+    {
+      "key": "diaReserva",
+      "value": ""
+    },
+    {
+      "key": "aperturaReserva",
+      "value": ""
+    },
+    {
+      "key": "cierreReserva",
+      "value": ""
+    },
+    {
+      "key": "fechaPasada",
+      "value": ""
+    },
+    {
+      "key": "fechaBloqueo",
+      "value": ""
+    },
+    {
+      "key": "fechaFeriado",
+      "value": ""
+    },
+    {
+      "key": "idFeriado",
+      "value": ""
+    },
+    {
+      "key": "correoMecA",
+      "value": ""
+    },
+    {
+      "key": "passMecA",
+      "value": ""
+    },
+    {
+      "key": "idMecA",
+      "value": ""
+    },
+    {
+      "key": "tokenMecA",
+      "value": ""
+    },
+    {
+      "key": "correoMecB",
+      "value": ""
+    },
+    {
+      "key": "passMecB",
+      "value": ""
+    },
+    {
+      "key": "idMecB",
+      "value": ""
+    },
+    {
+      "key": "tokenMecB",
+      "value": ""
+    },
+    {
+      "key": "idHorarioA",
+      "value": ""
+    },
+    {
+      "key": "idBloqueo",
+      "value": ""
+    },
+    {
+      "key": "nombreServicio2",
+      "value": ""
+    },
+    {
+      "key": "idServicio2",
+      "value": ""
+    },
+    {
+      "key": "turno1",
+      "value": ""
+    },
+    {
+      "key": "turno2",
+      "value": ""
+    },
+    {
+      "key": "turno3",
+      "value": ""
+    },
+    {
+      "key": "turno4",
+      "value": ""
+    },
+    {
+      "key": "idCita1",
+      "value": ""
+    },
+    {
+      "key": "idCita2",
+      "value": ""
+    },
+    {
+      "key": "idCita3",
       "value": ""
     }
   ]
