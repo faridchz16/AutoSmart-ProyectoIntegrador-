@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Service
 public class AdminUsuarioService {
@@ -30,6 +32,7 @@ public class AdminUsuarioService {
     private static final String DIGITOS = "23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final List<String> ROLES_VALIDOS = List.of("CLIENTE", "MECANICO", "ADMIN");
+    private static final ZoneId LIMA = ZoneId.of("America/Lima");
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
@@ -73,7 +76,7 @@ public class AdminUsuarioService {
         return res;
     }
 
-    // Lista paginada de usuarios, con filtro opcional por rol y busqueda por nombre o correo
+
     @Transactional(readOnly = true)
     public PaginaResponse<UsuarioResumenResponse> listar(String rol, String q, int page, int size) {
         String rolFiltro = rol == null ? "" : rol.trim().toUpperCase();
@@ -107,12 +110,14 @@ public class AdminUsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
-        // Evita que el administrador se bloquee a si mismo
         if (!activo && usuario.getCorreo().equalsIgnoreCase(correoAdmin)) {
             throw new BadRequestException("No puedes desactivar tu propia cuenta");
         }
 
-        usuario.setActivo(activo);
+        if (!Boolean.valueOf(activo).equals(usuario.getActivo())) {
+            usuario.setActivo(activo);
+            usuario.setEstadoCambiadoEn(LocalDateTime.now(LIMA));
+        }
         return mapearResumen(usuarioRepository.save(usuario));
     }
 
@@ -123,10 +128,12 @@ public class AdminUsuarioService {
         r.setCorreo(u.getCorreo());
         r.setRol(u.getRol() != null ? u.getRol().getNombre() : null);
         r.setActivo(u.getActivo());
+        r.setCreadoEn(u.getCreadoEn() != null ? u.getCreadoEn().toString() : null);
+        r.setEstadoCambiadoEn(u.getEstadoCambiadoEn() != null ? u.getEstadoCambiadoEn().toString() : null);
         return r;
     }
 
-    // 10 caracteres con al menos una mayuscula, una minuscula y un digito
+
     private String generarPasswordTemporal() {
         String todos = MAYUS + MINUS + DIGITOS;
         StringBuilder sb = new StringBuilder();
