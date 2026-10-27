@@ -458,3 +458,52 @@ export async function reasignarReserva(idCita, idMecanico) {
   Object.assign(reserva, { idMecanico: nuevo.id, mecanico: nuevo.nombre, estado: "PENDIENTE" });
   return { ...reserva };
 }
+
+/* ---------- Horario del taller y feriados (T40.2) ---------- */
+
+let horarioTaller = [1, 2, 3, 4, 5, 6, 7].map((dia) => ({
+  diaSemana: dia,
+  abierto: dia <= 6,
+  horaApertura: "08:00",
+  horaCierre: dia === 6 ? "13:00" : "18:00",
+}));
+
+let feriados = [
+  { idFeriado: 1, fecha: "2026-10-08", descripcion: "Combate de Angamos" },
+  { idFeriado: 2, fecha: "2026-11-01", descripcion: "Día de Todos los Santos" },
+  { idFeriado: 3, fecha: "2026-12-08", descripcion: "Inmaculada Concepción" },
+  { idFeriado: 4, fecha: "2026-12-25", descripcion: "Navidad" },
+];
+let siguienteFeriado = 5;
+
+export async function obtenerHorarioTaller() {
+  await esperar();
+  return horarioTaller.map((d) => ({ ...d }));
+}
+
+export async function guardarHorarioTaller(dias) {
+  await esperar(450);
+  if (dias.length !== 7) throw new Error("Debes enviar los 7 dias de la semana");
+  const malo = dias.find((d) => d.abierto && d.horaApertura >= d.horaCierre);
+  if (malo) throw new Error(`La hora de apertura debe ser anterior a la de cierre (dia ${malo.diaSemana})`);
+  horarioTaller = dias.map((d) => ({ ...d }));
+  return obtenerHorarioTaller();
+}
+
+export async function listarFeriados(anio) {
+  await esperar();
+  return feriados.filter((f) => f.fecha.startsWith(String(anio))).map((f) => ({ ...f }));
+}
+
+export async function crearFeriado({ fecha, descripcion }) {
+  await esperar(350);
+  if (feriados.some((f) => f.fecha === fecha)) throw new Error("Ya existe un feriado en esa fecha");
+  const nuevo = { idFeriado: siguienteFeriado++, fecha, descripcion };
+  feriados = [...feriados, nuevo];
+  return { ...nuevo };
+}
+
+export async function eliminarFeriado(id) {
+  await esperar(250);
+  feriados = feriados.filter((f) => f.idFeriado !== id);
+}

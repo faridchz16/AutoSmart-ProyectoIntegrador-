@@ -1,7 +1,8 @@
 import "./admin-ui.css";
 
-/* Interruptor activo / inactivo (se usa en usuarios y en servicios). */
-function Switch({ activo, alCambiar, deshabilitado, cargando, etiqueta, titulo }) {
+/* Interruptor activo / inactivo (se usa en usuarios, servicios y el horario del taller).
+   textoSi / textoNo cambian lo que dice al lado (por defecto "Activo" / "Inactivo"). */
+function Switch({ activo, alCambiar, deshabilitado, cargando, etiqueta, titulo, textoSi = "Activo", textoNo = "Inactivo" }) {
   return (
     <button
       type="button"
@@ -16,7 +17,7 @@ function Switch({ activo, alCambiar, deshabilitado, cargando, etiqueta, titulo }
       <span className="switch-pista" aria-hidden="true">
         <span className="switch-bola" />
       </span>
-      <span className="switch-texto">{activo ? "Activo" : "Inactivo"}</span>
+      <span className="switch-texto">{activo ? textoSi : textoNo}</span>
     </button>
   );
 }
