@@ -9,9 +9,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.1.63:8081/"
+    private const val BASE_URL = "http://10.0.2.2:8081/"
 
-    // Esta variable arregla los 4 errores de compilación en MainActivity
+
     var token: String? = null
 
     private var tokenManager: TokenManager? = null
