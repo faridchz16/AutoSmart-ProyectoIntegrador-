@@ -1,3 +1,4 @@
+
 package com.tecsup.autosmart.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
@@ -11,8 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// Cambiar a 'false' cuando el backend esté integrado
-private const val USAR_DATOS_DE_PRUEBA = true
+// HU-24: mecánicos desde el backend.
+// HU-25: turnos de prueba temporalmente.
+private const val USAR_DATOS_DE_PRUEBA_TURNOS = true
 
 data class MecanicosUiState(
     val cargando: Boolean = false,
@@ -27,8 +29,13 @@ data class TurnosUiState(
 )
 
 class ReservaViewModel(
-    private val repo: ReservaRepository =
-        if (USAR_DATOS_DE_PRUEBA) ReservaRepositoryFake() else ReservaRepositoryRetrofit()
+    private val repoMecanicos: ReservaRepository = ReservaRepositoryRetrofit(),
+    private val repoTurnos: ReservaRepository =
+        if (USAR_DATOS_DE_PRUEBA_TURNOS) {
+            ReservaRepositoryFake()
+        } else {
+            ReservaRepositoryRetrofit()
+        }
 ) : ViewModel() {
 
     private val _mecanicos = MutableStateFlow(MecanicosUiState())
@@ -40,18 +47,38 @@ class ReservaViewModel(
     fun cargarMecanicos(idServicio: Long = 1L) {
         viewModelScope.launch {
             _mecanicos.value = MecanicosUiState(cargando = true)
-            repo.mecanicosPorServicio(idServicio)
-                .onSuccess { _mecanicos.value = MecanicosUiState(lista = it) }
-                .onFailure { _mecanicos.value = MecanicosUiState(error = it.message ?: "No se pudo cargar la lista de mecánicos") }
+
+            repoMecanicos.mecanicosPorServicio(idServicio)
+                .onSuccess {
+                    _mecanicos.value = MecanicosUiState(lista = it)
+                }
+                .onFailure {
+                    _mecanicos.value = MecanicosUiState(
+                        error = it.message
+                            ?: "No se pudo cargar la lista de mecánicos"
+                    )
+                }
         }
     }
 
-    fun cargarTurnos(idServicio: Long = 1L, fecha: String, idMecanico: Int) {
+    fun cargarTurnos(
+        idServicio: Long = 1L,
+        fecha: String,
+        idMecanico: Int
+    ) {
         viewModelScope.launch {
             _turnos.value = TurnosUiState(cargando = true)
-            repo.turnos(idServicio, fecha, idMecanico)
-                .onSuccess { _turnos.value = TurnosUiState(lista = it) }
-                .onFailure { _turnos.value = TurnosUiState(error = it.message ?: "No se pudieron cargar los turnos") }
+
+            repoTurnos.turnos(idServicio, fecha, idMecanico)
+                .onSuccess {
+                    _turnos.value = TurnosUiState(lista = it)
+                }
+                .onFailure {
+                    _turnos.value = TurnosUiState(
+                        error = it.message
+                            ?: "No se pudieron cargar los turnos"
+                    )
+                }
         }
     }
 }

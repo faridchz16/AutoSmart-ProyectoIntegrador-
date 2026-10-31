@@ -120,6 +120,13 @@ fun ReservaScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+            } else if (mecanicosState.lista.isEmpty()) {
+                item {
+                    Text(
+                        text = "No hay mecánicos disponibles para este servicio.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             } else {
                 items(mecanicosState.lista) { mecanico ->
                     MecanicoCard(
