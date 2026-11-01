@@ -1,15 +1,18 @@
 package com.tecsup.autosmart.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.tecsup.autosmart.data.model.VehiculoResponse
+import com.tecsup.autosmart.data.network.RetrofitClient
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,6 +22,32 @@ fun VehiculosScreen(
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {} // <-- Callback para navegar a la reserva
 ) {
+    var vehiculos by remember {
+        mutableStateOf<List<VehiculoResponse>>(emptyList())
+    }
+
+    var cargando by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        cargando = true
+        error = null
+
+        try {
+            val response = RetrofitClient.vehiculoApi.listarVehiculos()
+
+            if (response.isSuccessful) {
+                vehiculos = response.body().orEmpty()
+            } else {
+                error = "Error al cargar vehículos: ${response.code()}"
+            }
+        } catch (e: Exception) {
+            error = "Error de conexión: ${e.localizedMessage}"
+        } finally {
+            cargando = false
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -60,13 +89,68 @@ fun VehiculosScreen(
             }
         }
     ) { innerPadding ->
-        Box(
+
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
+                .padding(innerPadding)
+                .padding(16.dp)
         ) {
-            Text("No tienes vehículos registrados aún.\nPresiona '+' para agregar uno.")
+            when {
+                cargando -> {
+                    CircularProgressIndicator()
+                }
+
+                error != null -> {
+                    Text(
+                        text = error.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                vehiculos.isEmpty() -> {
+                    Text(
+                        "No tienes vehículos registrados aún.\n" +
+                                "Presiona '+' para agregar uno."
+                    )
+                }
+
+                else -> {
+                    Text(
+                        "Mis vehículos registrados",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(vehiculos) { vehiculo ->
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = "${vehiculo.marca} ${vehiculo.modelo}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text("Placa: ${vehiculo.placa}")
+                                    Text("Año: ${vehiculo.anio}")
+                                    Text("Kilometraje: ${vehiculo.kilometraje} km")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

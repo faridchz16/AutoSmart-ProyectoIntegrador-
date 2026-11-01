@@ -20,6 +20,5 @@ data class VehiculoRequest(
     @SerializedName("marca") val marca: String,
     @SerializedName("modelo") val modelo: String,
     @SerializedName("anio") val anio: Int,
-    @SerializedName("kilometraje") val kilometraje: Int,
-    @SerializedName("idCliente") val idCliente: Int
+    @SerializedName("kilometraje") val kilometraje: Int
 )
