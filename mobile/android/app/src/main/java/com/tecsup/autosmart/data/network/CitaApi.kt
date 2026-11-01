@@ -6,6 +6,8 @@ import com.tecsup.autosmart.data.model.CitaCreadaResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
+import retrofit2.http.GET
+import retrofit2.http.Query
 
 interface CitaApi {
 
@@ -13,4 +15,9 @@ interface CitaApi {
     suspend fun crearCita(
         @Body request: CitaRequest
     ): Response<CitaCreadaResponse>
+
+    @GET("appointments/mine")
+    suspend fun listarMisCitas(
+        @Query("futuras") futuras: Boolean = false
+    ): Response<List<CitaCreadaResponse>>
 }

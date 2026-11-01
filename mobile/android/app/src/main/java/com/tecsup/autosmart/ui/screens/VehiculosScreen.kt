@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun VehiculosScreen(
     onLogout: () -> Unit,
+    onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {} // <-- Callback para navegar a la reserva
 ) {
     Scaffold(
@@ -21,6 +22,9 @@ fun VehiculosScreen(
                 title = { Text("Mis Vehículos", fontWeight = FontWeight.Bold) },
                 actions = {
                     // Botón para acceder a la Reserva de Citas
+                    TextButton(onClick = onNavigateToMisCitas) {
+                        Text("Mis citas")
+                    }
                     TextButton(onClick = onNavigateToReserva) {
                         Text("Reservar", fontWeight = FontWeight.SemiBold)
                     }

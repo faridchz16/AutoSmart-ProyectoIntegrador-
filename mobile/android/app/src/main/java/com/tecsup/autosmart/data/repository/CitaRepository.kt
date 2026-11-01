@@ -3,17 +3,20 @@ package com.tecsup.autosmart.data.repository
 
 import com.tecsup.autosmart.data.model.CitaRequest
 import com.tecsup.autosmart.data.model.CitaCreadaResponse
+import com.tecsup.autosmart.data.network.CitaApi
 import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.data.network.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
-class CitaRepository {
+class CitaRepository(
+    private val api: CitaApi = RetrofitClient.citaApi
+) {
 
     suspend fun crearCita(
         request: CitaRequest
     ): Result<CitaCreadaResponse> {
         return try {
-            val response = RetrofitClient.citaApi.crearCita(request)
+            val response = api.crearCita(request)
 
             if (response.isSuccessful) {
                 val cita = response.body()
@@ -45,5 +48,23 @@ class CitaRepository {
                 )
             )
         }
+    }
+
+    suspend fun misCitas(): Result<List<CitaCreadaResponse>> = try {
+        val response = api.listarMisCitas(futuras = false)
+        val citas = response.body()
+        when {
+            !response.isSuccessful -> Result.failure(
+                Exception(mensajeDeError(response.errorBody()?.string(), response.code()))
+            )
+            citas == null -> Result.failure(
+                Exception("El servidor no devolvió la lista de citas")
+            )
+            else -> Result.success(citas)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo conectar con el servidor. Revisa tu conexión", e))
     }
 }

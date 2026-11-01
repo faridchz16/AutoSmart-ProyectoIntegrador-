@@ -1,5 +1,7 @@
 package com.tecsup.autosmart.ui.screens
 
+import android.app.Activity
+import android.content.ContextWrapper
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -17,6 +19,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tecsup.autosmart.ui.viewmodel.MisCitasViewModel
+import java.math.BigDecimal
+import java.math.RoundingMode
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -33,21 +40,46 @@ data class CitaUI(
     val mecanico: String,
     val fecha: String,
     val hora: String,
-    val estado: String
+    val estado: String,
+    val ticket: String = "",
+    val horaFin: String = "",
+    val precio: BigDecimal? = null
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MisCitasScreen(
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    viewModel: MisCitasViewModel = viewModel()
 ) {
-    val listaCitas = remember {
-        mutableStateListOf(
-            CitaUI(1L, "Mantenimiento 10,000 km", "Toyota Corolla - ABC-123", "Juan Pérez", "2026-10-25", "10:00 AM", "CONFIRMADA"),
-            CitaUI(2L, "Cambio de Aceite", "Nissan Sentra - XYZ-789", "Carlos Gómez", "2026-10-28", "02:30 PM", "CONFIRMADA"),
-            CitaUI(3L, "Revisión de Frenos", "Toyota Corolla - ABC-123", "Juan Pérez", "2026-09-15", "09:00 AM", "COMPLETADA")
-        )
+    val estado by viewModel.estado.collectAsState()
+    val contexto = LocalContext.current
+    val actividad = remember(contexto) {
+        generateSequence(contexto) { (it as? ContextWrapper)?.baseContext }
+            .filterIsInstance<Activity>().firstOrNull()
+    }
+    LaunchedEffect(viewModel) { viewModel.cargarSiNecesario() }
+    DisposableEffect(viewModel, actividad) {
+        onDispose {
+            if (actividad?.isChangingConfigurations != true) viewModel.limpiar()
+        }
+    }
+    val listaCitas = remember(estado.citas) {
+        estado.citas.map { cita ->
+            CitaUI(
+                id = cita.idCita,
+                servicio = cita.servicio,
+                vehiculo = "Placa: ${cita.placa}",
+                mecanico = cita.mecanico,
+                fecha = cita.fecha,
+                hora = cita.horaInicio.take(5),
+                estado = cita.estado,
+                ticket = cita.ticket,
+                horaFin = cita.horaFin.take(5),
+                precio = cita.precio
+            )
+        }.toMutableStateList()
     }
 
     var citaACancelar by remember { mutableStateOf<CitaUI?>(null) }
@@ -61,6 +93,12 @@ fun MisCitasScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Mis Citas") },
+                actions = {
+                    TextButton(
+                        enabled = !estado.cargando,
+                        onClick = { viewModel.cargarCitas() }
+                    ) { Text("Actualizar") }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
@@ -76,16 +114,34 @@ fun MisCitasScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(listaCitas) { cita ->
-                CitaCard(
-                    cita = cita,
-                    onCancelar = { citaACancelar = cita },
-                    onReprogramar = { citaAReprogramar = cita }
-                )
+            when {
+                estado.cargando -> item {
+                    CircularProgressIndicator()
+                    Text("Cargando tus citas...")
+                }
+                estado.error != null -> item {
+                    Text(
+                        text = estado.error.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    Button(onClick = { viewModel.cargarCitas() }) { Text("Reintentar") }
+                }
+                listaCitas.isEmpty() -> item {
+                    Text("Aún no tienes citas registradas.")
+                }
+                else -> items(listaCitas, key = { it.id }) { cita ->
+                    CitaCard(
+                        cita = cita,
+                        onCancelar = { citaACancelar = cita },
+                        onReprogramar = { citaAReprogramar = cita },
+                        accionesHabilitadas = false
+                    )
+                }
             }
         }
     }
 
+    // Acciones deshabilitadas hasta su integración real en T31.2 y T32.2.
     // T32.2: Diálogo de Cancelación
     citaACancelar?.let { cita ->
         AlertDialog(
@@ -94,6 +150,7 @@ fun MisCitasScreen(
             text = { Text("¿Estás seguro de que deseas cancelar la cita de ${cita.servicio}? El turno será liberado.") },
             confirmButton = {
                 Button(
+                    enabled = false,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     onClick = {
                         val index = listaCitas.indexOfFirst { it.id == cita.id }
@@ -178,6 +235,7 @@ fun MisCitasScreen(
             },
             confirmButton = {
                 Button(
+                    enabled = false,
                     onClick = {
                         val index = listaCitas.indexOfFirst { it.id == cita.id }
                         if (index != -1) {
@@ -205,12 +263,16 @@ fun MisCitasScreen(
 fun CitaCard(
     cita: CitaUI,
     onCancelar: () -> Unit,
-    onReprogramar: () -> Unit
+    onReprogramar: () -> Unit,
+    accionesHabilitadas: Boolean = false
 ) {
-    val (estadoColor, estadoTexto) = when (cita.estado) {
+    val (estadoColor, estadoTexto) = when (cita.estado.uppercase(Locale.ROOT)) {
         "CONFIRMADA" -> Color(0xFF2E7D32) to "CONFIRMADA"
         "COMPLETADA" -> Color(0xFF1976D2) to "COMPLETADA"
-        else -> Color(0xFFD32F2F) to "CANCELADA"
+        "PENDIENTE" -> Color(0xFF8A5700) to "PENDIENTE"
+        "RECHAZADA" -> Color(0xFFB3261E) to "RECHAZADA"
+        "CANCELADA" -> Color(0xFFD32F2F) to "CANCELADA"
+        else -> MaterialTheme.colorScheme.onSurfaceVariant to cita.estado
     }
 
     Card(
@@ -224,7 +286,7 @@ fun CitaCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = cita.servicio, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(text = cita.servicio, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
@@ -235,6 +297,12 @@ fun CitaCard(
                 }
             }
 
+            if (cita.ticket.isNotBlank()) {
+                Text("Ticket: ${cita.ticket}", fontWeight = FontWeight.SemiBold)
+            }
+            cita.precio?.let { precio ->
+                Text("Precio: S/ ${precio.setScale(2, RoundingMode.HALF_UP).toPlainString()}")
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -252,23 +320,24 @@ fun CitaCard(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                 Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "${cita.fecha} - ${cita.hora}", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = "${cita.fecha} - ${cita.hora}" + if (cita.horaFin.isNotBlank()) " a ${cita.horaFin}" else "", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
 
-            if (cita.estado == "CONFIRMADA") {
+            if (cita.estado == "CONFIRMADA" || cita.estado == "PENDIENTE") {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     OutlinedButton(
+                        enabled = accionesHabilitadas,
                         onClick = onCancelar,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
                         Text("Cancelar", fontSize = 12.sp)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onReprogramar) {
+                    Button(enabled = accionesHabilitadas, onClick = onReprogramar) {
                         Text("Reprogramar", fontSize = 12.sp)
                     }
                 }
