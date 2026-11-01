@@ -3,8 +3,11 @@ package com.tecsup.autosmart.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tecsup.autosmart.data.model.CitaCreadaResponse
+import com.tecsup.autosmart.data.model.CitaRequest
 import com.tecsup.autosmart.data.model.MecanicoDisponible
 import com.tecsup.autosmart.data.model.Turno
+import com.tecsup.autosmart.data.repository.CitaRepository
 import com.tecsup.autosmart.data.repository.ReservaRepository
 import com.tecsup.autosmart.data.repository.ReservaRepositoryFake
 import com.tecsup.autosmart.data.repository.ReservaRepositoryRetrofit
@@ -12,9 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// HU-24: mecánicos desde el backend.
-// HU-25: turnos de prueba temporalmente.
-private const val USAR_DATOS_DE_PRUEBA_TURNOS = true
+
+private const val USAR_DATOS_DE_PRUEBA_TURNOS = false
 
 data class MecanicosUiState(
     val cargando: Boolean = false,
@@ -28,6 +30,13 @@ data class TurnosUiState(
     val error: String? = null
 )
 
+
+data class ConfirmarCitaUiState(
+    val cargando: Boolean = false,
+    val cita: CitaCreadaResponse? = null,
+    val error: String? = null
+)
+
 class ReservaViewModel(
     private val repoMecanicos: ReservaRepository = ReservaRepositoryRetrofit(),
     private val repoTurnos: ReservaRepository =
@@ -35,14 +44,21 @@ class ReservaViewModel(
             ReservaRepositoryFake()
         } else {
             ReservaRepositoryRetrofit()
-        }
+        },
+    private val citaRepository: CitaRepository = CitaRepository()
 ) : ViewModel() {
+
 
     private val _mecanicos = MutableStateFlow(MecanicosUiState())
     val mecanicos: StateFlow<MecanicosUiState> = _mecanicos
 
+
     private val _turnos = MutableStateFlow(TurnosUiState())
     val turnos: StateFlow<TurnosUiState> = _turnos
+
+
+    private val _confirmacion = MutableStateFlow(ConfirmarCitaUiState())
+    val confirmacion: StateFlow<ConfirmarCitaUiState> = _confirmacion
 
     fun cargarMecanicos(idServicio: Long = 1L) {
         viewModelScope.launch {
@@ -80,5 +96,31 @@ class ReservaViewModel(
                     )
                 }
         }
+    }
+
+
+    fun confirmarCita(request: CitaRequest) {
+        if (_confirmacion.value.cargando) return
+
+        viewModelScope.launch {
+            _confirmacion.value = ConfirmarCitaUiState(cargando = true)
+
+            citaRepository.crearCita(request)
+                .onSuccess { cita ->
+                    _confirmacion.value = ConfirmarCitaUiState(
+                        cita = cita
+                    )
+                }
+                .onFailure { error ->
+                    _confirmacion.value = ConfirmarCitaUiState(
+                        error = error.message
+                            ?: "No se pudo confirmar la reserva"
+                    )
+                }
+        }
+    }
+
+    fun limpiarConfirmacion() {
+        _confirmacion.value = ConfirmarCitaUiState()
     }
 }

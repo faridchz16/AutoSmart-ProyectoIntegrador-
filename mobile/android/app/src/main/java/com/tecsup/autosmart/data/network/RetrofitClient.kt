@@ -72,4 +72,14 @@ object RetrofitClient {
             .build()
             .create(ServicioApi::class.java)
     }
+
+
+    val citaApi: CitaApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CitaApi::class.java)
+    }
 }

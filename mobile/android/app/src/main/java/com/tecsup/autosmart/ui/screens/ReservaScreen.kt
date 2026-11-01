@@ -1,3 +1,4 @@
+
 package com.tecsup.autosmart.ui.screens
 
 import android.os.Build
@@ -7,10 +8,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,10 +27,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tecsup.autosmart.data.model.CitaRequest
 import com.tecsup.autosmart.data.model.MecanicoDisponible
 import com.tecsup.autosmart.data.model.Turno
 import com.tecsup.autosmart.data.model.VehiculoResponse
+import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.ui.viewmodel.ReservaViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -44,20 +49,66 @@ fun ReservaScreen(
 ) {
     val mecanicosState by viewModel.mecanicos.collectAsState()
     val turnosState by viewModel.turnos.collectAsState()
+    val confirmacionState by viewModel.confirmacion.collectAsState()
 
-    var vehiculoSeleccionado by remember { mutableStateOf<VehiculoResponse?>(null) }
-    var mecanicoSeleccionado by remember { mutableStateOf<MecanicoDisponible?>(null) }
-    var fechaSeleccionada by remember { mutableStateOf(LocalDate.now()) }
-    var turnoSeleccionado by remember { mutableStateOf<Turno?>(null) }
+    var vehiculos by remember {
+        mutableStateOf<List<VehiculoResponse>>(emptyList())
+    }
+    var cargandoVehiculos by remember { mutableStateOf(true) }
+    var errorVehiculos by remember { mutableStateOf<String?>(null) }
+
+    var vehiculoSeleccionado by remember {
+        mutableStateOf<VehiculoResponse?>(null)
+    }
+    var mecanicoSeleccionado by remember {
+        mutableStateOf<MecanicoDisponible?>(null)
+    }
+    var fechaSeleccionada by remember {
+        mutableStateOf(LocalDate.now())
+    }
+    var turnoSeleccionado by remember {
+        mutableStateOf<Turno?>(null)
+    }
 
     var mostrarResumen by remember { mutableStateOf(false) }
-    var ticketGenerado by remember { mutableStateOf<String?>(null) }
+
 
     LaunchedEffect(idServicio) {
         viewModel.cargarMecanicos(idServicio)
     }
 
-    LaunchedEffect(mecanicoSeleccionado, fechaSeleccionada) {
+
+    LaunchedEffect(Unit) {
+        cargandoVehiculos = true
+        errorVehiculos = null
+
+        try {
+            val respuesta =
+                RetrofitClient.vehiculoApi.listarVehiculos()
+
+            if (respuesta.isSuccessful) {
+                vehiculos = respuesta.body().orEmpty()
+            } else {
+                errorVehiculos =
+                    "No se pudieron cargar los vehículos. " +
+                            "HTTP ${respuesta.code()}"
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            errorVehiculos =
+                e.message ?: "Error al conectar con el servidor"
+        } finally {
+            cargandoVehiculos = false
+        }
+    }
+
+
+    LaunchedEffect(
+        idServicio,
+        mecanicoSeleccionado,
+        fechaSeleccionada
+    ) {
         mecanicoSeleccionado?.let { mecanico ->
             viewModel.cargarTurnos(
                 idServicio = idServicio,
@@ -73,12 +124,16 @@ fun ReservaScreen(
                 title = { Text("Reservar Cita") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 }
             )
         }
     ) { padding ->
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -86,24 +141,61 @@ fun ReservaScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+
+
             item {
                 Text(
-                    text = "1. Vehículo Seleccionado",
+                    text = "1. Selecciona tu Vehículo",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-
-                VehiculoCardSimple(
-                    marca = "Toyota",
-                    modelo = "Corolla",
-                    placa = "ABC-123",
-                    seleccionado = true,
-                    onSelect = { }
-                )
             }
 
+            if (cargandoVehiculos) {
+                item {
+                    CircularProgressIndicator()
+                }
+            } else if (errorVehiculos != null) {
+                item {
+                    Text(
+                        text = errorVehiculos.orEmpty(),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            } else if (vehiculos.isEmpty()) {
+                item {
+                    Text(
+                        text = "No tienes vehículos disponibles. " +
+                                "Registra un vehículo antes de reservar.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                items(
+                    items = vehiculos,
+                    key = { it.idVehiculo }
+                ) { vehiculo ->
+
+                    VehiculoCardSimple(
+                        marca = vehiculo.marca,
+                        modelo = vehiculo.modelo,
+                        placa = vehiculo.placa,
+                        seleccionado =
+                            vehiculoSeleccionado?.idVehiculo ==
+                                    vehiculo.idVehiculo,
+                        onSelect = {
+                            vehiculoSeleccionado = vehiculo
+                        }
+                    )
+                }
+            }
+
+
             item {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
                 Text(
                     text = "2. Selecciona un Mecánico",
                     style = MaterialTheme.typography.titleMedium,
@@ -112,18 +204,21 @@ fun ReservaScreen(
             }
 
             if (mecanicosState.cargando) {
-                item { CircularProgressIndicator() }
+                item {
+                    CircularProgressIndicator()
+                }
             } else if (mecanicosState.error != null) {
                 item {
                     Text(
-                        text = mecanicosState.error ?: "",
+                        text = mecanicosState.error.orEmpty(),
                         color = MaterialTheme.colorScheme.error
                     )
                 }
             } else if (mecanicosState.lista.isEmpty()) {
                 item {
                     Text(
-                        text = "No hay mecánicos disponibles para este servicio.",
+                        text = "No hay mecánicos disponibles " +
+                                "para este servicio.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -131,7 +226,9 @@ fun ReservaScreen(
                 items(mecanicosState.lista) { mecanico ->
                     MecanicoCard(
                         mecanico = mecanico,
-                        seleccionado = mecanicoSeleccionado?.idMecanico == mecanico.idMecanico,
+                        seleccionado =
+                            mecanicoSeleccionado?.idMecanico ==
+                                    mecanico.idMecanico,
                         onSelect = {
                             mecanicoSeleccionado = mecanico
                             turnoSeleccionado = null
@@ -140,9 +237,14 @@ fun ReservaScreen(
                 }
             }
 
+
             if (mecanicoSeleccionado != null) {
+
                 item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
                     Text(
                         text = "3. Selecciona Fecha y Hora",
                         style = MaterialTheme.typography.titleMedium,
@@ -155,18 +257,26 @@ fun ReservaScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement =
+                            Arrangement.spacedBy(8.dp)
                     ) {
                         val hoy = LocalDate.now()
+
                         (0..4).forEach { i ->
                             val dia = hoy.plusDays(i.toLong())
-                            val esSeleccionado = dia == fechaSeleccionada
+                            val seleccionado =
+                                dia == fechaSeleccionada
 
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (esSeleccionado) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
+                                    .background(
+                                        if (seleccionado)
+                                            MaterialTheme.colorScheme.primary
+                                        else
+                                            MaterialTheme.colorScheme.surfaceVariant
+                                    )
                                     .clickable {
                                         fechaSeleccionada = dia
                                         turnoSeleccionado = null
@@ -174,16 +284,31 @@ fun ReservaScreen(
                                     .padding(vertical = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    horizontalAlignment =
+                                        Alignment.CenterHorizontally
+                                ) {
                                     Text(
-                                        text = dia.format(DateTimeFormatter.ofPattern("EEE", Locale("es"))).uppercase(),
+                                        text = dia.format(
+                                            DateTimeFormatter.ofPattern(
+                                                "EEE",
+                                                Locale("es")
+                                            )
+                                        ).uppercase(),
                                         fontSize = 12.sp,
-                                        color = if (esSeleccionado) Color.White else Color.Black
+                                        color = if (seleccionado)
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else
+                                            MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+
                                     Text(
                                         text = dia.dayOfMonth.toString(),
                                         fontWeight = FontWeight.Bold,
-                                        color = if (esSeleccionado) Color.White else Color.Black
+                                        color = if (seleccionado)
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else
+                                            MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -200,9 +325,22 @@ fun ReservaScreen(
                 }
 
                 if (turnosState.cargando) {
-                    item { CircularProgressIndicator() }
+                    item {
+                        CircularProgressIndicator()
+                    }
+                } else if (turnosState.error != null) {
+                    item {
+                        Text(
+                            text = turnosState.error.orEmpty(),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 } else if (turnosState.lista.isEmpty()) {
-                    item { Text("No hay turnos disponibles para esta fecha") }
+                    item {
+                        Text(
+                            "No hay turnos disponibles para esta fecha"
+                        )
+                    }
                 } else {
                     item {
                         LazyVerticalGrid(
@@ -210,37 +348,69 @@ fun ReservaScreen(
                             modifier = Modifier
                                 .height(160.dp)
                                 .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement =
+                                Arrangement.spacedBy(8.dp),
+                            verticalArrangement =
+                                Arrangement.spacedBy(8.dp)
                         ) {
                             items(turnosState.lista) { turno ->
                                 TurnoChip(
                                     turno = turno,
-                                    seleccionado = turnoSeleccionado?.hora == turno.hora,
-                                    onSelect = { if (turno.disponible) turnoSeleccionado = turno }
+                                    seleccionado =
+                                        turnoSeleccionado?.hora ==
+                                                turno.hora,
+                                    onSelect = {
+                                        if (turno.disponible) {
+                                            turnoSeleccionado = turno
+                                        }
+                                    }
                                 )
                             }
                         }
                     }
                 }
 
-                // T33.2: Muestra el contador de 10 min al seleccionar un turno
                 if (turnoSeleccionado != null) {
+
                     item {
-                        TemporizadorBloqueoTurno(
-                            tiempoInicialSegundos = 600,
-                            onTiempoAgotado = { turnoSeleccionado = null }
-                        )
+                        key(
+                            mecanicoSeleccionado?.idMecanico,
+                            fechaSeleccionada,
+                            turnoSeleccionado?.hora
+                        ) {
+                            TemporizadorBloqueoTurno(
+                                tiempoInicialSegundos = 600,
+                                onTiempoAgotado = {
+                                    turnoSeleccionado = null
+                                    mostrarResumen = false
+                                }
+                            )
+                        }
                     }
 
                     item {
                         Button(
-                            onClick = { mostrarResumen = true },
+                            onClick = {
+                                viewModel.limpiarConfirmacion()
+                                mostrarResumen = true
+                            },
+                            enabled =
+                                vehiculoSeleccionado != null &&
+                                        !turnosState.cargando &&
+                                        !confirmacionState.cargando,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 8.dp)
                         ) {
                             Text("Ver Resumen y Confirmar Reserva")
+                        }
+
+                        if (vehiculoSeleccionado == null) {
+                            Text(
+                                text = "Primero selecciona un vehículo.",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
@@ -248,32 +418,113 @@ fun ReservaScreen(
         }
     }
 
+
     if (mostrarResumen) {
+        val citaCreada = confirmacionState.cita
+
         AlertDialog(
-            onDismissRequest = { mostrarResumen = false },
-            title = { Text("Resumen de la Cita", fontWeight = FontWeight.Bold) },
+            onDismissRequest = {
+                if (!confirmacionState.cargando &&
+                    citaCreada == null
+                ) {
+                    mostrarResumen = false
+                }
+            },
+            title = {
+                Text(
+                    text = if (citaCreada != null)
+                        "Cita Confirmada"
+                    else
+                        "Resumen de la Cita",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🚗 Vehículo: Toyota Corolla (ABC-123)")
-                    Text("👨‍🔧 Mecánico: ${mecanicoSeleccionado?.nombre}")
-                    Text("📅 Fecha: $fechaSeleccionada")
-                    Text("⏰ Turno: ${turnoSeleccionado?.hora}")
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                    if (ticketGenerado != null) {
+                Column(
+                    verticalArrangement =
+                        Arrangement.spacedBy(8.dp)
+                ) {
+                    if (citaCreada == null) {
                         Text(
-                            text = "Ticket: $ticketGenerado",
-                            fontWeight = FontWeight.Bold,
+                            "🚗 Vehículo: " +
+                                    "${vehiculoSeleccionado?.marca} " +
+                                    "${vehiculoSeleccionado?.modelo} " +
+                                    "(${vehiculoSeleccionado?.placa})"
+                        )
+
+                        Text(
+                            "👨‍🔧 Mecánico: " +
+                                    "${mecanicoSeleccionado?.nombre}"
+                        )
+
+                        Text("📅 Fecha: $fechaSeleccionada")
+                        Text(
+                            "⏰ Turno: ${turnoSeleccionado?.hora}"
+                        )
+                    } else {
+                        Text(
+                            "Tu cita fue registrada correctamente.",
                             color = MaterialTheme.colorScheme.primary,
-                            fontSize = 18.sp
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        HorizontalDivider()
+
+                        Text(
+                            text = "Ticket: ${citaCreada.ticket}",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Text("Estado: ${citaCreada.estado}")
+                        Text("Fecha: ${citaCreada.fecha}")
+                        Text("Hora: ${citaCreada.horaInicio}")
+                        Text("Mecánico: ${citaCreada.mecanico}")
+                        Text("Placa: ${citaCreada.placa}")
+                    }
+
+                    if (confirmacionState.cargando) {
+                        CircularProgressIndicator()
+                        Text("Registrando cita...")
+                    }
+
+                    confirmacionState.error?.let { error ->
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
             },
             confirmButton = {
-                if (ticketGenerado == null) {
+                if (citaCreada == null) {
                     Button(
+                        enabled = !confirmacionState.cargando,
                         onClick = {
-                            ticketGenerado = "AS-2026-${(1000..9999).random()}"
+                            val vehiculo = vehiculoSeleccionado
+                            val mecanico = mecanicoSeleccionado
+                            val turno = turnoSeleccionado
+
+                            if (
+                                vehiculo != null &&
+                                mecanico != null &&
+                                turno != null &&
+                                turno.disponible
+                            ) {
+                                val request = CitaRequest(
+                                    idServicio = idServicio,
+                                    idMecanico =
+                                        mecanico.idMecanico,
+                                    idVehiculo =
+                                        vehiculo.idVehiculo,
+                                    fecha =
+                                        fechaSeleccionada.toString(),
+                                    horaInicio = turno.hora
+                                )
+
+                                viewModel.confirmarCita(request)
+                            }
                         }
                     ) {
                         Text("Confirmar Cita")
@@ -282,6 +533,7 @@ fun ReservaScreen(
                     Button(
                         onClick = {
                             mostrarResumen = false
+                            viewModel.limpiarConfirmacion()
                             onNavigateBack()
                         }
                     ) {
@@ -290,8 +542,14 @@ fun ReservaScreen(
                 }
             },
             dismissButton = {
-                if (ticketGenerado == null) {
-                    TextButton(onClick = { mostrarResumen = false }) {
+                if (citaCreada == null) {
+                    TextButton(
+                        enabled = !confirmacionState.cargando,
+                        onClick = {
+                            mostrarResumen = false
+                            viewModel.limpiarConfirmacion()
+                        }
+                    ) {
                         Text("Cancelar")
                     }
                 }
@@ -299,6 +557,7 @@ fun ReservaScreen(
         )
     }
 }
+
 
 @Composable
 fun VehiculoCardSimple(
@@ -314,11 +573,17 @@ fun VehiculoCardSimple(
             .clickable { onSelect() }
             .border(
                 width = if (seleccionado) 2.dp else 0.dp,
-                color = if (seleccionado) MaterialTheme.colorScheme.primary else Color.Transparent,
+                color = if (seleccionado)
+                    MaterialTheme.colorScheme.primary
+                else
+                    Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+            containerColor = if (seleccionado)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -330,14 +595,24 @@ fun VehiculoCardSimple(
                 contentDescription = null,
                 modifier = Modifier.size(36.dp)
             )
+
             Spacer(modifier = Modifier.width(16.dp))
+
             Column {
-                Text(text = "$marca $modelo", fontWeight = FontWeight.Bold)
-                Text(text = "Placa: $placa", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    text = "$marca $modelo",
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Placa: $placa",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
+
 
 @Composable
 fun MecanicoCard(
@@ -351,11 +626,17 @@ fun MecanicoCard(
             .clickable { onSelect() }
             .border(
                 width = if (seleccionado) 2.dp else 0.dp,
-                color = if (seleccionado) MaterialTheme.colorScheme.primary else Color.Transparent,
+                color = if (seleccionado)
+                    MaterialTheme.colorScheme.primary
+                else
+                    Color.Transparent,
                 shape = RoundedCornerShape(12.dp)
             ),
         colors = CardDefaults.cardColors(
-            containerColor = if (seleccionado) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+            containerColor = if (seleccionado)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -367,19 +648,30 @@ fun MecanicoCard(
                 contentDescription = null,
                 modifier = Modifier.size(40.dp)
             )
+
             Spacer(modifier = Modifier.width(16.dp))
+
             Column {
-                Text(text = mecanico.nombre, fontWeight = FontWeight.Bold)
-                Text(text = "Experiencia: ${mecanico.aniosExperiencia} años", fontSize = 12.sp)
                 Text(
-                    text = "Esp: ${mecanico.especialidades.joinToString(", ")}",
+                    text = mecanico.nombre,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Experiencia: " +
+                            "${mecanico.aniosExperiencia} años",
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "Esp: " +
+                            mecanico.especialidades.joinToString(", "),
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun TurnoChip(
@@ -395,15 +687,17 @@ fun TurnoChip(
 
     val textColor = when {
         !turno.disponible -> Color.Gray
-        seleccionado -> Color.White
-        else -> Color.Black
+        seleccionado -> MaterialTheme.colorScheme.onPrimary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
-            .clickable(enabled = turno.disponible) { onSelect() }
+            .clickable(enabled = turno.disponible) {
+                onSelect()
+            }
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -415,17 +709,19 @@ fun TurnoChip(
     }
 }
 
-// T33.2: Componente independiente para el temporizador de bloqueo
+
 @Composable
 fun TemporizadorBloqueoTurno(
     tiempoInicialSegundos: Int = 600,
     onTiempoAgotado: () -> Unit = {}
 ) {
-    var segundosRestantes by remember { mutableIntStateOf(tiempoInicialSegundos) }
+    var segundosRestantes by remember {
+        mutableIntStateOf(tiempoInicialSegundos)
+    }
 
     LaunchedEffect(segundosRestantes) {
         if (segundosRestantes > 0) {
-            kotlinx.coroutines.delay(1000L)
+            delay(1000L)
             segundosRestantes--
         } else {
             onTiempoAgotado()
@@ -434,10 +730,19 @@ fun TemporizadorBloqueoTurno(
 
     val minutos = segundosRestantes / 60
     val segundos = segundosRestantes % 60
-    val tiempoFormateado = String.format(Locale.getDefault(), "%02d:%02d", minutos, segundos)
+
+    val tiempoFormateado = String.format(
+        Locale.getDefault(),
+        "%02d:%02d",
+        minutos,
+        segundos
+    )
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                MaterialTheme.colorScheme.errorContainer
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
@@ -445,18 +750,21 @@ fun TemporizadorBloqueoTurno(
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
             Text(
-                text = "⏱️ Turno reservado por:",
+                text = "⏱️ Tiempo para confirmar:",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
+
             Text(
                 text = tiempoFormateado,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                color =
+                    MaterialTheme.colorScheme.onErrorContainer
             )
         }
     }
