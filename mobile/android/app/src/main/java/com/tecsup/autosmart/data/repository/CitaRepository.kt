@@ -67,4 +67,33 @@ class CitaRepository(
     } catch (e: Exception) {
         Result.failure(Exception("No se pudo conectar con el servidor. Revisa tu conexión", e))
     }
+
+    suspend fun cancelarCita(idCita: Long): Result<CitaCreadaResponse> = try {
+        val response = api.cancelarCita(idCita)
+        val cita = response.body()
+        when {
+            !response.isSuccessful -> {
+                val mensaje = mensajeDeError(response.errorBody()?.string(), response.code())
+                Result.failure(
+                    if (response.code() == 408 || response.code() >= 500) {
+                        CancelacionInciertaException(mensaje)
+                    } else {
+                        Exception(mensaje)
+                    }
+                )
+            }
+            cita == null || cita.idCita != idCita || cita.estado != "CANCELADA" ->
+                Result.failure(CancelacionInciertaException("El servidor no confirmó la cancelación"))
+            else -> Result.success(cita)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(
+            CancelacionInciertaException("No se pudo confirmar la cancelación por un error de conexión", e)
+        )
+    }
 }
+
+class CancelacionInciertaException(mensaje: String, causa: Throwable? = null) :
+    Exception(mensaje, causa)

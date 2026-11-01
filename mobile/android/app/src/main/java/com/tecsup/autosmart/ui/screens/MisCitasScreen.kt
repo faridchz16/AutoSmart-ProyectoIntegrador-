@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,6 +57,11 @@ fun MisCitasScreen(
     viewModel: MisCitasViewModel = viewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
+    val cancelacion by viewModel.cancelacion.collectAsState()
+    val cancelando = cancelacion.enviando || cancelacion.verificando
+    BackHandler(enabled = cancelacion.cita != null) {
+        if (!cancelando) viewModel.cerrarCancelacion()
+    }
     val contexto = LocalContext.current
     val actividad = remember(contexto) {
         generateSequence(contexto) { (it as? ContextWrapper)?.baseContext }
@@ -82,7 +90,7 @@ fun MisCitasScreen(
         }.toMutableStateList()
     }
 
-    var citaACancelar by remember { mutableStateOf<CitaUI?>(null) }
+    val citaACancelar = cancelacion.cita
     var citaAReprogramar by remember { mutableStateOf<CitaUI?>(null) }
 
     // Estados para reprogramación (T31.2)
@@ -95,12 +103,12 @@ fun MisCitasScreen(
                 title = { Text("Mis Citas") },
                 actions = {
                     TextButton(
-                        enabled = !estado.cargando,
+                        enabled = !estado.cargando && !cancelando,
                         onClick = { viewModel.cargarCitas() }
                     ) { Text("Actualizar") }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(enabled = !cancelando, onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
@@ -114,6 +122,9 @@ fun MisCitasScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            estado.aviso?.let { aviso ->
+                item { Text(aviso, color = MaterialTheme.colorScheme.primary) }
+            }
             when {
                 estado.cargando -> item {
                     CircularProgressIndicator()
@@ -132,39 +143,52 @@ fun MisCitasScreen(
                 else -> items(listaCitas, key = { it.id }) { cita ->
                     CitaCard(
                         cita = cita,
-                        onCancelar = { citaACancelar = cita },
+                        onCancelar = { viewModel.abrirCancelacion(cita.id) },
                         onReprogramar = { citaAReprogramar = cita },
-                        accionesHabilitadas = false
+                        accionesHabilitadas = false,
+                        cancelarHabilitado = !cancelando && !estado.cargando && viewModel.puedeCancelar(cita.id)
                     )
                 }
             }
         }
     }
 
-    // Acciones deshabilitadas hasta su integración real en T31.2 y T32.2.
-    // T32.2: Diálogo de Cancelación
+    // T32.2: El estado cambia únicamente tras confirmación del servidor.
     citaACancelar?.let { cita ->
         AlertDialog(
-            onDismissRequest = { citaACancelar = null },
-            title = { Text("Cancelar Cita") },
-            text = { Text("¿Estás seguro de que deseas cancelar la cita de ${cita.servicio}? El turno será liberado.") },
+            onDismissRequest = { viewModel.cerrarCancelacion() },
+            title = { Text("Cancelar cita") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("¿Deseas cancelar esta cita?")
+                    Text("Ticket: ${cita.ticket}")
+                    Text("Servicio: ${cita.servicio}")
+                    Text("Fecha: ${cita.fecha} - ${cita.horaInicio.take(5)}")
+                    Text("Solo se puede cancelar con al menos 2 horas de anticipación.")
+                    if (cancelando) {
+                        CircularProgressIndicator()
+                        Text(if (cancelacion.verificando) "Comprobando estado..." else "Cancelando cita...")
+                    }
+                    cancelacion.error?.let { error ->
+                        Text(error, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
             confirmButton = {
                 Button(
-                    enabled = false,
+                    enabled = !cancelando &&
+                            (cancelacion.requiereVerificacion || viewModel.puedeCancelar(cita.idCita)),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    onClick = {
-                        val index = listaCitas.indexOfFirst { it.id == cita.id }
-                        if (index != -1) {
-                            listaCitas[index] = cita.copy(estado = "CANCELADA")
-                        }
-                        citaACancelar = null
-                    }
+                    onClick = { viewModel.confirmarCancelacion() }
                 ) {
-                    Text("Sí, Cancelar", color = Color.White)
+                    Text(if (cancelacion.requiereVerificacion) "Comprobar estado" else "Sí, cancelar")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { citaACancelar = null }) {
+                TextButton(enabled = !cancelando, onClick = { viewModel.cerrarCancelacion() }) {
                     Text("Volver")
                 }
             }
@@ -264,7 +288,8 @@ fun CitaCard(
     cita: CitaUI,
     onCancelar: () -> Unit,
     onReprogramar: () -> Unit,
-    accionesHabilitadas: Boolean = false
+    accionesHabilitadas: Boolean = false,
+    cancelarHabilitado: Boolean = false
 ) {
     val (estadoColor, estadoTexto) = when (cita.estado.uppercase(Locale.ROOT)) {
         "CONFIRMADA" -> Color(0xFF2E7D32) to "CONFIRMADA"
@@ -330,7 +355,7 @@ fun CitaCard(
                     horizontalArrangement = Arrangement.End
                 ) {
                     OutlinedButton(
-                        enabled = accionesHabilitadas,
+                        enabled = cancelarHabilitado,
                         onClick = onCancelar,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
