@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +33,7 @@ import com.tecsup.autosmart.data.model.MecanicoDisponible
 import com.tecsup.autosmart.data.model.Turno
 import com.tecsup.autosmart.data.model.VehiculoResponse
 import com.tecsup.autosmart.data.network.RetrofitClient
+import com.tecsup.autosmart.ui.components.TicketConfirmacionDialog
 import com.tecsup.autosmart.ui.viewmodel.ReservaViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -70,7 +72,7 @@ fun ReservaScreen(
         mutableStateOf<Turno?>(null)
     }
 
-    var mostrarResumen by remember { mutableStateOf(false) }
+    var mostrarResumen by rememberSaveable { mutableStateOf(false) }
 
 
     LaunchedEffect(idServicio) {
@@ -428,76 +430,44 @@ fun ReservaScreen(
     }
 
 
-    if (mostrarResumen) {
-        val citaCreada = confirmacionState.cita
-
+    val citaCreada = confirmacionState.cita
+    if (citaCreada != null) {
+        TicketConfirmacionDialog(
+            cita = citaCreada,
+            onFinalizar = {
+                mostrarResumen = false
+                viewModel.limpiarConfirmacion()
+                onNavigateBack()
+            }
+        )
+    } else if (mostrarResumen) {
         AlertDialog(
             onDismissRequest = {
-                if (!confirmacionState.cargando &&
-                    citaCreada == null
-                ) {
+                if (!confirmacionState.cargando) {
                     mostrarResumen = false
                 }
             },
             title = {
-                Text(
-                    text = if (citaCreada != null)
-                        "Cita Confirmada"
-                    else
-                        "Resumen de la Cita",
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Resumen de la Cita", fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(
-                    verticalArrangement =
-                        Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (citaCreada == null) {
-                        Text(
-                            "🚗 Vehículo: " +
-                                    "${vehiculoSeleccionado?.marca} " +
-                                    "${vehiculoSeleccionado?.modelo} " +
-                                    "(${vehiculoSeleccionado?.placa})"
-                        )
-
-                        Text(
-                            "👨‍🔧 Mecánico: " +
-                                    "${mecanicoSeleccionado?.nombre}"
-                        )
-
-                        Text("📅 Fecha: $fechaSeleccionada")
-                        Text(
-                            "⏰ Turno: ${turnoSeleccionado?.hora}"
-                        )
-                    } else {
-                        Text(
-                            "Tu cita fue registrada correctamente.",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        HorizontalDivider()
-
-                        Text(
-                            text = "Ticket: ${citaCreada.ticket}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-
-                        Text("Estado: ${citaCreada.estado}")
-                        Text("Fecha: ${citaCreada.fecha}")
-                        Text("Hora: ${citaCreada.horaInicio}")
-                        Text("Mecánico: ${citaCreada.mecanico}")
-                        Text("Placa: ${citaCreada.placa}")
-                    }
+                    Text(
+                        "🚗 Vehículo: " +
+                                "${vehiculoSeleccionado?.marca} " +
+                                "${vehiculoSeleccionado?.modelo} " +
+                                "(${vehiculoSeleccionado?.placa})"
+                    )
+                    Text("👨‍🔧 Mecánico: ${mecanicoSeleccionado?.nombre}")
+                    Text("📅 Fecha: $fechaSeleccionada")
+                    Text("⏰ Turno: ${turnoSeleccionado?.hora}")
 
                     if (confirmacionState.cargando) {
                         CircularProgressIndicator()
                         Text("Registrando cita...")
                     }
-
                     confirmacionState.error?.let { error ->
                         Text(
                             text = error,
@@ -507,60 +477,39 @@ fun ReservaScreen(
                 }
             },
             confirmButton = {
-                if (citaCreada == null) {
-                    Button(
-                        enabled = !confirmacionState.cargando,
-                        onClick = {
-                            val vehiculo = vehiculoSeleccionado
-                            val mecanico = mecanicoSeleccionado
-                            val turno = turnoSeleccionado
+                Button(
+                    enabled = !confirmacionState.cargando,
+                    onClick = {
+                        val vehiculo = vehiculoSeleccionado
+                        val mecanico = mecanicoSeleccionado
+                        val turno = turnoSeleccionado
 
-                            if (
-                                vehiculo != null &&
-                                mecanico != null &&
-                                turno != null &&
-                                turno.disponible
-                            ) {
-                                val request = CitaRequest(
-                                    idServicio = idServicio,
-                                    idMecanico =
-                                        mecanico.idMecanico,
-                                    idVehiculo =
-                                        vehiculo.idVehiculo,
-                                    fecha =
-                                        fechaSeleccionada.toString(),
-                                    horaInicio = turno.hora
-                                )
-
-                                viewModel.confirmarCita(request)
-                            }
+                        if (vehiculo != null && mecanico != null &&
+                            turno != null && turno.disponible
+                        ) {
+                            val request = CitaRequest(
+                                idServicio = idServicio,
+                                idMecanico = mecanico.idMecanico,
+                                idVehiculo = vehiculo.idVehiculo,
+                                fecha = fechaSeleccionada.toString(),
+                                horaInicio = turno.hora
+                            )
+                            viewModel.confirmarCita(request)
                         }
-                    ) {
-                        Text("Confirmar Cita")
                     }
-                } else {
-                    Button(
-                        onClick = {
-                            mostrarResumen = false
-                            viewModel.limpiarConfirmacion()
-                            onNavigateBack()
-                        }
-                    ) {
-                        Text("Finalizar")
-                    }
+                ) {
+                    Text("Confirmar Cita")
                 }
             },
             dismissButton = {
-                if (citaCreada == null) {
-                    TextButton(
-                        enabled = !confirmacionState.cargando,
-                        onClick = {
-                            mostrarResumen = false
-                            viewModel.limpiarConfirmacion()
-                        }
-                    ) {
-                        Text("Cancelar")
+                TextButton(
+                    enabled = !confirmacionState.cargando,
+                    onClick = {
+                        mostrarResumen = false
+                        viewModel.limpiarConfirmacion()
                     }
+                ) {
+                    Text("Cancelar")
                 }
             }
         )
