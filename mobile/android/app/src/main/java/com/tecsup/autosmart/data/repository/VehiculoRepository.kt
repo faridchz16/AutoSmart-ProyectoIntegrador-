@@ -8,6 +8,35 @@ import com.tecsup.autosmart.data.network.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class VehiculoRepository(private val api: VehiculoApi = RetrofitClient.vehiculoApi) {
+    suspend fun listar(): Result<List<VehiculoResponse>> = try {
+        val respuesta = api.listarVehiculos()
+        when {
+            !respuesta.isSuccessful -> Result.failure(Exception(
+                mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())))
+            respuesta.body() == null -> Result.failure(Exception("El servidor no devolvió la lista de vehículos."))
+            else -> Result.success(respuesta.body().orEmpty())
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo consultar tus vehículos. Revisa tu conexión.", e))
+    }
+
+    suspend fun eliminar(id: Long): Result<Unit> = try {
+        val respuesta = api.eliminarVehiculo(id)
+        when {
+            respuesta.code() == 204 -> Result.success(Unit)
+            respuesta.isSuccessful || respuesta.code() in listOf(404, 408) || respuesta.code() >= 500 ->
+                Result.failure(EliminacionInciertaException())
+            else -> Result.failure(Exception(
+                mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())))
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(EliminacionInciertaException(e))
+    }
+
     suspend fun actualizar(id: Long, datos: VehiculoRequest): Result<VehiculoResponse> = try {
         val respuesta = api.actualizarVehiculo(id, datos)
         val vehiculo = respuesta.body()
@@ -25,3 +54,7 @@ class VehiculoRepository(private val api: VehiculoApi = RetrofitClient.vehiculoA
         Result.failure(Exception("No se pudo confirmar la actualización. Revisa tu conexión y consulta la lista antes de reintentar.", e))
     }
 }
+
+class EliminacionInciertaException(causa: Throwable? = null) : Exception(
+    "No se pudo confirmar la eliminación del vehículo.", causa
+)
