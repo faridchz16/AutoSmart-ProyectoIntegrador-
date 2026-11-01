@@ -18,6 +18,7 @@ import com.tecsup.autosmart.data.network.RetrofitClient
 @Composable
 fun VehiculosScreen(
     onLogout: () -> Unit,
+    onEditarVehiculo: (VehiculoResponse) -> Unit = {},
     onNavigateToPerfil: () -> Unit = {},
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {} // <-- Callback para navegar a la reserva
@@ -145,6 +146,9 @@ fun VehiculosScreen(
                                     Text("Placa: ${vehiculo.placa}")
                                     Text("Año: ${vehiculo.anio}")
                                     Text("Kilometraje: ${vehiculo.kilometraje} km")
+                                    TextButton(onClick = { onEditarVehiculo(vehiculo) }) {
+                                        Text("Editar")
+                                    }
                                 }
                             }
                         }

@@ -26,6 +26,8 @@ import com.tecsup.autosmart.data.model.GoogleLoginRequest
 import com.tecsup.autosmart.data.model.LoginRequest
 import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
+import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
+import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
@@ -58,6 +60,8 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by rememberSaveable { mutableStateOf("loading") }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
+                val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
+
                 val serviciosVm: ServiciosViewModel = viewModel()
                 val recuperacionVm: RecuperacionViewModel = viewModel()
                 var correoRecuperacion by rememberSaveable { mutableStateOf("") }
@@ -207,6 +211,10 @@ class MainActivity : ComponentActivity() {
                             }
                             "vehiculos" -> {
                                 VehiculosScreen(
+                                    onEditarVehiculo = { vehiculo ->
+                                        editarVehiculoVm.iniciar(vehiculo)
+                                        currentScreen = "editar_vehiculo"
+                                    },
                                     onLogout = {
                                         scope.launch {
                                             tokenManager.clearSession()
@@ -222,6 +230,18 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToReserva = {
                                         currentScreen = "servicios"
+                                    }
+                                )
+                            }
+
+                            "editar_vehiculo" -> {
+                                EditarVehiculoScreen(
+                                    viewModel = editarVehiculoVm,
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onActualizado = {
+                                        Toast.makeText(this@MainActivity,
+                                            "Vehículo actualizado correctamente", Toast.LENGTH_SHORT).show()
+                                        currentScreen = "vehiculos"
                                     }
                                 )
                             }
