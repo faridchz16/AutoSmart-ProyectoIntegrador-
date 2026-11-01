@@ -1,6 +1,8 @@
 package com.tecsup.autosmart.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -13,13 +15,30 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun VehiculosScreen(
     onLogout: () -> Unit,
+    onNavigateToPerfil: () -> Unit = {},
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {} // <-- Callback para navegar a la reserva
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis Vehículos", fontWeight = FontWeight.Bold) },
+                title = {},
+                navigationIcon = {
+                    FilledTonalIconButton(
+                        onClick = onNavigateToPerfil,
+                        modifier = Modifier.size(48.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Mi perfil",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
                 actions = {
                     // Botón para acceder a la Reserva de Citas
                     TextButton(onClick = onNavigateToMisCitas) {

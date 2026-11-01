@@ -30,6 +30,7 @@ import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
 import com.tecsup.autosmart.ui.screens.ReservaScreen
+import com.tecsup.autosmart.ui.screens.PerfilScreen
 import com.tecsup.autosmart.ui.screens.MisCitasScreen
 import com.tecsup.autosmart.ui.screens.VehiculosScreen
 import com.tecsup.autosmart.ui.screens.WelcomeScreen
@@ -77,6 +78,10 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
                     currentScreen = "welcome"
+                }
+
+                BackHandler(enabled = currentScreen == "perfil") {
+                    currentScreen = "vehiculos"
                 }
 
                 BackHandler(enabled = currentScreen == "mis_citas") {
@@ -209,12 +214,21 @@ class MainActivity : ComponentActivity() {
                                             currentScreen = "welcome"
                                         }
                                     },
+                                    onNavigateToPerfil = {
+                                        currentScreen = "perfil"
+                                    },
                                     onNavigateToMisCitas = {
                                         currentScreen = "mis_citas"
                                     },
                                     onNavigateToReserva = {
                                         currentScreen = "servicios"
                                     }
+                                )
+                            }
+
+                            "perfil" -> {
+                                PerfilScreen(
+                                    onNavigateBack = { currentScreen = "vehiculos" }
                                 )
                             }
 
