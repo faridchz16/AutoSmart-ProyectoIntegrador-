@@ -378,13 +378,22 @@ fun ReservaScreen(
                             fechaSeleccionada,
                             turnoSeleccionado?.hora
                         ) {
-                            TemporizadorBloqueoTurno(
-                                tiempoInicialSegundos = 600,
-                                onTiempoAgotado = {
-                                    turnoSeleccionado = null
-                                    mostrarResumen = false
-                                }
-                            )
+                            if (!confirmacionState.cargando &&
+                                confirmacionState.cita == null
+                            ) {
+                                TemporizadorBloqueoTurno(
+                                    tiempoInicialSegundos = 600,
+                                    onTiempoAgotado = {
+                                        val confirmacionActual = viewModel.confirmacion.value
+                                        if (!confirmacionActual.cargando &&
+                                            confirmacionActual.cita == null
+                                        ) {
+                                            turnoSeleccionado = null
+                                            mostrarResumen = false
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
 

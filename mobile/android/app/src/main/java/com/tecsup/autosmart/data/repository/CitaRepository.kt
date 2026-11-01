@@ -5,6 +5,7 @@ import com.tecsup.autosmart.data.model.CitaRequest
 import com.tecsup.autosmart.data.model.CitaCreadaResponse
 import com.tecsup.autosmart.data.network.RetrofitClient
 import com.tecsup.autosmart.data.network.mensajeDeError
+import kotlinx.coroutines.CancellationException
 
 class CitaRepository {
 
@@ -34,6 +35,8 @@ class CitaRepository {
                     )
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(
                 Exception(

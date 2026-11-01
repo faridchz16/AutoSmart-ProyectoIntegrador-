@@ -11,6 +11,9 @@ import com.tecsup.autosmart.data.repository.CitaRepository
 import com.tecsup.autosmart.data.repository.ReservaRepository
 import com.tecsup.autosmart.data.repository.ReservaRepositoryFake
 import com.tecsup.autosmart.data.repository.ReservaRepositoryRetrofit
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -55,6 +58,7 @@ class ReservaViewModel(
 
     private val _turnos = MutableStateFlow(TurnosUiState())
     val turnos: StateFlow<TurnosUiState> = _turnos
+    private var consultaTurnos: Job? = null
 
 
     private val _confirmacion = MutableStateFlow(ConfirmarCitaUiState())
@@ -82,11 +86,14 @@ class ReservaViewModel(
         fecha: String,
         idMecanico: Int
     ) {
-        viewModelScope.launch {
+        consultaTurnos?.cancel()
+        consultaTurnos = viewModelScope.launch {
             _turnos.value = TurnosUiState(cargando = true)
 
-            repoTurnos.turnos(idServicio, fecha, idMecanico)
-                .onSuccess {
+            val resultado = repoTurnos.turnos(idServicio, fecha, idMecanico)
+            currentCoroutineContext().ensureActive()
+
+            resultado.onSuccess {
                     _turnos.value = TurnosUiState(lista = it)
                 }
                 .onFailure {
