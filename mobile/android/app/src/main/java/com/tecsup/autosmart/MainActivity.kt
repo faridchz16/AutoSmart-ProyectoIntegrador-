@@ -26,10 +26,15 @@ import com.tecsup.autosmart.data.model.GoogleLoginRequest
 import com.tecsup.autosmart.data.model.LoginRequest
 import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
+import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
+import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
+import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
 import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
 import com.tecsup.autosmart.ui.screens.ReservaScreen
+import com.tecsup.autosmart.ui.screens.PerfilScreen
+import com.tecsup.autosmart.ui.screens.MisCitasScreen
 import com.tecsup.autosmart.ui.screens.VehiculosScreen
 import com.tecsup.autosmart.ui.screens.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
@@ -56,6 +61,8 @@ class MainActivity : ComponentActivity() {
 
                 var currentScreen by rememberSaveable { mutableStateOf("loading") }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
+                val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
+
                 val serviciosVm: ServiciosViewModel = viewModel()
                 val recuperacionVm: RecuperacionViewModel = viewModel()
                 var correoRecuperacion by rememberSaveable { mutableStateOf("") }
@@ -76,6 +83,18 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
                     currentScreen = "welcome"
+                }
+
+                BackHandler(enabled = currentScreen == "agregar_vehiculo") {
+                    currentScreen = "vehiculos"
+                }
+
+                BackHandler(enabled = currentScreen == "perfil") {
+                    currentScreen = "vehiculos"
+                }
+
+                BackHandler(enabled = currentScreen == "mis_citas") {
+                    currentScreen = "vehiculos"
                 }
 
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
@@ -197,6 +216,10 @@ class MainActivity : ComponentActivity() {
                             }
                             "vehiculos" -> {
                                 VehiculosScreen(
+                                    onEditarVehiculo = { vehiculo ->
+                                        editarVehiculoVm.iniciar(vehiculo)
+                                        currentScreen = "editar_vehiculo"
+                                    },
                                     onLogout = {
                                         scope.launch {
                                             tokenManager.clearSession()
@@ -204,9 +227,61 @@ class MainActivity : ComponentActivity() {
                                             currentScreen = "welcome"
                                         }
                                     },
+                                    onNavigateToPerfil = {
+                                        currentScreen = "perfil"
+                                    },
+                                    onNavigateToMisCitas = {
+                                        currentScreen = "mis_citas"
+                                    },
                                     onNavigateToReserva = {
                                         currentScreen = "servicios"
+                                    },
+                                    onNavigateToAgregarVehiculo = {
+                                        currentScreen = "agregar_vehiculo"
                                     }
+                                )
+                            }
+
+                            "agregar_vehiculo" -> {
+                                AgregarVehiculoScreen(
+                                    onBack = {
+                                        currentScreen = "vehiculos"
+                                    },
+
+                                    onVehiculoRegistrado = {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "¡Vehículo registrado correctamente!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        currentScreen = "vehiculos"
+                                    }
+                                )
+                            }
+
+
+                            "editar_vehiculo" -> {
+                                EditarVehiculoScreen(
+                                    viewModel = editarVehiculoVm,
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onActualizado = {
+                                        Toast.makeText(this@MainActivity,
+                                            "Vehículo actualizado correctamente", Toast.LENGTH_SHORT).show()
+                                        currentScreen = "vehiculos"
+                                    }
+                                )
+                            }
+
+                            "perfil" -> {
+                                PerfilScreen(
+                                    onNavigateBack = { currentScreen = "vehiculos" }
+                                )
+                            }
+
+                            "mis_citas" -> {
+                                MisCitasScreen(
+                                    onNavigateBack = { currentScreen = "vehiculos" }
                                 )
                             }
 

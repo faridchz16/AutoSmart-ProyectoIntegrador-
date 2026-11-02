@@ -1,5 +1,7 @@
 package com.tecsup.autosmart.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class MecanicoDto(
     val idMecanico: Int,
     val nombre: String,
@@ -8,6 +10,7 @@ data class MecanicoDto(
 )
 
 data class TurnoDto(
+    @SerializedName("horaInicio")
     val hora: String,
     val disponible: Boolean?
 )

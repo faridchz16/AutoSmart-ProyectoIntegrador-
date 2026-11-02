@@ -11,7 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
     private const val BASE_URL = "http://192.168.1.63:8081/"
 
-    // Esta variable arregla los 4 errores de compilación en MainActivity
+
     var token: String? = null
 
     private var tokenManager: TokenManager? = null
@@ -71,5 +71,24 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(ServicioApi::class.java)
+    }
+
+
+    val citaApi: CitaApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CitaApi::class.java)
+    }
+
+    val usuarioApi: UsuarioApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(UsuarioApi::class.java)
     }
 }
