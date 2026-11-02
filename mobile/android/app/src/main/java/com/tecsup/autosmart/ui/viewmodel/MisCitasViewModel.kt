@@ -1,5 +1,10 @@
 package com.tecsup.autosmart.ui.viewmodel
 
+import com.tecsup.autosmart.data.model.ReprogramarRequest
+import com.tecsup.autosmart.data.model.esReprogramable
+import com.tecsup.autosmart.data.model.coincideHorario
+import com.tecsup.autosmart.data.model.validarReprogramacion
+import com.tecsup.autosmart.data.repository.ReprogramacionInciertaException
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.time.LocalDate
@@ -24,11 +29,23 @@ data class MisCitasUiState(
     val citas: List<CitaCreadaResponse> = emptyList(),
     val error: String? = null,
     val aviso: String? = null,
-    val cancelacionesPorVerificar: Set<Long> = emptySet()
+    val cancelacionesPorVerificar: Set<Long> = emptySet(),
+    val reprogramacionesPorVerificar: Set<Long> = emptySet()
 )
 
 data class CancelacionUiState(
     val cita: CitaCreadaResponse? = null,
+    val enviando: Boolean = false,
+    val verificando: Boolean = false,
+    val requiereVerificacion: Boolean = false,
+    val error: String? = null
+)
+
+data class ReprogramacionUiState(
+    val cita: CitaCreadaResponse? = null,
+    val fecha: String = "",
+    val hora: String = "",
+    val confirmando: Boolean = false,
     val enviando: Boolean = false,
     val verificando: Boolean = false,
     val requiereVerificacion: Boolean = false,
@@ -43,6 +60,9 @@ class MisCitasViewModel(
     private val ahora: () -> LocalDateTime = { LocalDateTime.now(ZoneId.of("America/Lima")) },
     private val consultar: suspend () -> Result<List<CitaCreadaResponse>> = {
         CitaRepository().misCitas()
+    },
+    private val reprogramar: suspend (Long, ReprogramarRequest) -> Result<CitaCreadaResponse> = { id, datos ->
+        CitaRepository().reprogramarCita(id, datos)
     }
 ) : ViewModel() {
     private val _estado = MutableStateFlow(MisCitasUiState())
@@ -52,13 +72,17 @@ class MisCitasViewModel(
     private val _cancelacion = MutableStateFlow(CancelacionUiState())
     val cancelacion: StateFlow<CancelacionUiState> = _cancelacion
     private var operacionCancelacion: Job? = null
+    private var operacionReprogramacion: Job? = null
+    private val _reprogramacion = MutableStateFlow(ReprogramacionUiState())
+    val reprogramacion: StateFlow<ReprogramacionUiState> = _reprogramacion
 
     fun cargarSiNecesario() {
         if (!iniciada) cargarCitas()
     }
 
     fun cargarCitas() {
-        if (consulta?.isActive == true || operacionCancelacion?.isActive == true) return
+        if (consulta?.isActive == true || operacionCancelacion?.isActive == true ||
+            operacionReprogramacion?.isActive == true || _reprogramacion.value.cita != null) return
         iniciada = true
         _estado.value = MisCitasUiState(cargando = true)
         consulta = viewModelScope.launch {
@@ -86,12 +110,15 @@ class MisCitasViewModel(
 
     fun puedeCancelar(idCita: Long): Boolean {
         val cita = _estado.value.citas.find { it.idCita == idCita } ?: return false
-        return idCita !in _estado.value.cancelacionesPorVerificar &&
+        return operacionReprogramacion?.isActive != true &&
+                idCita !in _estado.value.reprogramacionesPorVerificar &&
+                idCita !in _estado.value.cancelacionesPorVerificar &&
                 esCancelable(cita, ahora())
     }
 
     fun abrirCancelacion(idCita: Long) {
-        if (consulta?.isActive == true || operacionCancelacion?.isActive == true) return
+        if (consulta?.isActive == true || operacionCancelacion?.isActive == true ||
+            operacionReprogramacion?.isActive == true || _reprogramacion.value.cita != null) return
         val cita = _estado.value.citas.find { it.idCita == idCita } ?: return
         if (!puedeCancelar(idCita)) return
         _cancelacion.value = CancelacionUiState(cita = cita)
@@ -200,7 +227,114 @@ class MisCitasViewModel(
         }
     }
 
+    fun puedeReprogramar(idCita: Long): Boolean {
+        val cita = _estado.value.citas.find { it.idCita == idCita } ?: return false
+        return !_estado.value.cargando && operacionCancelacion?.isActive != true &&
+            _cancelacion.value.cita == null && idCita !in _estado.value.cancelacionesPorVerificar &&
+            idCita !in _estado.value.reprogramacionesPorVerificar && esReprogramable(cita, ahora())
+    }
+
+    fun abrirReprogramacion(idCita: Long) {
+        if (consulta?.isActive == true || operacionReprogramacion?.isActive == true || !puedeReprogramar(idCita)) return
+        val cita = _estado.value.citas.find { it.idCita == idCita } ?: return
+        _reprogramacion.value = ReprogramacionUiState(cita = cita, fecha = cita.fecha, hora = cita.horaInicio.take(5))
+    }
+
+    fun editarReprogramacion(fecha: String = _reprogramacion.value.fecha, hora: String = _reprogramacion.value.hora) {
+        val actual = _reprogramacion.value
+        if (actual.cita == null || actual.enviando || actual.verificando || actual.requiereVerificacion) return
+        _reprogramacion.value = actual.copy(fecha = fecha, hora = hora, confirmando = false, error = null)
+    }
+
+    fun cerrarReprogramacion() {
+        if (!_reprogramacion.value.enviando && !_reprogramacion.value.verificando) {
+            _reprogramacion.value = ReprogramacionUiState()
+        }
+    }
+
+    fun solicitarConfirmacionReprogramacion() {
+        val actual = _reprogramacion.value
+        val cita = actual.cita ?: return
+        if (actual.enviando || actual.verificando || actual.requiereVerificacion) return
+        val error = validarReprogramacion(cita, ReprogramarRequest(actual.fecha, actual.hora), ahora())
+        _reprogramacion.value = actual.copy(confirmando = error == null, error = error)
+    }
+
+    fun confirmarReprogramacion() {
+        val actual = _reprogramacion.value
+        val cita = actual.cita ?: return
+        if (actual.enviando || actual.verificando || operacionReprogramacion?.isActive == true ||
+            operacionCancelacion?.isActive == true || consulta?.isActive == true) return
+        if (actual.requiereVerificacion) { comprobarReprogramacion(); return }
+        if (!actual.confirmando) return
+        val datos = ReprogramarRequest(actual.fecha, actual.hora)
+        val error = validarReprogramacion(cita, datos, ahora())
+        if (error != null) { _reprogramacion.value = actual.copy(error = error); return }
+        _reprogramacion.value = actual.copy(enviando = true, error = null)
+        operacionReprogramacion = viewModelScope.launch {
+            val resultado = try { reprogramar(cita.idCita, datos) }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { Result.failure(ReprogramacionInciertaException("No se pudo confirmar el cambio.", e)) }
+            currentCoroutineContext().ensureActive()
+            val confirmada = resultado.getOrNull()
+            if (confirmada != null && confirmada.idCita == cita.idCita &&
+                confirmada.estado == "PENDIENTE" && coincideHorario(confirmada, datos)) {
+                _estado.value = _estado.value.copy(citas = _estado.value.citas.map {
+                    if (it.idCita == cita.idCita) confirmada else it
+                }, aviso = "Cita reprogramada. Está pendiente de aceptación por el mecánico.")
+                _reprogramacion.value = ReprogramacionUiState()
+            } else {
+                val fallo = resultado.exceptionOrNull()
+                    ?: ReprogramacionInciertaException("El servidor no confirmó el horario solicitado.")
+                if (fallo is ReprogramacionInciertaException) reconciliarReprogramacion(cita.idCita, fallo.message.orEmpty())
+                else _reprogramacion.value = actual.copy(error = fallo.message ?: "No se pudo reprogramar la cita.")
+            }
+        }
+    }
+
+    fun comprobarReprogramacion() {
+        val actual = _reprogramacion.value
+        val cita = actual.cita ?: return
+        if (!actual.requiereVerificacion || actual.enviando || actual.verificando ||
+            operacionReprogramacion?.isActive == true || consulta?.isActive == true) return
+        _reprogramacion.value = actual.copy(verificando = true)
+        operacionReprogramacion = viewModelScope.launch {
+            reconciliarReprogramacion(cita.idCita, "Reprogramación pendiente de comprobar")
+        }
+    }
+
+    private suspend fun reconciliarReprogramacion(idCita: Long, motivo: String) {
+        _estado.value = _estado.value.copy(
+            reprogramacionesPorVerificar = _estado.value.reprogramacionesPorVerificar + idCita,
+            aviso = "Hay una reprogramación sin confirmar. Actualiza la lista para comprobar su estado antes de repetirla.")
+        _reprogramacion.value = _reprogramacion.value.copy(enviando = false, verificando = true,
+            requiereVerificacion = true, error = motivo)
+        val resultado = try { consultar() }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { Result.failure(e) }
+        currentCoroutineContext().ensureActive()
+        val citas = resultado.getOrNull()
+        val actual = citas?.find { it.idCita == idCita }
+        if (actual == null) {
+            _reprogramacion.value = _reprogramacion.value.copy(verificando = false,
+                error = "$motivo. No se pudo comprobar el estado. Compruébalo antes de reintentar.")
+            return
+        }
+        val seleccion = _reprogramacion.value
+        val coincide = coincideHorario(actual, ReprogramarRequest(seleccion.fecha, seleccion.hora)) &&
+            actual.estado in listOf("PENDIENTE", "CONFIRMADA")
+        _estado.value = _estado.value.copy(citas = citas,
+            reprogramacionesPorVerificar = _estado.value.reprogramacionesPorVerificar - idCita,
+            aviso = if (coincide) "El servidor confirmó el nuevo horario. Estado: ${actual.estado}." else null)
+        _reprogramacion.value = if (coincide) ReprogramacionUiState() else seleccion.copy(
+            cita = actual, enviando = false, verificando = false, requiereVerificacion = false,
+            confirmando = false, error = "$motivo. El servidor no confirmó el cambio; tus datos ingresados se conservaron.")
+    }
+
     fun limpiar() {
+        operacionReprogramacion?.cancel()
+        operacionReprogramacion = null
+        _reprogramacion.value = ReprogramacionUiState()
         operacionCancelacion?.cancel()
         operacionCancelacion = null
         _cancelacion.value = CancelacionUiState()
