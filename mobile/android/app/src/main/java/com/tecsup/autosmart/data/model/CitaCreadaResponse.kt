@@ -15,4 +15,3 @@ data class CitaCreadaResponse(
     val mecanico: String,
     val placa: String
 )
-

@@ -27,6 +27,7 @@ fun VehiculosScreen(
     onNavigateToPerfil: () -> Unit = {},
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {},
+    onNavigateToAgregarVehiculo: () -> Unit = {},
     viewModel: VehiculosViewModel = viewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
@@ -102,7 +103,7 @@ fun VehiculosScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { if (!estado.ocupado) { /* Agregar vehículo */ } }) {
+            FloatingActionButton(onClick = { if (!estado.ocupado) onNavigateToAgregarVehiculo() }) {
                 Text("+")
             }
         }

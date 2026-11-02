@@ -26,6 +26,7 @@ import com.tecsup.autosmart.data.model.GoogleLoginRequest
 import com.tecsup.autosmart.data.model.LoginRequest
 import com.tecsup.autosmart.data.model.RegisterRequest
 import com.tecsup.autosmart.data.network.RetrofitClient
+import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
 import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
@@ -82,6 +83,10 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
                     currentScreen = "welcome"
+                }
+
+                BackHandler(enabled = currentScreen == "agregar_vehiculo") {
+                    currentScreen = "vehiculos"
                 }
 
                 BackHandler(enabled = currentScreen == "perfil") {
@@ -230,9 +235,31 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToReserva = {
                                         currentScreen = "servicios"
+                                    },
+                                    onNavigateToAgregarVehiculo = {
+                                        currentScreen = "agregar_vehiculo"
                                     }
                                 )
                             }
+
+                            "agregar_vehiculo" -> {
+                                AgregarVehiculoScreen(
+                                    onBack = {
+                                        currentScreen = "vehiculos"
+                                    },
+
+                                    onVehiculoRegistrado = {
+                                        Toast.makeText(
+                                            this@MainActivity,
+                                            "¡Vehículo registrado correctamente!",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+
+                                        currentScreen = "vehiculos"
+                                    }
+                                )
+                            }
+
 
                             "editar_vehiculo" -> {
                                 EditarVehiculoScreen(
