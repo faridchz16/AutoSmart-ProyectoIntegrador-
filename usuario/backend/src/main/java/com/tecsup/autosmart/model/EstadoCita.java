@@ -4,5 +4,8 @@ public enum EstadoCita {
     PENDIENTE,
     CONFIRMADA,
     RECHAZADA,
-    CANCELADA
+    CANCELADA,
+    EN_PROCESO,
+    ESPERA_APROBACION,
+    FINALIZADA
 }

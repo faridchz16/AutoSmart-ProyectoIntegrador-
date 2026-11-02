@@ -43,7 +43,7 @@ public class Cita {
     private LocalTime horaFin;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado", nullable = false, columnDefinition = "VARCHAR(15)")
+    @Column(name = "estado", nullable = false, columnDefinition = "VARCHAR(20)")
     private EstadoCita estado = EstadoCita.PENDIENTE;
 
     @Column(name = "precio", nullable = false, precision = 10, scale = 2)
