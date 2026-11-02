@@ -91,4 +91,14 @@ object RetrofitClient {
             .build()
             .create(UsuarioApi::class.java)
     }
+
+    val agendaMecanicoApi: AgendaMecanicoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(AgendaMecanicoApi::class.java)
+    }
+
 }

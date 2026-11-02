@@ -28,6 +28,7 @@ import com.tecsup.autosmart.R
 @Composable
 fun MecanicoScreen(
     onLogout: () -> Unit,
+    onOrdenesClick: (() -> Unit)? = null,
     onPerfilClick: (() -> Unit)? = null   // se conectará cuando exista la pantalla "Mi perfil"
 ) {
     val isLandscape =
@@ -136,8 +137,8 @@ fun MecanicoScreen(
                         emoji = "🔧",
                         titulo = "Órdenes de trabajo",
                         descripcion = "Las órdenes asignadas a ti.",
-                        etiqueta = "Próximamente",
-                        onClick = null,
+                        etiqueta = if (onOrdenesClick == null) "Próximamente" else "Agenda",
+                        onClick = onOrdenesClick,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -155,8 +156,8 @@ fun MecanicoScreen(
                     emoji = "🔧",
                     titulo = "Órdenes de trabajo",
                     descripcion = "Las órdenes asignadas a ti.",
-                    etiqueta = "Próximamente",
-                    onClick = null,
+                    etiqueta = if (onOrdenesClick == null) "Próximamente" else "Agenda",
+                    onClick = onOrdenesClick,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
