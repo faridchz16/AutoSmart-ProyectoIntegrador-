@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS citas (
     fecha DATE NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
-    estado VARCHAR(15) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA
+    estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA, EN_PROCESO, ESPERA_APROBACION, FINALIZADA
     precio DECIMAL(10,2) NOT NULL,
     motivo_rechazo VARCHAR(300) NULL,   
     FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario),
@@ -161,4 +161,14 @@ CREATE TABLE IF NOT EXISTS bloqueos_turno (
     expira_en DATETIME NOT NULL,   -- vence 10 minutos despues de crearse
     FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario)
+);
+
+-- ---------- Orden de trabajo (T41.1) ----------
+
+CREATE TABLE IF NOT EXISTS ordenes_trabajo (
+    id_orden BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_cita BIGINT UNIQUE NOT NULL,
+    fecha_inicio DATETIME NOT NULL,
+    fecha_fin DATETIME NULL,          -- se llena al finalizar (T52.1)
+    FOREIGN KEY (id_cita) REFERENCES citas(id_cita)
 );
