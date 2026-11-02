@@ -1,0 +1,35 @@
+package com.tecsup.autosmart.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "ordenes_trabajo")
+public class OrdenTrabajo {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_orden")
+    private Long idOrden;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_cita", nullable = false, unique = true)
+    private Cita cita;
+
+    @Column(name = "fecha_inicio", nullable = false)
+    private LocalDateTime fechaInicio;
+
+    @Column(name = "fecha_fin")
+    private LocalDateTime fechaFin;
+
+    public OrdenTrabajo() {}
+
+    public Long getIdOrden() { return idOrden; }
+    public void setIdOrden(Long idOrden) { this.idOrden = idOrden; }
+    public Cita getCita() { return cita; }
+    public void setCita(Cita cita) { this.cita = cita; }
+    public LocalDateTime getFechaInicio() { return fechaInicio; }
+    public void setFechaInicio(LocalDateTime fechaInicio) { this.fechaInicio = fechaInicio; }
+    public LocalDateTime getFechaFin() { return fechaFin; }
+    public void setFechaFin(LocalDateTime fechaFin) { this.fechaFin = fechaFin; }
+}
