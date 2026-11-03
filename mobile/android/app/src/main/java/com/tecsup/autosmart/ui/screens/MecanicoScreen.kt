@@ -137,7 +137,7 @@ fun MecanicoScreen(
                         emoji = "🔧",
                         titulo = "Órdenes de trabajo",
                         descripcion = "Las órdenes asignadas a ti.",
-                        etiqueta = if (onOrdenesClick == null) "Próximamente" else "Agenda",
+                        etiqueta = if (onOrdenesClick == null) "Próximamente" else null,
                         onClick = onOrdenesClick,
                         modifier = Modifier.weight(1f)
                     )
@@ -156,7 +156,7 @@ fun MecanicoScreen(
                     emoji = "🔧",
                     titulo = "Órdenes de trabajo",
                     descripcion = "Las órdenes asignadas a ti.",
-                    etiqueta = if (onOrdenesClick == null) "Próximamente" else "Agenda",
+                    etiqueta = if (onOrdenesClick == null) "Próximamente" else null,
                     onClick = onOrdenesClick,
                     modifier = Modifier.fillMaxWidth()
                 )

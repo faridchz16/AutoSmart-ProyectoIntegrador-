@@ -92,6 +92,15 @@ object RetrofitClient {
             .create(UsuarioApi::class.java)
     }
 
+    val ordenTrabajoApi: OrdenTrabajoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(OrdenTrabajoApi::class.java)
+    }
+
     val agendaMecanicoApi: AgendaMecanicoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

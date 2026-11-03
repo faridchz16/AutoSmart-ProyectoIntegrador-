@@ -53,7 +53,7 @@ fun AgendaMecanicoScreen(
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                Text("Consulta las citas de tu agenda. Las órdenes de trabajo y la inspección aún no están disponibles.",
+                Text("Consulta las citas asignadas para la fecha seleccionada.",
                     style = MaterialTheme.typography.bodyMedium)
                 TextButton(onClick = { elegirFecha = true }) { Text("Fecha: ${estado.fecha}") }
             }

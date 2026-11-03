@@ -30,6 +30,8 @@ import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
 import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
+import com.tecsup.autosmart.ui.screens.OrdenesMecanicoScreen
+import com.tecsup.autosmart.ui.viewmodel.OrdenesMecanicoViewModel
 import com.tecsup.autosmart.ui.screens.AgendaMecanicoScreen
 import com.tecsup.autosmart.ui.screens.CitaDetalleMecanicoScreen
 import com.tecsup.autosmart.ui.viewmodel.AgendaMecanicoViewModel
@@ -68,6 +70,12 @@ class MainActivity : ComponentActivity() {
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
                 var selectedCitaMecanicoId by rememberSaveable { mutableStateOf(0L) }
+                val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico")) {
+                        ordenesMecanicoVm.limpiar()
+                    }
+                }
                 val agendaMecanicoVm: AgendaMecanicoViewModel = viewModel()
                 val detalleMecanicoVm: CitaDetalleMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
@@ -323,10 +331,17 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { currentScreen = "servicio_detalle" }
                                 )
                             }
+                            "ordenes_mecanico" -> {
+                                OrdenesMecanicoScreen(
+                                    viewModel = ordenesMecanicoVm,
+                                    onBack = { currentScreen = "mecanico" },
+                                    onAgenda = { currentScreen = "agenda_mecanico" }
+                                )
+                            }
                             "agenda_mecanico" -> {
                                 AgendaMecanicoScreen(
                                     viewModel = agendaMecanicoVm,
-                                    onBack = { currentScreen = "mecanico" },
+                                    onBack = { currentScreen = "ordenes_mecanico" },
                                     onDetalle = { id ->
                                         selectedCitaMecanicoId = id
                                         detalleMecanicoVm.cargar(id, forzar = true)
@@ -343,7 +358,7 @@ class MainActivity : ComponentActivity() {
                             }
                             "mecanico" -> {
                                 MecanicoScreen(
-                                    onOrdenesClick = { currentScreen = "agenda_mecanico" },
+                                    onOrdenesClick = { currentScreen = "ordenes_mecanico" },
                                     onLogout = {
                                         scope.launch {
                                             tokenManager.clearSession()
