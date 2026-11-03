@@ -172,3 +172,22 @@ CREATE TABLE IF NOT EXISTS ordenes_trabajo (
     fecha_fin DATETIME NULL,          -- se llena al finalizar (T52.1)
     FOREIGN KEY (id_cita) REFERENCES citas(id_cita)
 );
+-- ---------- Checklist de recepcion (T42.1) ----------
+
+CREATE TABLE IF NOT EXISTS checklists (
+    id_checklist BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT UNIQUE NOT NULL,
+    fecha_registro DATETIME NOT NULL,
+    observacion_general VARCHAR(300) NULL,
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
+);
+
+CREATE TABLE IF NOT EXISTS checklist_items (
+    id_item BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_checklist BIGINT NOT NULL,
+    elemento VARCHAR(20) NOT NULL,     -- LUCES, FRENOS, NEUMATICOS, FLUIDOS, CARROCERIA
+    estado VARCHAR(10) NOT NULL,       -- OK, OBSERVADO
+    observacion VARCHAR(300) NULL,
+    UNIQUE (id_checklist, elemento),
+    FOREIGN KEY (id_checklist) REFERENCES checklists(id_checklist)
+);
