@@ -5,7 +5,8 @@ import * as prueba from "./datosPrueba";
      GET /mechanics/me/appointments?desde=AAAA-MM-DD&hasta=AAAA-MM-DD
        -> [{ idCita, ticket, fecha, horaInicio, horaFin, estado, servicio, cliente, placa }]
    Sin parámetros devuelve las citas de hoy. El rango máximo es de 31 días.
-   Estados: PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA. */
+   Estados: PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA y, desde el Sprint 3 (orden de trabajo, T41.1),
+   EN_PROCESO, ESPERA_APROBACION y FINALIZADA. */
 
 const RUTA = "/mechanics/me/appointments";
 
@@ -14,7 +15,15 @@ export const ESTADOS_CITA = {
   CONFIRMADA: "Confirmada",
   RECHAZADA: "Rechazada",
   CANCELADA: "Cancelada",
+  EN_PROCESO: "En proceso",
+  ESPERA_APROBACION: "Espera aprobación",
+  FINALIZADA: "Finalizada",
 };
+
+// Por defecto la agenda oculta las citas que no se atenderán
+export const ESTADOS_OCULTOS = ["RECHAZADA", "CANCELADA"];
+// Citas que el mecánico todavía tiene por atender o está atendiendo
+export const ESTADOS_EN_CURSO = ["EN_PROCESO", "ESPERA_APROBACION"];
 
 const hora = (h) => String(h ?? "").slice(0, 5);
 

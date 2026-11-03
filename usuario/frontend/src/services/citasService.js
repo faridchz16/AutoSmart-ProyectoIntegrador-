@@ -7,7 +7,11 @@ import * as prueba from "./datosPrueba";
          cliente, telefonoCliente, placa, marca, modelo, anio, kilometraje }
      PUT /appointments/{id}/accept                       -> confirma una cita PENDIENTE (T36.1)
      PUT /appointments/{id}/reject  { motivo }           -> la rechaza; motivo obligatorio, máx. 300 (T36.1)
-   Si la cita ya no está pendiente (por ejemplo, el cliente la canceló), el backend responde 409. */
+   Si la cita ya no está pendiente (por ejemplo, el cliente la canceló), el backend responde 409.
+     PUT /appointments/{id}/start  -> inicia la atención (T41.1): solo citas CONFIRMADA del mecánico asignado.
+       Crea la orden de trabajo y la cita pasa a EN_PROCESO con la hora de inicio automática.
+       -> { idOrden, idCita, ticket, estado, fechaInicio "AAAA-MM-DDTHH:mm:ss", servicio, placa }
+       409 si la cita no está CONFIRMADA o si la atención ya fue iniciada. */
 
 export const MAX_MOTIVO_RECHAZO = 300;
 
@@ -56,11 +60,30 @@ export async function rechazarCita(id, motivo) {
   return String(datos?.estado ?? "RECHAZADA").toUpperCase();
 }
 
-// Texto del aviso que se muestra después de aceptar o rechazar
-export const mensajeRespuesta = (cita, estado) =>
-  estado === "CONFIRMADA"
-    ? `Confirmaste la cita de ${cita.cliente} (${cita.horaInicio}).`
-    : `Rechazaste la cita de ${cita.cliente}. Verá el motivo en la app.`;
+// Inicia la atención (T41.2). Devuelve la orden de trabajo creada.
+export async function iniciarAtencion(id) {
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.iniciarAtencion(id)
+    : await apiFetch(`/appointments/${id}/start`, { metodo: "PUT" });
+  return {
+    idOrden: datos?.idOrden ?? null,
+    estado: String(datos?.estado ?? "EN_PROCESO").toUpperCase(),
+    fechaInicio: datos?.fechaInicio ?? "",
+  };
+}
+
+// "2026-11-03T09:05:00" -> "09:05"
+export const horaDe = (fechaHora) => String(fechaHora ?? "").slice(11, 16);
+
+// Texto del aviso que se muestra después de aceptar, rechazar o iniciar la atención
+export function mensajeRespuesta(cita, estado, extra = {}) {
+  if (estado === "CONFIRMADA") return `Confirmaste la cita de ${cita.cliente} (${cita.horaInicio}).`;
+  if (estado === "EN_PROCESO") {
+    const hora = horaDe(extra.fechaInicio);
+    return `Iniciaste la atención de ${cita.cliente}${cita.placa ? ` (${cita.placa})` : ""}${hora ? ` a las ${hora}` : ""}.`;
+  }
+  return `Rechazaste la cita de ${cita.cliente}. Verá el motivo en la app.`;
+}
 
 // Enlace de WhatsApp para un celular peruano (9 dígitos) o un número que ya trae el 51
 export function enlaceWhatsApp(telefono) {

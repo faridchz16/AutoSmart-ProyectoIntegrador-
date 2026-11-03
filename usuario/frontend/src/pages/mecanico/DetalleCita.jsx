@@ -4,12 +4,13 @@ import {
   obtenerCita,
   aceptarCita,
   rechazarCita,
+  iniciarAtencion,
   enlaceWhatsApp,
   formatoKm,
   MAX_MOTIVO_RECHAZO,
 } from "../../services/citasService";
 import { ESTADOS_CITA } from "../../services/agendaService";
-import { fechaLarga } from "../../services/bloqueosService";
+import { fechaLarga, hoyLima, horaLima } from "../../services/bloqueosService";
 import { formatoPrecio } from "../../services/serviciosService";
 import { formatoHoras } from "../../services/horariosService";
 import "./Agenda.css";
@@ -20,7 +21,17 @@ import "./DetalleCita.css";
    `cita` es el resumen de la lista: se muestra al instante mientras llega el detalle.
    T36.2 – Si la cita está pendiente, el mecánico la acepta o la rechaza (con motivo).
    `alResponder(cita, estado)` avisa a la pantalla para actualizar la lista;
-   `alDesactualizar()` le pide recargar cuando la cita cambió por otro lado (409). */
+   `alDesactualizar()` le pide recargar cuando la cita cambió por otro lado (409).
+   T41.2 – Si la cita está confirmada, el mecánico pulsa "Iniciar atención" al recibir el vehículo:
+   se crea la orden de trabajo y la cita pasa a EN_PROCESO con la hora de inicio (PUT /appointments/{id}/start). */
+
+// Aviso bajo el encabezado según el estado de la cita
+const NOTAS = {
+  PENDIENTE: { clase: "dc-nota", texto: "Esta cita está pendiente: el cliente espera tu confirmación." },
+  EN_PROCESO: { clase: "dc-nota dc-nota-proceso", texto: "La atención de este vehículo está en proceso." },
+  ESPERA_APROBACION: { clase: "dc-nota dc-nota-espera", texto: "Esperando que el cliente apruebe el presupuesto." },
+  FINALIZADA: { clase: "dc-nota dc-nota-fin", texto: "La atención de este vehículo ya finalizó." },
+};
 
 const MOTIVOS_RAPIDOS = [
   "No tengo disponibilidad en ese horario",
@@ -42,6 +53,7 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
   const [motivo, setMotivo] = useState("");
   const [enviando, setEnviando] = useState(""); // "", "aceptar" o "rechazar"
   const [errorAccion, setErrorAccion] = useState("");
+  const [iniciando, setIniciando] = useState(false); // muestra la confirmación de "Iniciar atención"
 
   useEffect(() => {
     let vigente = true;
@@ -59,20 +71,35 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
   const whatsapp = listo ? enlaceWhatsApp(c.telefono) : null;
   const vehiculo = [c.marca, c.modelo, c.anio].filter(Boolean).join(" ");
   const pendiente = listo && c.estado === "PENDIENTE";
+  const confirmada = listo && c.estado === "CONFIRMADA";
+  const hoy = hoyLima();
+  const nota = NOTAS[c.estado];
   const motivoLimpio = motivo.trim();
 
   const responder = async (accion) => {
     setEnviando(accion);
     setErrorAccion("");
     try {
-      const estado = accion === "aceptar" ? await aceptarCita(c.id) : await rechazarCita(c.id, motivoLimpio);
-      alResponder?.({ ...resumen, ...c }, estado);
+      if (accion === "iniciar") {
+        const orden = await iniciarAtencion(c.id);
+        alResponder?.({ ...resumen, ...c }, orden.estado, orden);
+      } else {
+        const estado = accion === "aceptar" ? await aceptarCita(c.id) : await rechazarCita(c.id, motivoLimpio);
+        alResponder?.({ ...resumen, ...c }, estado);
+      }
     } catch (e) {
       setEnviando("");
-      if (e.status === 409 || /ya no esta pendiente/i.test(e.message)) {
+      if (e.status === 409 || /ya no esta pendiente|ya fue iniciada|solo se puede iniciar/i.test(e.message)) {
         // Cambió por otro lado (p. ej., el cliente la canceló): se recargan el detalle y la lista
-        setErrorAccion("Esta cita ya no está pendiente; se actualizó su estado.");
+        setErrorAccion(
+          accion === "iniciar"
+            ? /ya fue iniciada/i.test(e.message)
+              ? "La atención de esta cita ya fue iniciada; se actualizó su estado."
+              : "Esta cita ya no está confirmada; se actualizó su estado."
+            : "Esta cita ya no está pendiente; se actualizó su estado."
+        );
         setRechazando(false);
+        setIniciando(false);
         setRecarga((n) => n + 1);
         alDesactualizar?.();
       } else {
@@ -97,9 +124,7 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
             {listo && c.duracionMinutos ? ` · ${formatoHoras(c.duracionMinutos)}` : ""}
           </span>
         </p>
-        {c.estado === "PENDIENTE" && !rechazando && (
-          <p className="dc-nota">Esta cita está pendiente: el cliente espera tu confirmación.</p>
-        )}
+        {nota && !rechazando && <p className={nota.clase}>{nota.texto}</p>}
       </div>
 
       {resultado.error ? (
@@ -247,10 +272,41 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
         </div>
       )}
 
-      {!rechazando && (
+      {iniciando && (
+        /* ---------- Confirmar el inicio de la atención (T41.2) ---------- */
+        <div className="dc-iniciar" role="group" aria-labelledby="dc-iniciar-titulo">
+          <p id="dc-iniciar-titulo" className="dc-iniciar-titulo">¿Recibiste el vehículo {c.placa}?</p>
+          <p>
+            Se registrará la hora de inicio (<strong>{horaLima()}</strong>) y la cita pasará a <strong>En proceso</strong>.
+          </p>
+          {c.fecha !== hoy && (
+            <p className="dc-iniciar-ojo">Ojo: esta cita está programada para el {fechaLarga(c.fecha)}.</p>
+          )}
+          {errorAccion && <p className="form-error-general" role="alert">{errorAccion}</p>}
+          <div className="form-acciones">
+            <button
+              type="button"
+              className="btn btn-sec"
+              onClick={() => {
+                setIniciando(false);
+                setErrorAccion("");
+              }}
+              disabled={!!enviando}
+            >
+              Volver
+            </button>
+            <button type="button" className="btn btn-pri" onClick={() => responder("iniciar")} disabled={!!enviando}>
+              {enviando === "iniciar" && <span className="btn-spinner" aria-hidden="true" />}
+              {enviando === "iniciar" ? "Iniciando..." : "Sí, iniciar atención"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!rechazando && !iniciando && (
         <>
           {errorAccion && <p className="form-error-general" role="alert">{errorAccion}</p>}
-          <div className={pendiente ? "form-acciones dc-acciones" : "form-acciones"}>
+          <div className={pendiente || confirmada ? "form-acciones dc-acciones" : "form-acciones"}>
             <button type="button" className="btn btn-sec" onClick={alCerrar} disabled={!!enviando}>
               Cerrar
             </button>
@@ -272,6 +328,21 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
                   {enviando === "aceptar" ? "Aceptando..." : "Aceptar cita"}
                 </button>
               </>
+            )}
+            {confirmada && (
+              <button
+                type="button"
+                className="btn btn-pri dc-iniciar-btn"
+                onClick={() => {
+                  setIniciando(true);
+                  setErrorAccion("");
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M7 5v14l11-7z" />
+                </svg>
+                Iniciar atención
+              </button>
             )}
           </div>
         </>

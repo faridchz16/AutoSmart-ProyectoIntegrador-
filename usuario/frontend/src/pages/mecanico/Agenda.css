@@ -265,3 +265,15 @@
 @media (prefers-reduced-motion: reduce) {
   .ag-cita { animation: none; transition: none; }
 }
+
+/* ---------- Estados de la orden de trabajo (Sprint 3, T41.2) ---------- */
+.ag-cita.est-EN_PROCESO { border-left-color: #1150e8; background: #eef4ff; }
+.ag-cita.est-ESPERA_APROBACION { border-left-color: #7c3aed; background: #f5f3ff; }
+.ag-cita.est-FINALIZADA { border-left-color: #0d9488; background: #f0fdfa; }
+
+.insignia-estado.est-EN_PROCESO { background: #dbeafe; color: #1e40af; }
+.insignia-estado.est-ESPERA_APROBACION { background: #ede9fe; color: #6b21a8; }
+.insignia-estado.est-FINALIZADA { background: #ccfbf1; color: #115e59; }
+
+.ag-resumen .est-EN_PROCESO strong { color: #1d4ed8; }
+.ag-resumen .est-FINALIZADA strong { color: #0f766e; }

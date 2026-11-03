@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { listarCitasHoy, ESTADOS_CITA } from "../../services/agendaService";
+import { listarCitasHoy, ESTADOS_CITA, ESTADOS_OCULTOS, ESTADOS_EN_CURSO } from "../../services/agendaService";
 import { listarBloqueos, hoyLima, horaLima, aFecha, diaSemanaDe } from "../../services/bloqueosService";
 import { listarHorarios, duracionMinutos, formatoHoras } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
@@ -16,7 +16,8 @@ import "./CitasHoy.css";
    Se actualiza sola cada 2 minutos y al volver a la pestaña.
    T35.2: al hacer clic en una cita se abre su detalle; T36.2: desde ahí se acepta o rechaza. */
 
-const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
+// Citas por atender (las que aún pueden estar "en curso" o ser "la siguiente")
+const POR_ATENDER = ["PENDIENTE", "CONFIRMADA"];
 const CADA_RELOJ = 30 * 1000;
 const CADA_ACTUALIZACION = 2 * 60 * 1000;
 
@@ -47,12 +48,19 @@ function Foco({ enCurso, siguiente, ahora, total, alAbrir }) {
     const duracion = duracionMinutos(enCurso.horaInicio, enCurso.horaFin);
     const pasados = duracionMinutos(enCurso.horaInicio, ahora);
     const avance = Math.min(100, Math.max(0, Math.round((pasados / duracion) * 100)));
+    const faltan = duracion - pasados;
+    // Iniciada por el mecánico (T41.2) o solo "en curso" según el horario
+    const iniciada = enCurso.estado === "EN_PROCESO" || enCurso.estado === "ESPERA_APROBACION";
+    const etiqueta =
+      enCurso.estado === "ESPERA_APROBACION" ? "Espera aprobación" : iniciada ? "Atención en proceso" : "En curso";
+    const tiempo =
+      pasados < 0 ? `Programada a las ${enCurso.horaInicio}` : faltan > 0 ? `Termina en ${formatoHoras(faltan)}` : "Pasó la hora de fin";
     return (
       <section className="ch-foco en-curso" aria-label="Cita en curso">
         <div className="ch-foco-cab">
           <span className="ch-pulso" aria-hidden="true" />
-          <span>En curso</span>
-          <span className="ch-foco-tiempo">Termina en {formatoHoras(duracion - pasados)}</span>
+          <span>{etiqueta}</span>
+          <span className="ch-foco-tiempo">{tiempo}</span>
         </div>
         <h3>{enCurso.servicio}</h3>
         <p className="ch-foco-datos">
@@ -176,11 +184,11 @@ function CitasHoy() {
   const [aviso, setAviso] = useState(null);
   const contadorAvisos = useRef(0);
   const cerrarAviso = useCallback(() => setAviso(null), []);
-  const alResponder = (cita, estado) => {
+  const alResponder = (cita, estado, extra) => {
     setAbierta(null);
     setResultado((r) => ({ ...r, citas: r.citas.map((x) => (x.id === cita.id ? { ...x, estado } : x)) }));
     contadorAvisos.current += 1;
-    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado), id: contadorAvisos.current });
+    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado, extra), id: contadorAvisos.current });
   };
 
   const { hoy, ahora } = reloj;
@@ -246,13 +254,18 @@ function CitasHoy() {
   }, [clave, hoy]);
 
   const { citas, bloqueado, sinHorario, error, fallo, actualizado } = resultado;
-  const activas = citas.filter((c) => ACTIVAS.includes(c.estado));
+  // Activas: todas menos canceladas y rechazadas (incluye en proceso y finalizadas)
+  const activas = citas.filter((c) => !ESTADOS_OCULTOS.includes(c.estado));
   const visibles = verTodas ? citas : activas;
   const ocultas = citas.length - activas.length;
   const cuenta = (estado) => citas.filter((c) => c.estado === estado).length;
+  const porAtender = activas.filter((c) => POR_ATENDER.includes(c.estado));
 
-  const enCurso = activas.find((c) => c.horaInicio <= ahora && ahora < c.horaFin);
-  const siguiente = activas.find((c) => c.horaInicio > ahora);
+  // En curso: primero la que el mecánico ya inició (T41.2); si no, la que toca por horario
+  const enCurso =
+    activas.find((c) => ESTADOS_EN_CURSO.includes(c.estado)) ??
+    porAtender.find((c) => c.horaInicio <= ahora && ahora < c.horaFin);
+  const siguiente = porAtender.find((c) => c !== enCurso && c.horaInicio > ahora);
 
   // Posición de la marca "Ahora" en la lista (no se muestra si hay una cita en curso)
   let posicionAhora = -1;
@@ -315,6 +328,14 @@ function CitasHoy() {
               <span className="est-CONFIRMADA">
                 <strong>{cuenta("CONFIRMADA")}</strong> {cuenta("CONFIRMADA") === 1 ? "confirmada" : "confirmadas"}
               </span>
+              {cuenta("EN_PROCESO") > 0 && (
+                <span className="est-EN_PROCESO"><strong>{cuenta("EN_PROCESO")}</strong> en proceso</span>
+              )}
+              {cuenta("FINALIZADA") > 0 && (
+                <span className="est-FINALIZADA">
+                  <strong>{cuenta("FINALIZADA")}</strong> {cuenta("FINALIZADA") === 1 ? "finalizada" : "finalizadas"}
+                </span>
+              )}
               {ocultas > 0 && (
                 <label className="ag-toggle">
                   <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} />

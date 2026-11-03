@@ -217,3 +217,36 @@ button.ag-cita:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; 
 
 .dc-rapido:hover { border-color: #be123c; border-style: solid; background: #fff1f2; color: #be123c; }
 .dc-rapido:focus-visible { outline: 3px solid #93b4ff; outline-offset: 1px; }
+
+/* ---------- Iniciar atención y estados de la orden (T41.2) ---------- */
+.dc-nota-proceso { background: #e6f0ff; color: #1e40af; }
+.dc-nota-espera { background: #f3e8ff; color: #6b21a8; }
+.dc-nota-fin { background: #ccfbf1; color: #115e59; }
+
+.dc-iniciar-btn svg { margin-right: 2px; }
+
+.dc-iniciar {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #bfd3fb;
+  border-radius: 14px;
+  background: #f4f8ff;
+  color: #3b4a66;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.dc-iniciar p { margin: 0; }
+.dc-iniciar-titulo { color: #0b1b3a; font-weight: 800; font-size: 0.98rem; }
+.dc-iniciar-ojo { padding: 6px 10px; border-radius: 8px; background: #fffbeb; color: #92400e; font-weight: 600; }
+.dc-iniciar .form-acciones { margin-top: 4px; }
+
+@media (max-width: 480px) {
+  .dc-iniciar .form-acciones { flex-direction: column-reverse; }
+  .dc-iniciar .form-acciones .btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .form-acciones.dc-acciones .dc-iniciar-btn { grid-column: 1 / -1; }
+}

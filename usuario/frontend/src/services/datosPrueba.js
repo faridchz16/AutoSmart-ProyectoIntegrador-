@@ -259,6 +259,7 @@ const citasPrueba = [
   [7, "08:00", "09:00", "PENDIENTE", "Revisión de frenos", "Camila Flores", "HIJ-135"],
   [0, "14:00", "15:00", "CONFIRMADA", "Revisión de suspensión", "Daniela Vargas", "JKL-482"],
   [0, "16:30", "17:10", "CANCELADA", "Revisión de batería", "Fernando Ríos", "KLM-517"],
+  [0, "12:00", "13:00", "EN_PROCESO", "Cambio de amortiguadores", "Gabriela Núñez", "LMN-208"],
 ].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
   idCita: i + 1,
   ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,
@@ -345,6 +346,19 @@ export async function responderCita(id, estado, motivo) {
   cita.estado = estado;
   if (motivo) cita.motivoRechazo = motivo;
   return { ...cita };
+}
+
+// Iniciar la atención (T41.1): solo citas confirmadas, una sola vez
+let siguienteOrden = 1;
+export async function iniciarAtencion(id) {
+  await esperar(450);
+  const cita = citasPrueba.find((c) => c.idCita === Number(id));
+  if (!cita) throw new Error("Cita no encontrada");
+  if (cita.estado !== "CONFIRMADA") throw new Error(`Solo se puede iniciar una cita CONFIRMADA (estado: ${cita.estado})`);
+  cita.estado = "EN_PROCESO";
+  const d = new Date();
+  const fechaInicio = `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:00`;
+  return { idOrden: siguienteOrden++, idCita: cita.idCita, ticket: cita.ticket, estado: "EN_PROCESO", fechaInicio, servicio: cita.servicio, placa: cita.placa };
 }
 
 /* ---------- Reservas del taller para el administrador (T38.2) ---------- */
