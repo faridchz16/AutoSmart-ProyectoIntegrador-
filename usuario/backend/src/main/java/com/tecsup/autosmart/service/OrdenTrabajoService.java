@@ -14,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class OrdenTrabajoService {
@@ -51,6 +53,31 @@ public class OrdenTrabajoService {
         orden.setFechaInicio(LocalDateTime.now(ZONA_LIMA).withNano(0));
 
         return aRespuesta(ordenRepository.save(orden));
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrdenTrabajoResponse> ordenesDelMecanico(String correoMecanico) {
+        return ordenRepository.buscarDelMecanico(correoMecanico,
+                        List.of(EstadoCita.EN_PROCESO, EstadoCita.ESPERA_APROBACION))
+                .stream()
+                .map(this::aRespuesta)
+                .collect(Collectors.toList());
+    }
+
+    public OrdenTrabajo ordenDelMecanico(String correoMecanico, Long idOrden) {
+        OrdenTrabajo orden = ordenRepository.findById(idOrden)
+                .orElseThrow(() -> new NotFoundException("Orden de trabajo no encontrada"));
+        if (!orden.getCita().getMecanico().getCorreo().equalsIgnoreCase(correoMecanico)) {
+            throw new ForbiddenException("Solo el mecanico asignado puede trabajar esta orden");
+        }
+        return orden;
+    }
+
+    public void validarEnProceso(OrdenTrabajo orden) {
+        EstadoCita estado = orden.getCita().getEstado();
+        if (estado != EstadoCita.EN_PROCESO) {
+            throw new ConflictException("La orden no esta EN_PROCESO (estado: " + estado + ")");
+        }
     }
 
     private OrdenTrabajoResponse aRespuesta(OrdenTrabajo o) {
