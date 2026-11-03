@@ -30,6 +30,8 @@ import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
 import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
+import com.tecsup.autosmart.ui.screens.ChecklistScreen
+import com.tecsup.autosmart.ui.viewmodel.ChecklistViewModel
 import com.tecsup.autosmart.ui.screens.OrdenesMecanicoScreen
 import com.tecsup.autosmart.ui.viewmodel.OrdenesMecanicoViewModel
 import com.tecsup.autosmart.ui.screens.AgendaMecanicoScreen
@@ -70,9 +72,15 @@ class MainActivity : ComponentActivity() {
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
                 var selectedCitaMecanicoId by rememberSaveable { mutableStateOf(0L) }
+                var checklistOrdenId by rememberSaveable { mutableStateOf(0L) }
+                var checklistEditable by rememberSaveable { mutableStateOf(false) }
+                val checklistVm: ChecklistViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "checklist") checklistVm.limpiar()
+                }
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico")) {
+                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist")) {
                         ordenesMecanicoVm.limpiar()
                     }
                 }
@@ -331,11 +339,20 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { currentScreen = "servicio_detalle" }
                                 )
                             }
+                            "checklist" -> {
+                                ChecklistScreen(checklistOrdenId, checklistEditable, checklistVm,
+                                    onBack = { currentScreen = "ordenes_mecanico" })
+                            }
                             "ordenes_mecanico" -> {
                                 OrdenesMecanicoScreen(
                                     viewModel = ordenesMecanicoVm,
                                     onBack = { currentScreen = "mecanico" },
-                                    onAgenda = { currentScreen = "agenda_mecanico" }
+                                    onAgenda = { currentScreen = "agenda_mecanico" },
+                                    onChecklist = { id, editable ->
+                                        checklistOrdenId = id
+                                        checklistEditable = editable
+                                        currentScreen = "checklist"
+                                    }
                                 )
                             }
                             "agenda_mecanico" -> {
