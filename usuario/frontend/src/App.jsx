@@ -20,6 +20,7 @@ import CitasHoy from "./pages/mecanico/CitasHoy";
 import Horarios from "./pages/mecanico/Horarios";
 import Bloqueos from "./pages/mecanico/Bloqueos";
 import Perfil from "./pages/mecanico/Perfil";
+import OrdenTrabajo from "./pages/mecanico/OrdenTrabajo";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
             <Route path="horarios" element={<Horarios />} />
             <Route path="bloqueos" element={<Bloqueos />} />
             <Route path="perfil" element={<Perfil />} />
+            <Route path="citas/:idCita/orden" element={<OrdenTrabajo />} />
           </Route>
         </Route>
 

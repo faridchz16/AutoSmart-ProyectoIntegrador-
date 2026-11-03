@@ -330,3 +330,9 @@
 .ch-item.est-ESPERA_APROBACION .ch-punto { border-color: #7c3aed; }
 .ch-item.est-FINALIZADA .ch-cita { border-left-color: #0d9488; }
 .ch-item.est-FINALIZADA .ch-punto { border-color: #0d9488; background: #0d9488; }
+
+/* ---------- Abrir la orden de trabajo desde la tarjeta en curso (TEC3.2) ---------- */
+.ch-foco-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.ch-foco-botones .ch-foco-ver { margin-top: 0; }
+.ch-foco-orden { border-color: #fff; background: #fff; color: #1150e8; text-decoration: none; }
+.ch-foco.en-curso .ch-foco-orden:hover { background: #eef4ff; }

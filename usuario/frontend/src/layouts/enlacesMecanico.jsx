@@ -2,6 +2,9 @@ import { Icono } from "./PanelLayout";
 
 /* Secciones del panel del mecánico: las usa el menú lateral y la pantalla de inicio. */
 
+// Pantallas que no están en el menú, pero necesitan su título en el encabezado
+export const TITULOS_MECANICO = [{ patron: /^\/mecanico\/citas\/[^/]+\/orden\/?$/, texto: "Orden de trabajo" }];
+
 export const ENLACES_MECANICO = [
   {
     to: "/mecanico",

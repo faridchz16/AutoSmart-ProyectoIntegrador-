@@ -45,3 +45,32 @@ export async function apiFetch(ruta, { metodo = "GET", cuerpo, ...resto } = {}) 
 
   return datos;
 }
+
+// Descarga un archivo protegido (p. ej., una foto de evidencia) con el token JWT.
+// Un <img src> no puede enviar el token, por eso se pide como Blob y se muestra con URL.createObjectURL.
+export async function apiArchivo(ruta) {
+  const token = obtenerToken();
+  let respuesta;
+
+  try {
+    respuesta = await fetch(`${API_URL}${ruta}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new Error("No hay conexión con el servidor.");
+  }
+
+  if (respuesta.status === 401) {
+    cerrarSesion();
+    window.location.assign("/login");
+    throw new Error("Tu sesión venció. Inicia sesión de nuevo.");
+  }
+
+  if (!respuesta.ok) {
+    const error = new Error("No se pudo cargar el archivo.");
+    error.status = respuesta.status;
+    throw error;
+  }
+
+  return respuesta.blob();
+}

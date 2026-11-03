@@ -83,9 +83,16 @@ function Foco({ enCurso, siguiente, ahora, total, alAbrir }) {
             Después: <strong>{siguiente.horaInicio}</strong> · {siguiente.servicio}
           </p>
         )}
-        <button type="button" className="ch-foco-ver" onClick={() => alAbrir(enCurso)}>
-          Ver detalle
-        </button>
+        <div className="ch-foco-botones">
+          {iniciada && (
+            <Link to={`/mecanico/citas/${enCurso.id}/orden`} className="ch-foco-ver ch-foco-orden">
+              Abrir orden de trabajo
+            </Link>
+          )}
+          <button type="button" className="ch-foco-ver" onClick={() => alAbrir(enCurso)}>
+            Ver detalle
+          </button>
+        </div>
       </section>
     );
   }

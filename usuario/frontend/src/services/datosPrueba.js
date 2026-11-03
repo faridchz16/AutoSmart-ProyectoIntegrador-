@@ -260,6 +260,7 @@ const citasPrueba = [
   [0, "14:00", "15:00", "CONFIRMADA", "Revisión de suspensión", "Daniela Vargas", "JKL-482"],
   [0, "16:30", "17:10", "CANCELADA", "Revisión de batería", "Fernando Ríos", "KLM-517"],
   [0, "12:00", "13:00", "EN_PROCESO", "Cambio de amortiguadores", "Gabriela Núñez", "LMN-208"],
+  [-1, "10:00", "11:00", "FINALIZADA", "Cambio de aceite y filtro", "Ricardo Paredes", "MNP-934"],
 ].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
   idCita: i + 1,
   ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,
@@ -348,17 +349,140 @@ export async function responderCita(id, estado, motivo) {
   return { ...cita };
 }
 
+/* ---------- Órdenes de trabajo (T41.1) e inspección registrada desde la app (TEC3.2) ---------- */
+
+const conEstado = (mensaje, status) => Object.assign(new Error(mensaje), { status });
+const enHora = (dias, hora) => `${fechaRelativa(dias)}T${hora}:00`;
+
+// Orden 1: cita en proceso de hoy (con checklist, deficiencias y fotos). Orden 2: cita finalizada de ayer.
+const ordenesPrueba = [
+  { idOrden: 1, idCita: 11, fechaInicio: enHora(0, "12:04"), fechaFin: null },
+  { idOrden: 2, idCita: 12, fechaInicio: enHora(-1, "10:02"), fechaFin: enHora(-1, "10:58") },
+];
+let siguienteOrden = 3;
+
+const datosOrden = (orden) => {
+  const cita = citasPrueba.find((c) => c.idCita === orden.idCita);
+  return { ...orden, ticket: cita.ticket, estado: cita.estado, servicio: cita.servicio, placa: cita.placa };
+};
+
 // Iniciar la atención (T41.1): solo citas confirmadas, una sola vez
-let siguienteOrden = 1;
 export async function iniciarAtencion(id) {
   await esperar(450);
   const cita = citasPrueba.find((c) => c.idCita === Number(id));
   if (!cita) throw new Error("Cita no encontrada");
-  if (cita.estado !== "CONFIRMADA") throw new Error(`Solo se puede iniciar una cita CONFIRMADA (estado: ${cita.estado})`);
+  if (ordenesPrueba.some((o) => o.idCita === cita.idCita)) throw conEstado("La atencion de esta cita ya fue iniciada", 409);
+  if (cita.estado !== "CONFIRMADA") throw conEstado(`Solo se puede iniciar una cita CONFIRMADA (estado: ${cita.estado})`, 409);
   cita.estado = "EN_PROCESO";
   const d = new Date();
-  const fechaInicio = `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:00`;
-  return { idOrden: siguienteOrden++, idCita: cita.idCita, ticket: cita.ticket, estado: "EN_PROCESO", fechaInicio, servicio: cita.servicio, placa: cita.placa };
+  const orden = {
+    idOrden: siguienteOrden++,
+    idCita: cita.idCita,
+    fechaInicio: `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:00`,
+    fechaFin: null,
+  };
+  ordenesPrueba.push(orden);
+  return datosOrden(orden);
+}
+
+export async function obtenerOrdenDeCita(idCita) {
+  await esperar(300);
+  if (!citasPrueba.some((c) => c.idCita === Number(idCita))) throw conEstado("Cita no encontrada", 404);
+  const orden = ordenesPrueba.find((o) => o.idCita === Number(idCita));
+  if (!orden) throw conEstado("La cita aun no tiene orden de trabajo", 404);
+  return datosOrden(orden);
+}
+
+const checklistsPrueba = {
+  1: {
+    idChecklist: 1,
+    fechaRegistro: enHora(0, "12:10"),
+    observacionGeneral: "Ingresa con el tanque a 1/4. El cliente deja la llanta de repuesto y la gata en la maletera.",
+    items: [
+      { elemento: "LUCES", estado: "OK", observacion: null },
+      { elemento: "FRENOS", estado: "OBSERVADO", observacion: "Pastillas delanteras al 20 %; chirrido al frenar." },
+      { elemento: "NEUMATICOS", estado: "OK", observacion: null },
+      { elemento: "FLUIDOS", estado: "OK", observacion: null },
+      { elemento: "CARROCERIA", estado: "OBSERVADO", observacion: "Abolladura leve en la puerta trasera derecha." },
+    ],
+  },
+  2: {
+    idChecklist: 2,
+    fechaRegistro: enHora(-1, "10:06"),
+    observacionGeneral: null,
+    items: ["LUCES", "FRENOS", "NEUMATICOS", "FLUIDOS", "CARROCERIA"].map((elemento) => ({ elemento, estado: "OK", observacion: null })),
+  },
+};
+
+// Fotos de ejemplo (en el servidor real son JPG o PNG de la cámara del celular)
+function fotoEjemplo(titulo, [color1, color2]) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color1}"/><stop offset="1" stop-color="${color2}"/></linearGradient></defs>
+<rect width="800" height="600" fill="url(#g)"/>
+<g fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="14" stroke-linejoin="round">
+<rect x="290" y="170" width="220" height="160" rx="26"/><path d="M350 170l18-30h64l18 30"/></g>
+<circle cx="400" cy="252" r="46" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="14"/>
+<text x="400" y="430" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#fff" text-anchor="middle">${titulo}</text>
+<text x="400" y="474" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.75)" text-anchor="middle">Foto de ejemplo</text>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+const deficienciasPrueba = {
+  1: [
+    {
+      idDeficiencia: 1,
+      categoria: "FRENOS",
+      severidad: "MODERADA",
+      descripcion: "Pastillas de freno delanteras con 20 % de vida útil. Se recomienda cambiarlas en este servicio.",
+      fechaRegistro: enHora(0, "12:20"),
+      fotos: [{ idFoto: 3, src: fotoEjemplo("Pastillas delanteras", ["#7c2d12", "#ea580c"]) }],
+    },
+    {
+      idDeficiencia: 2,
+      categoria: "SUSPENSION",
+      severidad: "CRITICA",
+      descripcion:
+        "Amortiguador delantero izquierdo con fuga de aceite y rebote excesivo; compromete la estabilidad al frenar.",
+      fechaRegistro: enHora(0, "12:16"),
+      fotos: [
+        { idFoto: 1, src: fotoEjemplo("Amortiguador delantero izq.", ["#7f1d1d", "#dc2626"]) },
+        { idFoto: 2, src: fotoEjemplo("Fuga de aceite", ["#1e293b", "#b91c1c"]) },
+      ],
+    },
+    {
+      idDeficiencia: 3,
+      categoria: "CARROCERIA",
+      severidad: "LEVE",
+      descripcion: "Abolladura leve en la puerta trasera derecha. El cliente indica que ya la tenía.",
+      fechaRegistro: enHora(0, "12:22"),
+      fotos: [],
+    },
+  ],
+  2: [
+    {
+      idDeficiencia: 4,
+      categoria: "NEUMATICOS",
+      severidad: "LEVE",
+      descripcion: "Neumático trasero derecho con desgaste irregular; revisar el alineamiento en el próximo servicio.",
+      fechaRegistro: enHora(-1, "10:12"),
+      fotos: [{ idFoto: 4, src: fotoEjemplo("Neumático trasero der.", ["#0f172a", "#475569"]) }],
+    },
+  ],
+};
+
+const copia = (x) => JSON.parse(JSON.stringify(x));
+
+export async function obtenerChecklist(idOrden) {
+  await esperar(250);
+  const checklist = checklistsPrueba[Number(idOrden)];
+  if (!checklist) throw conEstado("La orden aun no tiene checklist de recepcion", 404);
+  return { ...copia(checklist), idOrden: Number(idOrden) };
+}
+
+export async function listarDeficiencias(idOrden) {
+  await esperar(250);
+  return copia(deficienciasPrueba[Number(idOrden)] ?? []);
 }
 
 /* ---------- Reservas del taller para el administrador (T38.2) ---------- */

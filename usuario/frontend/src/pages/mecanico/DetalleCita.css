@@ -250,3 +250,10 @@ button.ag-cita:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; 
 @media (max-width: 480px) {
   .form-acciones.dc-acciones .dc-iniciar-btn { grid-column: 1 / -1; }
 }
+
+/* ---------- Ver orden de trabajo (TEC3.2) ---------- */
+a.btn { text-decoration: none; }
+
+@media (max-width: 480px) {
+  .form-acciones.dc-acciones .dc-orden-btn { grid-column: 1 / -1; }
+}

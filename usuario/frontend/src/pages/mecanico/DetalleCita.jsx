@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Modal from "../../components/admin/Modal";
 import {
   obtenerCita,
@@ -23,7 +24,11 @@ import "./DetalleCita.css";
    `alResponder(cita, estado)` avisa a la pantalla para actualizar la lista;
    `alDesactualizar()` le pide recargar cuando la cita cambió por otro lado (409).
    T41.2 – Si la cita está confirmada, el mecánico pulsa "Iniciar atención" al recibir el vehículo:
-   se crea la orden de trabajo y la cita pasa a EN_PROCESO con la hora de inicio (PUT /appointments/{id}/start). */
+   se crea la orden de trabajo y la cita pasa a EN_PROCESO con la hora de inicio (PUT /appointments/{id}/start).
+   TEC3.2 – Si la atención ya se inició, el botón "Ver orden de trabajo" abre la orden con la inspección. */
+
+// Estados en los que la cita ya tiene orden de trabajo
+const CON_ORDEN = ["EN_PROCESO", "ESPERA_APROBACION", "FINALIZADA"];
 
 // Aviso bajo el encabezado según el estado de la cita
 const NOTAS = {
@@ -72,6 +77,7 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
   const vehiculo = [c.marca, c.modelo, c.anio].filter(Boolean).join(" ");
   const pendiente = listo && c.estado === "PENDIENTE";
   const confirmada = listo && c.estado === "CONFIRMADA";
+  const conOrden = listo && CON_ORDEN.includes(c.estado);
   const hoy = hoyLima();
   const nota = NOTAS[c.estado];
   const motivoLimpio = motivo.trim();
@@ -306,7 +312,7 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
       {!rechazando && !iniciando && (
         <>
           {errorAccion && <p className="form-error-general" role="alert">{errorAccion}</p>}
-          <div className={pendiente || confirmada ? "form-acciones dc-acciones" : "form-acciones"}>
+          <div className={pendiente || confirmada || conOrden ? "form-acciones dc-acciones" : "form-acciones"}>
             <button type="button" className="btn btn-sec" onClick={alCerrar} disabled={!!enviando}>
               Cerrar
             </button>
@@ -343,6 +349,16 @@ function Contenido({ resumen, alCerrar, alResponder, alDesactualizar }) {
                 </svg>
                 Iniciar atención
               </button>
+            )}
+            {conOrden && (
+              <Link to={`/mecanico/citas/${c.id}/orden`} className="btn btn-pri dc-orden-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 4h6v3H9z" />
+                  <path d="M9 5.5H6.5A1.5 1.5 0 0 0 5 7v12.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H15" />
+                  <path d="M8.5 12.5l2 2 4-4M8.5 17.5h7" />
+                </svg>
+                Ver orden de trabajo
+              </Link>
             )}
           </div>
         </>
