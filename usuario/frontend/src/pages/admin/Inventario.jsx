@@ -1,0 +1,383 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  listarMateriales,
+  cambiarEstadoMaterial,
+  CATEGORIAS_MATERIAL,
+  textoUnidad,
+  formatoSoles,
+  formatoCantidad,
+} from "../../services/inventarioService";
+import Modal from "../../components/admin/Modal";
+import Switch from "../../components/admin/Switch";
+import Paginacion from "../../components/admin/Paginacion";
+import Aviso from "../../components/admin/Aviso";
+import FormMaterial from "./FormMaterial";
+import "../../components/admin/admin-ui.css";
+import "./Servicios.css";
+import "./Inventario.css";
+
+/* T57.2 – Inventario del almacén: catálogo de materiales y repuestos.
+   - Tabla con código, material, categoría, stock (con su mínimo) y costo unitario
+   - Búsqueda por código, nombre o descripción; filtros por estado y categoría
+   - Crear y editar con formulario (código único, costo ≥ 0, stock mínimo)
+   - Activar o desactivar sin borrar (el material conserva su historial)
+   El stock no se edita aquí: cambia con los ingresos (T58) y las salidas del almacén (T51 y T59). */
+
+const TAMANO = 10;
+
+const FILTROS = [
+  { valor: "", texto: "Todos" },
+  { valor: "activos", texto: "Activos" },
+  { valor: "inactivos", texto: "Inactivos" },
+];
+
+const sinTildes = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const IconoEditar = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4Z" />
+    <path d="m13.5 6.5 4 4" />
+  </svg>
+);
+
+function Inventario() {
+  const [recarga, setRecarga] = useState(0);
+  const [resultado, setResultado] = useState({ clave: null, materiales: [], error: "" });
+  const [estado, setEstado] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(0);
+  const [formulario, setFormulario] = useState(null); // { material: null | {...} }
+  const [porDesactivar, setPorDesactivar] = useState(null);
+  const [cambiando, setCambiando] = useState([]);
+  const [aviso, setAviso] = useState(null);
+
+  const cargando = resultado.clave !== recarga;
+  const primeraCarga = resultado.clave === null;
+
+  const contadorAvisos = useRef(0);
+  const avisar = (tipo, texto) => {
+    contadorAvisos.current += 1;
+    setAviso({ tipo, texto, id: contadorAvisos.current });
+  };
+  const cerrarAviso = useCallback(() => setAviso(null), []);
+
+  useEffect(() => {
+    let vigente = true;
+    listarMateriales()
+      .then((materiales) => vigente && setResultado({ clave: recarga, materiales, error: "" }))
+      .catch((e) => vigente && setResultado({ clave: recarga, materiales: [], error: e.message }));
+    return () => {
+      vigente = false;
+    };
+  }, [recarga]);
+
+  const { materiales } = resultado;
+  const texto = sinTildes(busqueda.trim());
+  const filtrados = materiales
+    .filter((m) => (estado === "activos" ? m.activo : estado === "inactivos" ? !m.activo : true))
+    .filter((m) => !categoria || m.categoria === categoria)
+    .filter((m) => !texto || sinTildes(`${m.codigo} ${m.nombre} ${m.descripcion}`).includes(texto))
+    .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }));
+  const paginas = Math.max(1, Math.ceil(filtrados.length / TAMANO));
+  const paginaActual = Math.min(pagina, paginas - 1);
+  const visibles = filtrados.slice(paginaActual * TAMANO, paginaActual * TAMANO + TAMANO);
+  const activos = materiales.filter((m) => m.activo);
+  const valorStock = activos.reduce((total, m) => total + m.stockActual * m.costoUnitario, 0);
+  const porCategoria = (c) => materiales.filter((m) => m.categoria === c).length;
+  const hayFiltros = !!(texto || estado || categoria);
+  const codigosUsados = materiales.map((m) => m.codigo);
+
+  const reemplazar = (id, cambios) =>
+    setResultado((r) => ({ ...r, materiales: r.materiales.map((m) => (m.id === id ? { ...m, ...cambios } : m)) }));
+
+  const aplicarEstado = async (material, activo) => {
+    setCambiando((c) => [...c, material.id]);
+    try {
+      const r = await cambiarEstadoMaterial(material.id, activo);
+      reemplazar(material.id, { activo: r.activo });
+      avisar(
+        "ok",
+        r.activo
+          ? `${material.codigo} · "${material.nombre}" vuelve a estar disponible.`
+          : `${material.codigo} · "${material.nombre}" quedó inactivo.`
+      );
+    } catch (e) {
+      avisar("error", e.message);
+    } finally {
+      setCambiando((c) => c.filter((id) => id !== material.id));
+    }
+  };
+
+  const alCambiarEstado = (material, activo) => {
+    if (activo) aplicarEstado(material, true);
+    else setPorDesactivar(material);
+  };
+
+  const alGuardar = (guardado, editando) => {
+    setFormulario(null);
+    if (editando) {
+      reemplazar(guardado.id, guardado);
+      avisar("ok", `Se guardaron los cambios de ${guardado.codigo} · "${guardado.nombre}".`);
+    } else {
+      setResultado((r) => ({ ...r, materiales: [...r.materiales, guardado] }));
+      setEstado("");
+      setCategoria("");
+      setBusqueda(guardado.codigo);
+      setPagina(0);
+      avisar("ok", `Se registró ${guardado.codigo} · "${guardado.nombre}" con stock 0.`);
+    }
+  };
+
+  return (
+    <section className="gestion inv">
+      <div className="gestion-cabecera">
+        <div>
+          <h2>Inventario</h2>
+          <p>
+            Materiales y repuestos del almacén.
+            {!primeraCarga && !resultado.error && (
+              <>
+                {" "}
+                <strong>{activos.length}</strong> de <strong>{materiales.length}</strong> activos · valor del stock{" "}
+                <strong>{formatoSoles(valorStock)}</strong>.
+              </>
+            )}
+          </p>
+        </div>
+        <button type="button" className="btn btn-pri" onClick={() => setFormulario({ material: null })}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Nuevo material
+        </button>
+      </div>
+
+      {/* ---------- Filtros ---------- */}
+      <div className="filtros">
+        <label className="buscador">
+          <span className="sr-only">Buscar por código o nombre</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            type="search"
+            placeholder="Buscar por código o nombre"
+            value={busqueda}
+            onChange={(e) => {
+              setBusqueda(e.target.value);
+              setPagina(0);
+            }}
+          />
+        </label>
+
+        <div className="segmentos" role="group" aria-label="Filtrar por estado">
+          {FILTROS.map((f) => (
+            <button
+              key={f.valor || "todos"}
+              type="button"
+              className={estado === f.valor ? "activo" : ""}
+              aria-pressed={estado === f.valor}
+              onClick={() => {
+                setEstado(f.valor);
+                setPagina(0);
+              }}
+            >
+              {f.texto}
+            </button>
+          ))}
+        </div>
+
+        <label className="filtro-select">
+          <span className="sr-only">Filtrar por categoría</span>
+          <select
+            value={categoria}
+            onChange={(e) => {
+              setCategoria(e.target.value);
+              setPagina(0);
+            }}
+          >
+            <option value="">Todas las categorías</option>
+            {Object.entries(CATEGORIAS_MATERIAL).map(([valor, nombre]) => (
+              <option key={valor} value={valor}>
+                {nombre}
+                {!primeraCarga && ` (${porCategoria(valor)})`}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {hayFiltros && (
+          <button
+            type="button"
+            className="btn-limpiar"
+            onClick={() => {
+              setBusqueda("");
+              setEstado("");
+              setCategoria("");
+              setPagina(0);
+            }}
+          >
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* ---------- Tabla ---------- */}
+      <div className={cargando && !primeraCarga ? "tabla-caja actualizando" : "tabla-caja"} aria-busy={cargando}>
+        {resultado.error ? (
+          <div className="tabla-estado">
+            <p className="tabla-estado-titulo">No se pudo cargar el inventario</p>
+            <p>{resultado.error}</p>
+            <button type="button" className="btn btn-sec" onClick={() => setRecarga((n) => n + 1)}>
+              Reintentar
+            </button>
+          </div>
+        ) : !primeraCarga && filtrados.length === 0 ? (
+          <div className="tabla-estado">
+            <p className="tabla-estado-titulo">{materiales.length ? "Sin resultados" : "El almacén está vacío"}</p>
+            <p>
+              {materiales.length
+                ? "No hay materiales que coincidan con los filtros elegidos."
+                : "Registra el primer material con el botón «Nuevo material»."}
+            </p>
+          </div>
+        ) : (
+          <table className="tabla inv-tabla">
+            <thead>
+              <tr>
+                <th scope="col">Código</th>
+                <th scope="col">Material</th>
+                <th scope="col">Categoría</th>
+                <th scope="col" className="col-num">Stock</th>
+                <th scope="col" className="col-num">Costo unit.</th>
+                <th scope="col">Estado</th>
+                <th scope="col"><span className="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {primeraCarga
+                ? Array.from({ length: 6 }, (_, i) => (
+                    <tr key={i} className="fila-esqueleto" aria-hidden="true">
+                      <td><span className="esq" /></td>
+                      <td><span className="esq esq-largo" /></td>
+                      <td><span className="esq" /></td>
+                      <td><span className="esq" /></td>
+                      <td><span className="esq" /></td>
+                      <td><span className="esq" /></td>
+                      <td />
+                    </tr>
+                  ))
+                : visibles.map((m) => (
+                    <tr key={m.id} className={m.activo ? "" : "fila-inactiva"}>
+                      <td data-label="Código">
+                        <span className="inv-codigo">{m.codigo}</span>
+                      </td>
+                      <td data-label="Material">
+                        <div className="servicio-info">
+                          <strong>{m.nombre}</strong>
+                          {m.descripcion && <span>{m.descripcion}</span>}
+                        </div>
+                      </td>
+                      <td data-label="Categoría">
+                        <span className={`insignia inv-cat inv-cat-${m.categoria}`}>{CATEGORIAS_MATERIAL[m.categoria]}</span>
+                      </td>
+                      <td data-label="Stock" className="col-num">
+                        <span className="inv-stock">
+                          <strong>{formatoCantidad(m.stockActual)}</strong> {textoUnidad(m.unidad, m.stockActual)}
+                          <small>mín. {formatoCantidad(m.stockMinimo)}</small>
+                        </span>
+                      </td>
+                      <td data-label="Costo unit." className="col-num">
+                        <span className="precio">{formatoSoles(m.costoUnitario)}</span>
+                        <small className="inv-por">por {textoUnidad(m.unidad, 1)}</small>
+                      </td>
+                      <td data-label="Estado">
+                        <Switch
+                          activo={m.activo}
+                          cargando={cambiando.includes(m.id)}
+                          etiqueta={`Material ${m.codigo} ${m.nombre}`}
+                          alCambiar={(activo) => alCambiarEstado(m, activo)}
+                        />
+                      </td>
+                      <td data-label="Acciones" className="col-acciones">
+                        <button
+                          type="button"
+                          className="btn-icono"
+                          onClick={() => setFormulario({ material: m })}
+                          aria-label={`Editar ${m.codigo} ${m.nombre}`}
+                        >
+                          <IconoEditar />
+                          <span>Editar</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {!resultado.error && (
+        <Paginacion pagina={paginaActual} paginas={paginas} total={filtrados.length} tamano={TAMANO} alCambiar={setPagina} />
+      )}
+
+      {/* ---------- Crear / editar ---------- */}
+      <Modal
+        abierto={!!formulario}
+        alCerrar={() => setFormulario(null)}
+        titulo={formulario?.material ? "Editar material" : "Nuevo material"}
+      >
+        {formulario && (
+          <FormMaterial
+            material={formulario.material}
+            codigosUsados={codigosUsados}
+            alGuardar={alGuardar}
+            alCerrar={() => setFormulario(null)}
+          />
+        )}
+      </Modal>
+
+      {/* ---------- Confirmar desactivación ---------- */}
+      <Modal abierto={!!porDesactivar} alCerrar={() => setPorDesactivar(null)} titulo="¿Desactivar material?" pequeno>
+        {porDesactivar && (
+          <div className="confirmar">
+            <p>
+              <strong>
+                {porDesactivar.codigo} · {porDesactivar.nombre}
+              </strong>{" "}
+              dejará de aparecer cuando los mecánicos busquen repuestos. No se borra: su historial se conserva y puedes
+              activarlo cuando quieras.
+            </p>
+            {porDesactivar.stockActual > 0 && (
+              <p className="inv-ojo">
+                Aún quedan {formatoCantidad(porDesactivar.stockActual)}{" "}
+                {textoUnidad(porDesactivar.unidad, porDesactivar.stockActual)} en el almacén.
+              </p>
+            )}
+            <div className="form-acciones">
+              <button type="button" className="btn btn-sec" onClick={() => setPorDesactivar(null)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-peligro"
+                onClick={() => {
+                  aplicarEstado(porDesactivar, false);
+                  setPorDesactivar(null);
+                }}
+              >
+                Desactivar
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
+    </section>
+  );
+}
+
+export default Inventario;

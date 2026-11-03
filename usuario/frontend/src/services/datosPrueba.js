@@ -507,3 +507,79 @@ export async function eliminarFeriado(id) {
   await esperar(250);
   feriados = feriados.filter((f) => f.idFeriado !== id);
 }
+
+/* ---------- Inventario del almacén (T57.2) ---------- */
+
+const copiaMaterial = (m) => ({ ...m });
+const mismoCodigo = (a, b) => a.trim().toUpperCase() === b.trim().toUpperCase();
+
+// [código, nombre, descripción, categoría, unidad, costo, stock, mínimo, activo]
+let materiales = [
+  ["FIL-001", "Filtro de aceite", "Rosca 3/4\"-16 UNF. Toyota, Hyundai y Kia.", "FILTRO", "UNIDAD", 18.5, 24, 10, true],
+  ["FIL-002", "Filtro de aire", "Panel rectangular para Toyota Yaris y Corolla.", "FILTRO", "UNIDAD", 32, 6, 8, true],
+  ["FIL-003", "Filtro de combustible", "En línea, motores a gasolina.", "FILTRO", "UNIDAD", 28.9, 12, 5, true],
+  ["FIL-004", "Filtro de cabina", "Con carbón activado.", "FILTRO", "UNIDAD", 35, 0, 4, true],
+  ["LUB-001", "Aceite de motor 10W-30", "Sintético, galón de 4 L.", "LUBRICANTE", "GALON", 96, 15, 6, true],
+  ["LUB-002", "Aceite de motor 20W-50", "Mineral, galón de 4 L.", "LUBRICANTE", "GALON", 72, 4, 6, true],
+  ["LUB-003", "Líquido de frenos DOT 4", "Botella de 1 L.", "LUBRICANTE", "LITRO", 24, 9, 4, true],
+  ["LUB-004", "Refrigerante verde", "Listo para usar, galón.", "LUBRICANTE", "GALON", 38, 7, 3, true],
+  ["FRE-001", "Pastillas de freno delanteras", "Cerámicas. Toyota Yaris 2014-2020.", "FRENOS", "JUEGO", 120, 5, 4, true],
+  ["FRE-002", "Pastillas de freno traseras", "Semimetálicas. Hyundai Accent.", "FRENOS", "JUEGO", 98, 2, 3, true],
+  ["FRE-003", "Disco de freno delantero", "Ventilado, 256 mm.", "FRENOS", "UNIDAD", 165, 4, 2, true],
+  ["REP-001", "Bujía de iridio", "NGK, rosca 14 mm.", "REPUESTO", "UNIDAD", 42, 32, 16, true],
+  ["REP-002", "Correa de distribución", "Kit con tensor. Kia Rio 1.4.", "REPUESTO", "KIT", 285, 3, 2, true],
+  ["REP-003", "Amortiguador delantero", "A gas, lado izquierdo o derecho.", "REPUESTO", "UNIDAD", 210, 4, 2, true],
+  ["REP-004", "Rótula de suspensión", "Inferior, universal.", "REPUESTO", "UNIDAD", 75, 1, 2, true],
+  ["ELE-001", "Batería 12 V 65 Ah", "Libre de mantenimiento.", "ELECTRICO", "UNIDAD", 420, 3, 2, true],
+  ["ELE-002", "Foco H4 halógeno", "60/55 W.", "ELECTRICO", "UNIDAD", 16, 20, 10, true],
+  ["NEU-001", "Neumático 185/65 R15", "Para auto compacto.", "NEUMATICO", "UNIDAD", 260, 8, 4, true],
+  ["INS-001", "Limpiador de frenos", "Aerosol de 500 ml.", "INSUMO", "UNIDAD", 19, 14, 6, true],
+  ["INS-002", "Trapo industrial", "Bolsa de 1 kg.", "INSUMO", "UNIDAD", 9.5, 30, 10, true],
+  ["INS-003", "Cinta aislante", "Rollo de 20 m.", "INSUMO", "UNIDAD", 4.5, 0, 5, false],
+].map(([codigo, nombre, descripcion, categoria, unidad, costoUnitario, stockActual, stockMinimo, activo], i) => ({
+  idMaterial: i + 1,
+  codigo,
+  nombre,
+  descripcion,
+  categoria,
+  unidad,
+  costoUnitario,
+  stockActual,
+  stockMinimo,
+  activo,
+}));
+let siguienteMaterial = materiales.length + 1;
+
+export async function listarMateriales() {
+  await esperar();
+  return materiales.map(copiaMaterial);
+}
+
+export async function crearMaterial(datos) {
+  await esperar(450);
+  if (materiales.some((m) => mismoCodigo(m.codigo, datos.codigo))) {
+    throw Object.assign(new Error(`Ya existe un material con el código ${datos.codigo.toUpperCase()}.`), { status: 409 });
+  }
+  const nuevo = { idMaterial: siguienteMaterial++, ...datos, codigo: datos.codigo.toUpperCase(), stockActual: 0, activo: true };
+  materiales = [...materiales, nuevo];
+  return copiaMaterial(nuevo);
+}
+
+export async function editarMaterial(id, datos) {
+  await esperar(450);
+  const material = materiales.find((m) => m.idMaterial === id);
+  if (!material) throw Object.assign(new Error("El material ya no existe."), { status: 404 });
+  if (materiales.some((m) => m.idMaterial !== id && mismoCodigo(m.codigo, datos.codigo))) {
+    throw Object.assign(new Error(`Ya existe un material con el código ${datos.codigo.toUpperCase()}.`), { status: 409 });
+  }
+  Object.assign(material, datos, { codigo: datos.codigo.toUpperCase() });
+  return copiaMaterial(material);
+}
+
+export async function cambiarEstadoMaterial(id, activo) {
+  await esperar(300);
+  const material = materiales.find((m) => m.idMaterial === id);
+  if (!material) throw Object.assign(new Error("El material ya no existe."), { status: 404 });
+  material.activo = activo;
+  return copiaMaterial(material);
+}

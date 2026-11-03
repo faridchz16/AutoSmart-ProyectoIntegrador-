@@ -1,0 +1,110 @@
+/* ===== Inventario del almacén (T57.2) =====
+   Usa la tabla, filtros y formulario comunes de admin-ui.css y el filtro por categoría de Servicios.css */
+
+/* ---------- Tabla ---------- */
+.inv-codigo {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid #d6e0f2;
+  border-radius: 7px;
+  background: #f7f9fd;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.inv-stock {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  color: #3b4a66;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.inv-stock strong {
+  color: #0b1b3a;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-stock small,
+.inv-por {
+  color: #7a8aa6;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.inv-por { display: block; }
+
+.fila-inactiva .inv-codigo,
+.fila-inactiva .inv-stock,
+.fila-inactiva .inv-por,
+.fila-inactiva .inv-cat { opacity: 0.6; }
+
+/* Colores por categoría */
+.inv-cat { background: #eef2f9; color: #3b4a66; }
+.inv-cat-REPUESTO { background: #e6f0ff; color: #1150e8; }
+.inv-cat-FRENOS { background: #ffe4e6; color: #be123c; }
+.inv-cat-FILTRO { background: #fef3c7; color: #a16207; }
+.inv-cat-LUBRICANTE { background: #ffedd5; color: #c2410c; }
+.inv-cat-ELECTRICO { background: #ede9fe; color: #6d28d9; }
+.inv-cat-NEUMATICO { background: #e2e8f0; color: #334155; }
+.inv-cat-INSUMO { background: #dcfce7; color: #15803d; }
+
+/* ---------- Formulario ---------- */
+.inv-cod-nom { grid-template-columns: 0.75fr 1.25fr; }
+
+/* Si la ayuda de un campo ocupa dos líneas, el campo vecino no se estira */
+.inv-form .campo { align-content: start; }
+
+.inv-input-codigo {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.inv-input-codigo::placeholder { text-transform: none; }
+
+.inv-nota {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f8ff;
+  color: #3b4a66;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.inv-nota strong { color: #0b1b3a; }
+
+.confirmar .inv-ojo {
+  margin-top: -10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* ---------- Celular: la tabla se convierte en tarjetas ---------- */
+@media (max-width: 720px) {
+  .inv-tabla td[data-label="Código"] { padding-top: 10px; }
+  .inv-tabla td[data-label="Material"] { padding-bottom: 10px; border-bottom: 1px solid #eef2f9; }
+  .inv-tabla td[data-label="Material"]::before { display: none; }
+  .inv-tabla td[data-label="Material"] .servicio-info span { -webkit-line-clamp: 3; }
+  .inv-stock { flex-direction: row; align-items: baseline; gap: 6px; }
+  .inv-tabla td[data-label="Costo unit."] { align-items: baseline; }
+  .inv-tabla td[data-label="Costo unit."] .inv-por { display: inline; margin-left: 6px; }
+  .inv-tabla td[data-label="Costo unit."] > .precio { margin-left: auto; }
+}
+
+@media (max-width: 420px) {
+  .inv-cod-nom { grid-template-columns: 1fr; }
+}

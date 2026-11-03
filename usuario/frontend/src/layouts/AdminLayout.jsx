@@ -49,6 +49,16 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/inventario",
+    texto: "Inventario",
+    icono: (
+      <Icono>
+        <path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16Z" />
+        <path d="M3.5 8 12 12.5 20.5 8M12 12.5v8" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/taller",
     texto: "Horario del taller",
     icono: (
