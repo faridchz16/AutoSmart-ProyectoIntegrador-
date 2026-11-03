@@ -191,3 +191,15 @@ CREATE TABLE IF NOT EXISTS checklist_items (
     UNIQUE (id_checklist, elemento),
     FOREIGN KEY (id_checklist) REFERENCES checklists(id_checklist)
 );
+
+-- ---------- Deficiencias de la inspeccion (T43.1) ----------
+
+CREATE TABLE IF NOT EXISTS deficiencias (
+    id_deficiencia BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT NOT NULL,
+    categoria VARCHAR(20) NOT NULL,    -- MOTOR, FRENOS, SUSPENSION, ELECTRICO, NEUMATICOS, CARROCERIA, FLUIDOS, OTRO
+    severidad VARCHAR(10) NOT NULL,    -- LEVE, MODERADA, CRITICA
+    descripcion VARCHAR(500) NOT NULL,
+    fecha_registro DATETIME NOT NULL,
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
+);
