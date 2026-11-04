@@ -1,5 +1,7 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.exception.ForbiddenException;
+import com.tecsup.autosmart.model.Cita;
 import com.tecsup.autosmart.dto.FotoResponse;
 import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ConflictException;
@@ -92,5 +94,22 @@ public class FotoDeficienciaService {
         if (esJpg) return "image/jpeg";
         if (esPng) return "image/png";
         throw new BadRequestException("Solo se permiten fotos JPG o PNG");
+    }
+
+    @Transactional(readOnly = true)
+    public FotoDeficiencia buscarParaVer(String correoUsuario, Long idFoto) {
+        FotoDeficiencia foto = fotoRepository.findById(idFoto)
+                .orElseThrow(() -> new NotFoundException("Foto no encontrada"));
+        Cita cita = foto.getDeficiencia().getOrden().getCita();
+        boolean esMecanico = cita.getMecanico().getCorreo().equalsIgnoreCase(correoUsuario);
+        boolean esCliente = cita.getCliente().getCorreo().equalsIgnoreCase(correoUsuario);
+        if (!esMecanico && !esCliente) {
+            throw new ForbiddenException("No puedes ver esta foto");
+        }
+        return foto;
+    }
+
+    public byte[] leerArchivo(FotoDeficiencia foto) {
+        return almacen.leer(foto.getNombreArchivo());
     }
 }

@@ -1,6 +1,7 @@
 package com.tecsup.autosmart.controller;
 
 import com.tecsup.autosmart.dto.FotoResponse;
+import com.tecsup.autosmart.model.FotoDeficiencia;
 import com.tecsup.autosmart.service.FotoDeficienciaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,5 +28,13 @@ public class FotoDeficienciaController {
                                               Authentication auth) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(fotoService.subir(auth.getName(), id, idDeficiencia, foto));
+    }
+
+    @GetMapping("/photos/{idFoto}")
+    public ResponseEntity<byte[]> ver(@PathVariable Long idFoto, Authentication auth) {
+        FotoDeficiencia foto = fotoService.buscarParaVer(auth.getName(), idFoto);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(foto.getTipoContenido()))
+                .body(fotoService.leerArchivo(foto));
     }
 }
