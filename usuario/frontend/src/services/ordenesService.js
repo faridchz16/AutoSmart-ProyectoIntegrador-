@@ -10,9 +10,10 @@ import * as prueba from "./datosPrueba";
        { idChecklist, idOrden, fechaRegistro, observacionGeneral, items: [{ elemento, estado OK|OBSERVADO, observacion }] }
      GET /work-orders/{idOrden}/deficiencies -> deficiencias con sus fotos (T43.1)
        [{ idDeficiencia, categoria, severidad LEVE|MODERADA|CRITICA, descripcion, fechaRegistro, fotos: [{ idFoto, url }] }]
+     GET /photos/{idFoto}                  -> la imagen JPG o PNG (T44.1); url = "/photos/{idFoto}".
+       Pide el token JWT (solo el mecánico asignado y el cliente dueño), por eso se descarga con apiArchivo.
    Pendientes en el backend (se usan apenas existan; mientras tanto la pantalla los muestra vacíos):
      GET /appointments/{idCita}/work-order -> orden de una cita ya finalizada (no sale en la lista de activas)
-     GET /work-orders/photos/{idFoto}      -> la imagen (JPG o PNG), con el token JWT (T44.1)
      Diagnóstico técnico (T45.1), mismo estilo que el checklist:
        GET /work-orders/{idOrden}/diagnosis -> { idOrden, diagnostico, fechaRegistro }; 404 si aún no se registra
        PUT /work-orders/{idOrden}/diagnosis { diagnostico } -> lo crea o lo reemplaza (texto obligatorio).
@@ -101,7 +102,7 @@ function normalizarChecklist(c) {
 
 function normalizarFoto(f) {
   const idFoto = f.idFoto ?? f.id ?? null;
-  const url = f.url ?? (idFoto !== null ? `/work-orders/photos/${idFoto}` : "");
+  const url = f.url ?? (idFoto !== null ? `/photos/${idFoto}` : "");
   return { clave: String(idFoto ?? url ?? f.src), idFoto, url, src: f.src ?? "" };
 }
 
@@ -217,7 +218,11 @@ export function cargarFoto(foto) {
   if (foto.src) return Promise.resolve(foto.src);
   if (/^(https?:|data:|blob:)/.test(foto.url)) return Promise.resolve(foto.url);
   if (!fotosCargadas.has(foto.clave)) {
-    const promesa = apiArchivo(foto.url).then((blob) => URL.createObjectURL(blob));
+    const promesa = apiArchivo(foto.url).then((blob) => {
+      // Si no llega una imagen (p. ej., una página HTML por una ruta mal enrutada), se muestra el ícono de falla
+      if (blob.type && !blob.type.startsWith("image/")) throw new Error("La respuesta no es una imagen.");
+      return URL.createObjectURL(blob);
+    });
     promesa.catch(() => fotosCargadas.delete(foto.clave));
     fotosCargadas.set(foto.clave, promesa);
   }
