@@ -5,6 +5,7 @@ import com.tecsup.autosmart.dto.DeficienciaResponse;
 import com.tecsup.autosmart.model.Deficiencia;
 import com.tecsup.autosmart.model.OrdenTrabajo;
 import com.tecsup.autosmart.repository.DeficienciaRepository;
+import com.tecsup.autosmart.repository.FotoDeficienciaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,10 +21,13 @@ public class DeficienciaService {
 
     private final DeficienciaRepository deficienciaRepository;
     private final OrdenTrabajoService ordenService;
+    private final FotoDeficienciaRepository fotoRepository;
 
-    public DeficienciaService(DeficienciaRepository deficienciaRepository, OrdenTrabajoService ordenService) {
+    public DeficienciaService(DeficienciaRepository deficienciaRepository, OrdenTrabajoService ordenService,
+                              FotoDeficienciaRepository fotoRepository) {
         this.deficienciaRepository = deficienciaRepository;
         this.ordenService = ordenService;
+        this.fotoRepository = fotoRepository;
     }
 
     @Transactional
@@ -57,6 +61,10 @@ public class DeficienciaService {
         res.setSeveridad(d.getSeveridad().name());
         res.setDescripcion(d.getDescripcion());
         res.setFechaRegistro(d.getFechaRegistro().toString());
+
+        res.setFotos(fotoRepository.findByDeficiencia_IdDeficienciaOrderByIdFotoAsc(d.getIdDeficiencia()).stream()
+                .map(f -> new DeficienciaResponse.Foto(f.getIdFoto(), "/photos/" + f.getIdFoto()))
+                .collect(Collectors.toList()));
         return res;
     }
 }
