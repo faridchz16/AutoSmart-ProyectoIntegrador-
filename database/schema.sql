@@ -216,3 +216,15 @@ CREATE TABLE IF NOT EXISTS materiales (
     stock_minimo INT NOT NULL,              -- alerta de stock bajo (T60.1)
     version BIGINT NOT NULL DEFAULT 0       -- control de concurrencia (@Version)
 );
+
+-- ---------- Fotos de las deficiencias (T44.1) ----------
+
+CREATE TABLE IF NOT EXISTS fotos_deficiencia (
+    id_foto BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_deficiencia BIGINT NOT NULL,
+    nombre_archivo VARCHAR(100) UNIQUE NOT NULL,   -- nombre generado (UUID); la imagen vive en la carpeta del servidor
+    tipo_contenido VARCHAR(20) NOT NULL,           -- image/jpeg o image/png
+    tamano_bytes BIGINT NOT NULL,                  -- maximo 5 MB
+    fecha_registro DATETIME NOT NULL,
+    FOREIGN KEY (id_deficiencia) REFERENCES deficiencias(id_deficiencia)
+);
