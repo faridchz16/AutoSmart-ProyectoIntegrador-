@@ -31,3 +31,5 @@ build/
 
 ### VS Code ###
 .vscode/
+### Fotos subidas al servidor (T44.1) ###
+uploads/
