@@ -203,3 +203,16 @@ CREATE TABLE IF NOT EXISTS deficiencias (
     fecha_registro DATETIME NOT NULL,
     FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
 );
+
+-- ---------- Inventario: materiales y repuestos (T57.1) ----------
+
+CREATE TABLE IF NOT EXISTS materiales (
+    id_material BIGINT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(30) UNIQUE NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    unidad VARCHAR(20) NOT NULL,            -- unidad, litro, juego, ...
+    costo_unitario DECIMAL(10,2) NOT NULL,  -- >= 0
+    stock_actual INT NOT NULL DEFAULT 0,    -- solo cambia con el kardex (T58.1)
+    stock_minimo INT NOT NULL,              -- alerta de stock bajo (T60.1)
+    version BIGINT NOT NULL DEFAULT 0       -- control de concurrencia (@Version)
+);
