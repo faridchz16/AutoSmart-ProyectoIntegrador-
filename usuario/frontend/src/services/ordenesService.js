@@ -8,11 +8,15 @@ import * as prueba from "./datosPrueba";
        [{ idOrden, idCita, ticket, estado, fechaInicio, servicio, placa }]
      GET /work-orders/{idOrden}/checklist  -> checklist de recepción; 404 si aún no se registra (T42.1)
        { idChecklist, idOrden, fechaRegistro, observacionGeneral, items: [{ elemento, estado OK|OBSERVADO, observacion }] }
+     GET /work-orders/{idOrden}/deficiencies -> deficiencias con sus fotos (T43.1)
+       [{ idDeficiencia, categoria, severidad LEVE|MODERADA|CRITICA, descripcion, fechaRegistro, fotos: [{ idFoto, url }] }]
    Pendientes en el backend (se usan apenas existan; mientras tanto la pantalla los muestra vacíos):
      GET /appointments/{idCita}/work-order -> orden de una cita ya finalizada (no sale en la lista de activas)
-     GET /work-orders/{idOrden}/deficiencies -> deficiencias con sus fotos (T43.1 y T44.1)
-       [{ idDeficiencia, categoria, severidad LEVE|MODERADA|CRITICA, descripcion, fechaRegistro, fotos: [{ idFoto, url }] }]
-     GET /work-orders/photos/{idFoto}      -> la imagen (JPG o PNG), con el token JWT
+     GET /work-orders/photos/{idFoto}      -> la imagen (JPG o PNG), con el token JWT (T44.1)
+     Diagnóstico técnico (T45.1), mismo estilo que el checklist:
+       GET /work-orders/{idOrden}/diagnosis -> { idOrden, diagnostico, fechaRegistro }; 404 si aún no se registra
+       PUT /work-orders/{idOrden}/diagnosis { diagnostico } -> lo crea o lo reemplaza (texto obligatorio).
+         409 si la orden no está EN_PROCESO (en espera de aprobación o finalizada no se edita)
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
 
 export const ELEMENTOS_CHECKLIST = [
@@ -142,6 +146,46 @@ export async function obtenerChecklist(idOrden) {
     return normalizarChecklist(datos);
   } catch (e) {
     if (esNoEncontrado(e)) return null;
+    throw e;
+  }
+}
+
+/* ---------- Diagnóstico técnico (T45.2) ---------- */
+
+export const MIN_DIAGNOSTICO = 10;
+export const MAX_DIAGNOSTICO = 1000;
+
+function normalizarDiagnostico(d) {
+  const texto = String(d?.diagnostico ?? d?.descripcion ?? d?.texto ?? "").trim();
+  return texto ? { texto, fechaRegistro: d.fechaRegistro ?? d.fechaActualizacion ?? "" } : null;
+}
+
+// Diagnóstico de la orden, o null si aún no se registra (o el backend todavía no tiene la ruta)
+export async function obtenerDiagnostico(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.obtenerDiagnostico(idOrden)
+      : await apiFetch(`/work-orders/${idOrden}/diagnosis`);
+    return normalizarDiagnostico(datos);
+  } catch (e) {
+    if (esNoEncontrado(e)) return null;
+    throw e;
+  }
+}
+
+export async function guardarDiagnostico(idOrden, texto) {
+  const cuerpo = { diagnostico: texto.trim() };
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.guardarDiagnostico(idOrden, cuerpo.diagnostico)
+      : await apiFetch(`/work-orders/${idOrden}/diagnosis`, { metodo: "PUT", cuerpo });
+    return normalizarDiagnostico({ ...cuerpo, ...datos }) ?? { texto: cuerpo.diagnostico, fechaRegistro: "" };
+  } catch (e) {
+    if (e.status === 404 && !prueba.DATOS_PRUEBA) {
+      throw new Error("El servidor todavía no permite guardar el diagnóstico (falta PUT /work-orders/{id}/diagnosis).", {
+        cause: e,
+      });
+    }
     throw e;
   }
 }

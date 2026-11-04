@@ -473,6 +473,38 @@ const deficienciasPrueba = {
 
 const copia = (x) => JSON.parse(JSON.stringify(x));
 
+// Diagnóstico técnico (T45.2): la orden 2 (finalizada) ya lo tiene; la 1 (en proceso) aún no
+const diagnosticosPrueba = {
+  2: {
+    diagnostico:
+      "Aceite degradado por kilometraje (9 800 km desde el último cambio). Se reemplazó el aceite y el filtro.\nNeumático trasero derecho con desgaste irregular: se recomienda alineamiento y balanceo en el próximo servicio.",
+    fechaRegistro: enHora(-1, "10:40"),
+  },
+};
+
+const ahoraEnLima = () => {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
+  return `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:${dosCifras(d.getSeconds())}`;
+};
+
+export async function obtenerDiagnostico(idOrden) {
+  await esperar(250);
+  const diagnostico = diagnosticosPrueba[Number(idOrden)];
+  if (!diagnostico) throw conEstado("La orden aun no tiene diagnostico", 404);
+  return { idOrden: Number(idOrden), ...diagnostico };
+}
+
+export async function guardarDiagnostico(idOrden, diagnostico) {
+  await esperar(500);
+  const orden = ordenesPrueba.find((o) => o.idOrden === Number(idOrden));
+  if (!orden) throw conEstado("Orden de trabajo no encontrada", 404);
+  const { estado } = datosOrden(orden);
+  if (estado !== "EN_PROCESO") throw conEstado(`La orden no esta EN_PROCESO (estado: ${estado})`, 409);
+  if (!diagnostico.trim()) throw conEstado("El diagnostico es obligatorio", 400);
+  diagnosticosPrueba[Number(idOrden)] = { diagnostico: diagnostico.trim(), fechaRegistro: ahoraEnLima() };
+  return { idOrden: Number(idOrden), ...diagnosticosPrueba[Number(idOrden)] };
+}
+
 export async function obtenerChecklist(idOrden) {
   await esperar(250);
   const checklist = checklistsPrueba[Number(idOrden)];

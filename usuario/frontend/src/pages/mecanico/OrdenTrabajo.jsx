@@ -5,6 +5,7 @@ import {
   obtenerOrdenDeCita,
   obtenerChecklist,
   listarDeficiencias,
+  obtenerDiagnostico,
   cargarFoto,
   textoCategoria,
   minutosEntre,
@@ -16,6 +17,7 @@ import {
 import { ESTADOS_CITA } from "../../services/agendaService";
 import { hoyLima, horaLima, fechaCorta, fechaLarga, aFecha, isoDe } from "../../services/bloqueosService";
 import { formatoHoras } from "../../services/horariosService";
+import DiagnosticoOrden from "./DiagnosticoOrden";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -23,6 +25,7 @@ import "./OrdenTrabajo.css";
 /* TEC3.2 – Vista web de la orden de trabajo: datos de la atención y la inspección de recepción
    que el mecánico registra desde la app (checklist, deficiencias y fotos).
    Se abre desde el detalle de una cita en proceso, en espera de aprobación o finalizada.
+   T45.2: área de diagnóstico técnico (se registra y edita aquí mientras la orden está EN_PROCESO).
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -306,12 +309,13 @@ function OrdenTrabajo() {
     let vigente = true;
     Promise.all([obtenerCita(idCita), obtenerOrdenDeCita(idCita)])
       .then(async ([cita, orden]) => {
-        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [] };
-        const [checklist, deficiencias] = await Promise.all([
+        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null };
+        const [checklist, deficiencias, diagnostico] = await Promise.all([
           obtenerChecklist(orden.idOrden),
           listarDeficiencias(orden.idOrden),
+          obtenerDiagnostico(orden.idOrden),
         ]);
-        return { cita, orden, checklist, deficiencias };
+        return { cita, orden, checklist, deficiencias, diagnostico };
       })
       .then((d) => {
         if (vigente) setResultado({ clave, datosDe: idCita, ...d, error: "", fallo: "", actualizado: horaLima() });
@@ -397,7 +401,7 @@ function OrdenTrabajo() {
     );
   }
 
-  const { cita, orden, checklist, deficiencias, fallo, actualizado } = datos;
+  const { cita, orden, checklist, deficiencias, diagnostico, fallo, actualizado } = datos;
   const estado = orden?.estado ?? cita.estado;
 
   /* ----- La cita aún no tiene orden (o no se encontró) ----- */
@@ -543,6 +547,13 @@ function OrdenTrabajo() {
             de evidencia
           </span>
         </a>
+        <a href="#ot-diagnostico" className={diagnostico ? "ot-res hecho" : "ot-res"}>
+          <span className="ot-res-num" aria-hidden="true">{diagnostico ? "✓" : "—"}</span>
+          <span>
+            <strong>Diagnóstico</strong>
+            {diagnostico ? "Registrado" : estado === "EN_PROCESO" ? "Por registrar" : "Sin registrar"}
+          </span>
+        </a>
       </nav>
 
       {/* ---------- Inspección registrada desde la app ---------- */}
@@ -573,6 +584,23 @@ function OrdenTrabajo() {
           />
         </section>
       </div>
+
+      {/* ---------- Diagnóstico técnico (T45.2) ---------- */}
+      <section className="ot-panel ot-diag-panel" id="ot-diagnostico" aria-labelledby="ot-diag-titulo">
+        <header className="ot-panel-cab">
+          <h3 id="ot-diag-titulo">Diagnóstico técnico</h3>
+          <span className="ot-panel-extra">Lo verá el cliente en la app</span>
+        </header>
+        <DiagnosticoOrden
+          idOrden={orden.idOrden}
+          diagnostico={diagnostico}
+          editable={estado === "EN_PROCESO"}
+          estado={estado}
+          deficiencias={deficiencias}
+          momento={momento}
+          alGuardar={(d) => setResultado((r) => ({ ...r, diagnostico: d }))}
+        />
+      </section>
 
       {visor && (
         <Visor

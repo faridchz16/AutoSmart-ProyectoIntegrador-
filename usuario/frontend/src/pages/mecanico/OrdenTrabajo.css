@@ -114,7 +114,7 @@
 /* ---------- Resumen de la inspección ---------- */
 .ot-resumen {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -416,6 +416,7 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 
 /* ---------- Pantallas medianas y celular ---------- */
 @media (max-width: 1180px) {
+  .ot-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ot-ficha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ot-dato + .ot-dato { border-left: 0; }
   .ot-dato:nth-child(even) { border-left: 1px solid #eef2f9; }
@@ -445,4 +446,71 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 @media (prefers-reduced-motion: reduce) {
   .ot-pulso::after, .ot-girando, .ot-visor[open] { animation: none; }
   .ot-foto-img, .ot-res { transition: none; }
+}
+
+/* ---------- Diagnóstico técnico (T45.2) ---------- */
+.ot-diag-panel { margin-top: 16px; }
+
+.ot-diag-form { display: grid; gap: 12px; }
+.ot-diag-form textarea { min-height: 120px; }
+
+.ot-diag-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ot-diag-botones { display: flex; gap: 10px; margin-left: auto; }
+
+.ot-diag-base {
+  padding: 7px 12px;
+  border: 1px dashed #b9c8e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ot-diag-base:hover { border-style: solid; border-color: #93b4ff; background: #eef4ff; }
+.ot-diag-base:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+.ot-diag { display: grid; gap: 10px; }
+
+.ot-diag-texto {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 4px solid #1150e8;
+  border-radius: 0 12px 12px 0;
+  background: #f4f8ff;
+  color: #1c2a45;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ot-diag-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.ot-diag-fecha { color: #9aa7bf; font-size: 0.8rem; }
+.ot-diag-fecha.ok { color: #047857; font-weight: 700; }
+.ot-diag-bloqueo { color: #7a8aa6; font-size: 0.82rem; }
+
+.ot-diag-vacio {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #c9d6ee;
+  border-radius: 12px;
+  background: #f8faff;
+  color: #5b6b88;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 480px) {
+  .ot-diag-acciones { flex-direction: column-reverse; align-items: stretch; }
+  .ot-diag-botones { flex-direction: column-reverse; margin-left: 0; }
+  .ot-diag-botones .btn { width: 100%; }
 }
