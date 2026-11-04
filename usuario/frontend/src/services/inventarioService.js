@@ -1,74 +1,71 @@
 import { apiFetch } from "./api";
 import * as prueba from "./datosPrueba";
 
-/* Inventario del almacén (T57.2). Backend de Farid: T57.1 (rama feature/backend-inventory).
-   Contrato propuesto (el backend aún no está en main):
-     GET   /admin/materials               -> todos los materiales, activos e inactivos
-     POST  /admin/materials               -> crea un material; 409 si el código ya existe
-     PUT   /admin/materials/{id}          -> edita datos, costo y stock mínimo (el stock NO se edita aquí)
-     PATCH /admin/materials/{id}/estado   -> { activo } activa o desactiva sin borrar
-   Cuerpo:    { codigo, nombre, descripcion, categoria, unidad, costoUnitario, stockMinimo }
-   Respuesta: { idMaterial, codigo, nombre, descripcion, categoria, unidad, costoUnitario,
-                stockActual, stockMinimo, activo }
-   Reglas: código único (se guarda en mayúsculas), costo ≥ 0, stock mínimo entero ≥ 0.
-   Un material nuevo empieza con stock 0: el stock solo cambia con movimientos del kardex
+/* Inventario del almacén (T57.2). Backend de Farid (rama main, T57.1):
+     GET  /admin/materials          -> todos los materiales, ordenados por nombre
+          ?buscar=texto              (opcional) filtra por código o nombre
+          ?soloBajoStock=true        (opcional) solo los que tienen stock ≤ mínimo (para T60.1)
+     GET  /admin/materials/{id}     -> un material; 404 si no existe
+     POST /admin/materials          -> crea; 201. 409 si el código ya existe
+     PUT  /admin/materials/{id}     -> edita; 409 si el código lo usa otro material
+   Cuerpo:    { codigo, nombre, unidad, costoUnitario, stockMinimo }
+   Respuesta: { idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo, bajoStock }
+   Reglas del backend: código único (lo guarda en mayúsculas, máx. 30), nombre máx. 100,
+   unidad de texto libre (la guarda en minúsculas, máx. 20), costo ≥ 0 (2 decimales), stock mínimo entero ≥ 0.
+   Un material nuevo empieza con stock 0: el stock solo cambia con el kardex
    (ingresos T58, salidas por solicitudes aprobadas T59 y consumo en la orden T51).
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
 
-export const CATEGORIAS_MATERIAL = {
-  REPUESTO: "Repuestos",
-  FRENOS: "Frenos",
-  FILTRO: "Filtros",
-  LUBRICANTE: "Lubricantes y fluidos",
-  ELECTRICO: "Eléctricos",
-  NEUMATICO: "Neumáticos",
-  INSUMO: "Insumos",
-};
+export const MAX_CODIGO = 30;
+export const MAX_NOMBRE = 100;
 
-// Unidad de medida: texto en singular y plural
-export const UNIDADES = {
-  UNIDAD: ["unidad", "unidades"],
-  JUEGO: ["juego", "juegos"],
-  LITRO: ["litro", "litros"],
-  GALON: ["galón", "galones"],
-  KIT: ["kit", "kits"],
-  METRO: ["metro", "metros"],
-};
+// Unidades que ofrece el formulario: lo que se guarda (singular) y su plural
+export const UNIDADES = [
+  ["unidad", "unidades"],
+  ["juego", "juegos"],
+  ["litro", "litros"],
+  ["galón", "galones"],
+  ["kit", "kits"],
+  ["metro", "metros"],
+];
 
-export const textoUnidad = (unidad, cantidad = 2) => {
-  const [uno, varios] = UNIDADES[unidad] ?? UNIDADES.UNIDAD;
-  return cantidad === 1 ? uno : varios;
-};
+const sinTildes = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+// La unidad llega como texto libre ("unidad", "GALON", "caja"): se muestra en singular o plural
+export function textoUnidad(unidad, cantidad = 2) {
+  const u = String(unidad ?? "").trim().toLowerCase() || "unidad";
+  const conocida = UNIDADES.find(([uno]) => sinTildes(uno) === sinTildes(u));
+  if (conocida) return cantidad === 1 ? conocida[0] : conocida[1];
+  if (cantidad === 1) return u;
+  return /[aeiouáéó]$/.test(u) ? `${u}s` : `${u}es`;
+}
+
+// Unidad tal como se elige en el formulario ("GALON" o "galon" -> "galón")
+export function unidadDelFormulario(unidad) {
+  const u = String(unidad ?? "").trim().toLowerCase();
+  return UNIDADES.find(([uno]) => sinTildes(uno) === sinTildes(u))?.[0] ?? u;
+}
 
 // "fre-001 " -> "FRE-001"
 export const normalizarCodigo = (codigo) => String(codigo ?? "").trim().toUpperCase();
 
-const codigoDe = (texto, lista, porDefecto) => {
-  const valor = String(texto ?? "")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toUpperCase();
-  return lista[valor] ? valor : porDefecto;
-};
-
-const numero = (n, porDefecto = 0) => {
+const numero = (n) => {
   const v = Number(n);
-  return Number.isFinite(v) ? v : porDefecto;
+  return Number.isFinite(v) ? v : 0;
 };
 
 function normalizarMaterial(m = {}) {
+  const stockActual = numero(m.stockActual ?? m.stock);
+  const stockMinimo = numero(m.stockMinimo);
   return {
     id: m.idMaterial ?? m.id,
     codigo: normalizarCodigo(m.codigo),
     nombre: m.nombre ?? "",
-    descripcion: m.descripcion ?? "",
-    categoria: codigoDe(m.categoria, CATEGORIAS_MATERIAL, "REPUESTO"),
-    unidad: codigoDe(m.unidad ?? m.unidadMedida, UNIDADES, "UNIDAD"),
+    unidad: unidadDelFormulario(m.unidad) || "unidad",
     costoUnitario: numero(m.costoUnitario ?? m.costo),
-    stockActual: numero(m.stockActual ?? m.stock),
-    stockMinimo: numero(m.stockMinimo),
-    activo: m.activo ?? true,
+    stockActual,
+    stockMinimo,
+    bajoStock: m.bajoStock ?? stockActual <= stockMinimo,
   };
 }
 
@@ -92,7 +89,7 @@ export async function crearMaterial(material) {
   const datos = prueba.DATOS_PRUEBA
     ? await prueba.crearMaterial(material)
     : await apiFetch("/admin/materials", { metodo: "POST", cuerpo: material });
-  return normalizarMaterial({ stockActual: 0, activo: true, ...material, ...datos });
+  return normalizarMaterial({ stockActual: 0, ...material, ...datos });
 }
 
 export async function editarMaterial(id, material) {
@@ -100,13 +97,6 @@ export async function editarMaterial(id, material) {
     ? await prueba.editarMaterial(id, material)
     : await apiFetch(`/admin/materials/${id}`, { metodo: "PUT", cuerpo: material });
   return normalizarMaterial({ idMaterial: id, ...material, ...datos });
-}
-
-export async function cambiarEstadoMaterial(id, activo) {
-  const datos = prueba.DATOS_PRUEBA
-    ? await prueba.cambiarEstadoMaterial(id, activo)
-    : await apiFetch(`/admin/materials/${id}/estado`, { metodo: "PATCH", cuerpo: { activo } });
-  return { activo: datos?.activo ?? activo };
 }
 
 // Formatos

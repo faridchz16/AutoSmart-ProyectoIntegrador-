@@ -3,17 +3,18 @@ import {
   crearMaterial,
   editarMaterial,
   normalizarCodigo,
-  CATEGORIAS_MATERIAL,
   UNIDADES,
+  MAX_CODIGO,
+  MAX_NOMBRE,
   textoUnidad,
   formatoSoles,
   formatoCantidad,
 } from "../../services/inventarioService";
 
-/* Formulario de material (T57.2): sirve para crear (material = null) y para editar.
-   Reglas de T57.1: código único, costo ≥ 0 y stock mínimo. El stock actual no se edita aquí. */
+/* Formulario de material (T57.2): sirve para registrar (material = null) y para editar.
+   Mismas reglas que el backend (T57.1): código único, costo ≥ 0 y stock mínimo entero.
+   El stock actual no se edita aquí. */
 
-const MAX_DESCRIPCION = 250;
 const PATRON_CODIGO = /^[A-Z0-9][A-Z0-9-]*$/;
 
 function validar(datos, codigosUsados, codigoOriginal) {
@@ -21,25 +22,22 @@ function validar(datos, codigosUsados, codigoOriginal) {
 
   const codigo = normalizarCodigo(datos.codigo);
   if (!codigo) errores.codigo = "Ingresa el código del material.";
-  else if (codigo.length < 3 || codigo.length > 20) errores.codigo = "Entre 3 y 20 caracteres.";
+  else if (codigo.length < 3 || codigo.length > MAX_CODIGO) errores.codigo = `Entre 3 y ${MAX_CODIGO} caracteres.`;
   else if (!PATRON_CODIGO.test(codigo)) errores.codigo = "Usa solo letras, números y guiones (ej. FIL-001).";
   else if (codigo !== codigoOriginal && codigosUsados.includes(codigo)) errores.codigo = `El código ${codigo} ya está registrado.`;
 
   const nombre = datos.nombre.trim();
   if (!nombre) errores.nombre = "Ingresa el nombre del material.";
   else if (nombre.length < 3) errores.nombre = "El nombre debe tener al menos 3 caracteres.";
-  else if (nombre.length > 100) errores.nombre = "El nombre no puede pasar de 100 caracteres.";
+  else if (nombre.length > MAX_NOMBRE) errores.nombre = `El nombre no puede pasar de ${MAX_NOMBRE} caracteres.`;
 
-  if (!CATEGORIAS_MATERIAL[datos.categoria]) errores.categoria = "Elige la categoría.";
-  if (!UNIDADES[datos.unidad]) errores.unidad = "Elige la unidad de medida.";
-
-  if (datos.descripcion.length > MAX_DESCRIPCION) errores.descripcion = `Máximo ${MAX_DESCRIPCION} caracteres.`;
+  if (!datos.unidad.trim()) errores.unidad = "Elige la unidad de medida.";
 
   const costoTexto = String(datos.costo).replace(",", ".");
   const costo = Number(costoTexto);
   if (datos.costo === "") errores.costo = "Ingresa el costo unitario.";
   else if (!Number.isFinite(costo) || costo < 0) errores.costo = "El costo no puede ser negativo.";
-  else if (costo > 99999) errores.costo = "El costo es demasiado alto.";
+  else if (costo > 99999999) errores.costo = "El costo es demasiado alto.";
   else if (!/^\d+(\.\d{1,2})?$/.test(costoTexto)) errores.costo = "Usa como máximo 2 decimales.";
 
   const minimo = Number(datos.minimo);
@@ -55,9 +53,7 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
   const inicial = {
     codigo: material?.codigo ?? "",
     nombre: material?.nombre ?? "",
-    descripcion: material?.descripcion ?? "",
-    categoria: material?.categoria ?? "",
-    unidad: material?.unidad ?? "UNIDAD",
+    unidad: material?.unidad ?? "unidad",
     costo: material ? String(material.costoUnitario) : "",
     minimo: material ? String(material.stockMinimo) : "",
   };
@@ -67,6 +63,8 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
   const [enviando, setEnviando] = useState(false);
 
   const sinCambios = editando && Object.keys(inicial).every((k) => inicial[k] === datos[k]);
+  // Si el material tiene una unidad que no está en la lista (registrada desde otro cliente), se ofrece igual
+  const unidades = UNIDADES.some(([uno]) => uno === inicial.unidad) ? UNIDADES : [...UNIDADES, [inicial.unidad]];
 
   const actualizar = (campo, valor) => {
     setDatos((d) => ({ ...d, [campo]: valor }));
@@ -84,8 +82,6 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
     const cuerpo = {
       codigo: normalizarCodigo(datos.codigo),
       nombre: datos.nombre.trim(),
-      descripcion: datos.descripcion.trim(),
-      categoria: datos.categoria,
       unidad: datos.unidad,
       costoUnitario: Number(String(datos.costo).replace(",", ".")),
       stockMinimo: Number(datos.minimo),
@@ -103,9 +99,6 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
     }
   };
 
-  const unidadUno = textoUnidad(datos.unidad, 1);
-  const unidadVarios = textoUnidad(datos.unidad, 2);
-
   return (
     <form className="adm-form inv-form" onSubmit={enviar} noValidate>
       {errorGeneral && <p className="form-error-general" role="alert">{errorGeneral}</p>}
@@ -118,7 +111,7 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
             className="inv-input-codigo"
             autoFocus={!editando}
             autoComplete="off"
-            maxLength={20}
+            maxLength={MAX_CODIGO}
             placeholder="FIL-001"
             value={datos.codigo}
             onChange={(e) => actualizar("codigo", e.target.value.toUpperCase())}
@@ -136,7 +129,7 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
             id="mat-nombre"
             autoFocus={editando}
             autoComplete="off"
-            maxLength={100}
+            maxLength={MAX_NOMBRE}
             placeholder="Ej. Filtro de aceite"
             value={datos.nombre}
             onChange={cambiar("nombre")}
@@ -147,63 +140,27 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
         </div>
       </div>
 
-      <div className="campo-doble">
+      <div className="inv-triple">
         <div className="campo">
-          <label htmlFor="mat-categoria">Categoría</label>
+          <label htmlFor="mat-unidad">Unidad</label>
           <select
-            id="mat-categoria"
-            value={datos.categoria}
-            onChange={cambiar("categoria")}
-            aria-invalid={!!errores.categoria}
-            aria-describedby={errores.categoria ? "mat-categoria-error" : undefined}
+            id="mat-unidad"
+            value={datos.unidad}
+            onChange={cambiar("unidad")}
+            aria-invalid={!!errores.unidad}
+            aria-describedby="mat-unidad-ayuda"
           >
-            <option value="" disabled>
-              Elige una categoría
-            </option>
-            {Object.entries(CATEGORIAS_MATERIAL).map(([valor, nombre]) => (
-              <option key={valor} value={valor}>
-                {nombre}
-              </option>
-            ))}
-          </select>
-          {errores.categoria && <p id="mat-categoria-error" className="campo-error">{errores.categoria}</p>}
-        </div>
-
-        <div className="campo">
-          <label htmlFor="mat-unidad">Unidad de medida</label>
-          <select id="mat-unidad" value={datos.unidad} onChange={cambiar("unidad")} aria-invalid={!!errores.unidad}>
-            {Object.entries(UNIDADES).map(([valor, [uno]]) => (
-              <option key={valor} value={valor}>
+            {unidades.map(([uno]) => (
+              <option key={uno} value={uno}>
                 {uno.charAt(0).toUpperCase() + uno.slice(1)}
               </option>
             ))}
           </select>
-          {errores.unidad && <p className="campo-error">{errores.unidad}</p>}
+          <p id="mat-unidad-ayuda" className={errores.unidad ? "campo-error" : "campo-ayuda"}>
+            {errores.unidad || "Cómo se cuenta."}
+          </p>
         </div>
-      </div>
 
-      <div className="campo">
-        <div className="campo-fila">
-          <label htmlFor="mat-descripcion">
-            Descripción <span className="opcional">(opcional)</span>
-          </label>
-          <span className={datos.descripcion.length > MAX_DESCRIPCION ? "contador excedido" : "contador"}>
-            {datos.descripcion.length}/{MAX_DESCRIPCION}
-          </span>
-        </div>
-        <textarea
-          id="mat-descripcion"
-          rows={2}
-          placeholder="Marca, medida o vehículos compatibles"
-          value={datos.descripcion}
-          onChange={cambiar("descripcion")}
-          aria-invalid={!!errores.descripcion}
-          aria-describedby={errores.descripcion ? "mat-descripcion-error" : undefined}
-        />
-        {errores.descripcion && <p id="mat-descripcion-error" className="campo-error">{errores.descripcion}</p>}
-      </div>
-
-      <div className="campo-doble">
         <div className="campo">
           <label htmlFor="mat-costo">Costo unitario</label>
           <div className="campo-prefijo">
@@ -222,7 +179,7 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
             />
           </div>
           <p id="mat-costo-ayuda" className={errores.costo ? "campo-error" : "campo-ayuda"}>
-            {errores.costo || `Lo que cuesta al taller cada ${unidadUno}.`}
+            {errores.costo || `Por ${textoUnidad(datos.unidad, 1)}.`}
           </p>
         </div>
 
@@ -241,7 +198,7 @@ function FormMaterial({ material, codigosUsados = [], alGuardar, alCerrar }) {
             aria-describedby="mat-minimo-ayuda"
           />
           <p id="mat-minimo-ayuda" className={errores.minimo ? "campo-error" : "campo-ayuda"}>
-            {errores.minimo || `En ${unidadVarios}. Debajo de esta cantidad toca reponer.`}
+            {errores.minimo || "Debajo, toca reponer."}
           </p>
         </div>
       </div>

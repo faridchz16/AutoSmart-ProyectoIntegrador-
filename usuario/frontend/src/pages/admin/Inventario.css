@@ -1,5 +1,8 @@
 /* ===== Inventario del almacén (T57.2) =====
-   Usa la tabla, filtros y formulario comunes de admin-ui.css y el filtro por categoría de Servicios.css */
+   Usa la tabla, el buscador y el formulario comunes de admin-ui.css */
+
+/* ---------- Búsqueda ---------- */
+.inv-encontrados { color: #5b6b88; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
 
 /* ---------- Tabla ---------- */
 .inv-codigo {
@@ -42,23 +45,12 @@
 
 .inv-por { display: block; }
 
-.fila-inactiva .inv-codigo,
-.fila-inactiva .inv-stock,
-.fila-inactiva .inv-por,
-.fila-inactiva .inv-cat { opacity: 0.6; }
-
-/* Colores por categoría */
-.inv-cat { background: #eef2f9; color: #3b4a66; }
-.inv-cat-REPUESTO { background: #e6f0ff; color: #1150e8; }
-.inv-cat-FRENOS { background: #ffe4e6; color: #be123c; }
-.inv-cat-FILTRO { background: #fef3c7; color: #a16207; }
-.inv-cat-LUBRICANTE { background: #ffedd5; color: #c2410c; }
-.inv-cat-ELECTRICO { background: #ede9fe; color: #6d28d9; }
-.inv-cat-NEUMATICO { background: #e2e8f0; color: #334155; }
-.inv-cat-INSUMO { background: #dcfce7; color: #15803d; }
+.inv-valor { color: #3b4a66; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- Formulario ---------- */
 .inv-cod-nom { grid-template-columns: 0.75fr 1.25fr; }
+
+.inv-triple { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 
 /* Si la ayuda de un campo ocupa dos líneas, el campo vecino no se estira */
 .inv-form .campo { align-content: start; }
@@ -84,25 +76,20 @@
 
 .inv-nota strong { color: #0b1b3a; }
 
-.confirmar .inv-ojo {
-  margin-top: -10px;
-  padding: 8px 10px;
-  border-radius: 9px;
-  background: #fffbeb;
-  color: #92400e;
-  font-weight: 600;
-}
-
 /* ---------- Celular: la tabla se convierte en tarjetas ---------- */
 @media (max-width: 720px) {
   .inv-tabla td[data-label="Código"] { padding-top: 10px; }
   .inv-tabla td[data-label="Material"] { padding-bottom: 10px; border-bottom: 1px solid #eef2f9; }
   .inv-tabla td[data-label="Material"]::before { display: none; }
-  .inv-tabla td[data-label="Material"] .servicio-info span { -webkit-line-clamp: 3; }
   .inv-stock { flex-direction: row; align-items: baseline; gap: 6px; }
   .inv-tabla td[data-label="Costo unit."] { align-items: baseline; }
   .inv-tabla td[data-label="Costo unit."] .inv-por { display: inline; margin-left: 6px; }
   .inv-tabla td[data-label="Costo unit."] > .precio { margin-left: auto; }
+}
+
+@media (max-width: 520px) {
+  .inv-triple { grid-template-columns: 1fr 1fr; }
+  .inv-triple .campo:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 420px) {
