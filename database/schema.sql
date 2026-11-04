@@ -169,7 +169,9 @@ CREATE TABLE IF NOT EXISTS ordenes_trabajo (
     id_orden BIGINT AUTO_INCREMENT PRIMARY KEY,
     id_cita BIGINT UNIQUE NOT NULL,
     fecha_inicio DATETIME NOT NULL,
-    fecha_fin DATETIME NULL,          -- se llena al finalizar (T52.1)
+    fecha_fin DATETIME NULL,              -- se llena al finalizar (T52.1)
+    diagnostico VARCHAR(2000) NULL,       -- diagnostico tecnico (T45.1)
+    fecha_diagnostico DATETIME NULL,      -- cuando se registro el diagnostico (T45.1)
     FOREIGN KEY (id_cita) REFERENCES citas(id_cita)
 );
 -- ---------- Checklist de recepcion (T42.1) ----------
