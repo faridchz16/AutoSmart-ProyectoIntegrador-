@@ -22,6 +22,12 @@ public class OrdenTrabajo {
     @Column(name = "fecha_fin")
     private LocalDateTime fechaFin;
 
+    @Column(name = "diagnostico", length = 2000)
+    private String diagnostico;
+
+    @Column(name = "fecha_diagnostico")
+    private LocalDateTime fechaDiagnostico;
+
     public OrdenTrabajo() {}
 
     public Long getIdOrden() { return idOrden; }
@@ -32,4 +38,8 @@ public class OrdenTrabajo {
     public void setFechaInicio(LocalDateTime fechaInicio) { this.fechaInicio = fechaInicio; }
     public LocalDateTime getFechaFin() { return fechaFin; }
     public void setFechaFin(LocalDateTime fechaFin) { this.fechaFin = fechaFin; }
+    public String getDiagnostico() { return diagnostico; }
+    public void setDiagnostico(String diagnostico) { this.diagnostico = diagnostico; }
+    public LocalDateTime getFechaDiagnostico() { return fechaDiagnostico; }
+    public void setFechaDiagnostico(LocalDateTime fechaDiagnostico) { this.fechaDiagnostico = fechaDiagnostico; }
 }
