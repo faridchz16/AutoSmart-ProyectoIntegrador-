@@ -230,3 +230,27 @@ CREATE TABLE IF NOT EXISTS fotos_deficiencia (
     fecha_registro DATETIME NOT NULL,
     FOREIGN KEY (id_deficiencia) REFERENCES deficiencias(id_deficiencia)
 );
+
+-- ---------- Presupuesto de reparaciones adicionales (T46.1) ----------
+
+CREATE TABLE IF NOT EXISTS presupuestos (
+    id_presupuesto BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT NOT NULL,
+    descripcion VARCHAR(500) NOT NULL,
+    estado VARCHAR(10) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, APROBADO, RECHAZADO
+    total DECIMAL(10,2) NOT NULL,
+    fecha_creacion DATETIME NOT NULL,
+    fecha_decision DATETIME NULL,                      -- se llena al aprobar o rechazar (T48.1)
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
+);
+
+CREATE TABLE IF NOT EXISTS presupuesto_items (
+    id_item BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_presupuesto BIGINT NOT NULL,
+    tipo VARCHAR(10) NOT NULL,                         -- MANO_OBRA, REPUESTO
+    descripcion VARCHAR(200) NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (id_presupuesto) REFERENCES presupuestos(id_presupuesto)
+);
