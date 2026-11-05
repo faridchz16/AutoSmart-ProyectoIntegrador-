@@ -53,6 +53,13 @@ public class DeficienciaService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<DeficienciaResponse> listarPorOrden(Long idOrden) {
+        return deficienciaRepository.findByOrden_IdOrdenOrderByIdDeficienciaAsc(idOrden).stream()
+                .map(this::aRespuesta)
+                .collect(Collectors.toList());
+    }
+
     private DeficienciaResponse aRespuesta(Deficiencia d) {
         DeficienciaResponse res = new DeficienciaResponse();
         res.setIdDeficiencia(d.getIdDeficiencia());
