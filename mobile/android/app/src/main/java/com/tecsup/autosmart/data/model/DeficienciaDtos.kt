@@ -10,7 +10,8 @@ data class DeficienciaResponse(
     val categoria: String?,
     val severidad: String?,
     val descripcion: String?,
-    val fechaRegistro: String?
+    val fechaRegistro: String?,
+    val fotos: List<FotoReferenciaDto>? = emptyList()
 )
 
 internal fun validarDeficiencia(request: DeficienciaRequest): String? = when {

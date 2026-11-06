@@ -30,6 +30,8 @@ import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
 import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
+import com.tecsup.autosmart.ui.screens.FotosDeficienciaScreen
+import com.tecsup.autosmart.ui.viewmodel.FotosDeficienciaViewModel
 import com.tecsup.autosmart.ui.screens.DeficienciasScreen
 import com.tecsup.autosmart.ui.viewmodel.DeficienciasViewModel
 import com.tecsup.autosmart.ui.screens.ChecklistScreen
@@ -74,11 +76,16 @@ class MainActivity : ComponentActivity() {
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
                 var selectedCitaMecanicoId by rememberSaveable { mutableStateOf(0L) }
+                var fotoDeficienciaId by rememberSaveable { mutableStateOf(0L) }
+                val fotosVm: FotosDeficienciaViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "fotos_deficiencia") fotosVm.limpiar()
+                }
                 var deficienciasOrdenId by rememberSaveable { mutableStateOf(0L) }
                 var deficienciasEditable by rememberSaveable { mutableStateOf(false) }
                 val deficienciasVm: DeficienciasViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen != "deficiencias") deficienciasVm.limpiar()
+                    if (currentScreen != "deficiencias" && currentScreen != "fotos_deficiencia") deficienciasVm.limpiar()
                 }
                 var checklistOrdenId by rememberSaveable { mutableStateOf(0L) }
                 var checklistEditable by rememberSaveable { mutableStateOf(false) }
@@ -88,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist", "deficiencias")) {
+                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist", "deficiencias", "fotos_deficiencia")) {
                         ordenesMecanicoVm.limpiar()
                     }
                 }
@@ -347,9 +354,14 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { currentScreen = "servicio_detalle" }
                                 )
                             }
+                            "fotos_deficiencia" -> {
+                                FotosDeficienciaScreen(deficienciasOrdenId, fotoDeficienciaId, deficienciasEditable, fotosVm,
+                                    onBack = { currentScreen = "deficiencias"; deficienciasVm.cargar() })
+                            }
                             "deficiencias" -> {
                                 DeficienciasScreen(deficienciasOrdenId, deficienciasEditable, deficienciasVm,
-                                    onBack = { currentScreen = "ordenes_mecanico" })
+                                    onBack = { currentScreen = "ordenes_mecanico" },
+                                    onFotos = { id -> fotoDeficienciaId = id; currentScreen = "fotos_deficiencia" })
                             }
                             "checklist" -> {
                                 ChecklistScreen(checklistOrdenId, checklistEditable, checklistVm,

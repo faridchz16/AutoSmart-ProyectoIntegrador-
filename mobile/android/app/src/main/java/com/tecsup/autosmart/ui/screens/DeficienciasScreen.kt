@@ -16,7 +16,8 @@ import com.tecsup.autosmart.ui.viewmodel.DeficienciasViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeficienciasScreen(idOrden: Long, editable: Boolean, viewModel: DeficienciasViewModel, onBack: () -> Unit) {
+fun DeficienciasScreen(idOrden: Long, editable: Boolean, viewModel: DeficienciasViewModel, onBack: () -> Unit,
+                       onFotos: (Long) -> Unit) {
     val estado by viewModel.estado.collectAsState()
     var salir by rememberSaveable { mutableStateOf(false) }
     val volver: () -> Unit = { if (!estado.guardando) {
@@ -77,6 +78,7 @@ fun DeficienciasScreen(idOrden: Long, editable: Boolean, viewModel: Deficiencias
                             Text("Severidad: ${deficiencia.severidad.etiquetaDeficiencia()}")
                             Text(deficiencia.descripcion.datoCita())
                             Text("Registro: ${deficiencia.fechaRegistro?.replace('T', ' ').datoCita()}")
+                            TextButton(onClick = { onFotos(deficiencia.idDeficiencia) }, enabled = !estado.guardando) { Text("Fotos de evidencia") }
                         }
                     }
                 }
