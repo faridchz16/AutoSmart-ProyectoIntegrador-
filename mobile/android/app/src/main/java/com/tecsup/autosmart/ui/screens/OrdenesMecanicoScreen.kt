@@ -19,7 +19,8 @@ fun OrdenesMecanicoScreen(
     viewModel: OrdenesMecanicoViewModel,
     onBack: () -> Unit,
     onAgenda: () -> Unit,
-    onChecklist: (Long, Boolean) -> Unit
+    onChecklist: (Long, Boolean) -> Unit,
+    onDeficiencias: (Long, Boolean) -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
     val seleccionada = estado.ordenes.firstOrNull { it.idOrden == estado.seleccionada }
@@ -51,6 +52,8 @@ fun OrdenesMecanicoScreen(
                         DatosOrden(seleccionada)
                         TextButton(onClick = { onChecklist(seleccionada.idOrden, seleccionada.estado == "EN_PROCESO") },
                             modifier = Modifier.padding(horizontal = 16.dp)) { Text("Checklist de recepción") }
+                        TextButton(onClick = { onDeficiencias(seleccionada.idOrden, seleccionada.estado == "EN_PROCESO") },
+                            modifier = Modifier.padding(horizontal = 16.dp)) { Text("Deficiencias") }
                     }
                 }
                 estado.ordenes.isEmpty() -> item { Text("No tienes órdenes de trabajo activas.") }

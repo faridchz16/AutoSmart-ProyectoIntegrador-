@@ -30,6 +30,8 @@ import com.tecsup.autosmart.ui.screens.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.screens.EditarVehiculoScreen
 import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.screens.LoginScreen
+import com.tecsup.autosmart.ui.screens.DeficienciasScreen
+import com.tecsup.autosmart.ui.viewmodel.DeficienciasViewModel
 import com.tecsup.autosmart.ui.screens.ChecklistScreen
 import com.tecsup.autosmart.ui.viewmodel.ChecklistViewModel
 import com.tecsup.autosmart.ui.screens.OrdenesMecanicoScreen
@@ -72,6 +74,12 @@ class MainActivity : ComponentActivity() {
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
                 var selectedCitaMecanicoId by rememberSaveable { mutableStateOf(0L) }
+                var deficienciasOrdenId by rememberSaveable { mutableStateOf(0L) }
+                var deficienciasEditable by rememberSaveable { mutableStateOf(false) }
+                val deficienciasVm: DeficienciasViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "deficiencias") deficienciasVm.limpiar()
+                }
                 var checklistOrdenId by rememberSaveable { mutableStateOf(0L) }
                 var checklistEditable by rememberSaveable { mutableStateOf(false) }
                 val checklistVm: ChecklistViewModel = viewModel()
@@ -80,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist")) {
+                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist", "deficiencias")) {
                         ordenesMecanicoVm.limpiar()
                     }
                 }
@@ -339,6 +347,10 @@ class MainActivity : ComponentActivity() {
                                     onNavigateBack = { currentScreen = "servicio_detalle" }
                                 )
                             }
+                            "deficiencias" -> {
+                                DeficienciasScreen(deficienciasOrdenId, deficienciasEditable, deficienciasVm,
+                                    onBack = { currentScreen = "ordenes_mecanico" })
+                            }
                             "checklist" -> {
                                 ChecklistScreen(checklistOrdenId, checklistEditable, checklistVm,
                                     onBack = { currentScreen = "ordenes_mecanico" })
@@ -352,6 +364,11 @@ class MainActivity : ComponentActivity() {
                                         checklistOrdenId = id
                                         checklistEditable = editable
                                         currentScreen = "checklist"
+                                    },
+                                    onDeficiencias = { id, editable ->
+                                        deficienciasOrdenId = id
+                                        deficienciasEditable = editable
+                                        currentScreen = "deficiencias"
                                     }
                                 )
                             }

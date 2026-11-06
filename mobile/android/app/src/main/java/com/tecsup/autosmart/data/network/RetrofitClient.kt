@@ -92,6 +92,15 @@ object RetrofitClient {
             .create(UsuarioApi::class.java)
     }
 
+    val deficienciaApi: DeficienciaApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(DeficienciaApi::class.java)
+    }
+
     val checklistApi: ChecklistApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
