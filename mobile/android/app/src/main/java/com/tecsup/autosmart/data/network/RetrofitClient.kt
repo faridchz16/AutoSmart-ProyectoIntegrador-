@@ -92,6 +92,15 @@ object RetrofitClient {
             .create(UsuarioApi::class.java)
     }
 
+    val presupuestoApi: PresupuestoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PresupuestoApi::class.java)
+    }
+
     val fotoApi: FotoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

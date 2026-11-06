@@ -46,6 +46,8 @@ import com.tecsup.autosmart.ui.screens.MecanicoScreen
 import com.tecsup.autosmart.ui.screens.RegisterScreen
 import com.tecsup.autosmart.ui.screens.ReservaScreen
 import com.tecsup.autosmart.ui.screens.PerfilScreen
+import com.tecsup.autosmart.ui.screens.PresupuestoScreen
+import com.tecsup.autosmart.ui.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.screens.MisCitasScreen
 import com.tecsup.autosmart.ui.screens.VehiculosScreen
 import com.tecsup.autosmart.ui.screens.WelcomeScreen
@@ -75,6 +77,11 @@ class MainActivity : ComponentActivity() {
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
+                var presupuestoCitaId by rememberSaveable { mutableStateOf(0L) }
+                val presupuestoVm: PresupuestoViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "presupuesto") presupuestoVm.limpiar()
+                }
                 var selectedCitaMecanicoId by rememberSaveable { mutableStateOf(0L) }
                 var fotoDeficienciaId by rememberSaveable { mutableStateOf(0L) }
                 val fotosVm: FotosDeficienciaViewModel = viewModel()
@@ -324,9 +331,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
+                            "presupuesto" -> {
+                                PresupuestoScreen(presupuestoCitaId, presupuestoVm,
+                                    onBack = { currentScreen = "mis_citas" })
+                            }
                             "mis_citas" -> {
                                 MisCitasScreen(
-                                    onNavigateBack = { currentScreen = "vehiculos" }
+                                    onNavigateBack = { currentScreen = "vehiculos" },
+                                    onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" }
                                 )
                             }
 

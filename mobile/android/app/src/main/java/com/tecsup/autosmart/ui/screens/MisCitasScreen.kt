@@ -54,7 +54,8 @@ data class CitaUI(
 @Composable
 fun MisCitasScreen(
     onNavigateBack: () -> Unit = {},
-    viewModel: MisCitasViewModel = viewModel()
+    viewModel: MisCitasViewModel = viewModel(),
+    onPresupuesto: (Long) -> Unit = {}
 ) {
     val estado by viewModel.estado.collectAsState()
     val cancelacion by viewModel.cancelacion.collectAsState()
@@ -146,7 +147,9 @@ fun MisCitasScreen(
                         onCancelar = { viewModel.abrirCancelacion(cita.id) },
                         onReprogramar = { citaAReprogramar = cita },
                         accionesHabilitadas = false,
-                        cancelarHabilitado = !cancelando && !estado.cargando && viewModel.puedeCancelar(cita.id)
+                        cancelarHabilitado = !cancelando && !estado.cargando && viewModel.puedeCancelar(cita.id),
+                        onPresupuesto = { onPresupuesto(cita.id) },
+                        presupuestoHabilitado = !cancelando && cancelacion.cita == null
                     )
                 }
             }
@@ -289,7 +292,9 @@ fun CitaCard(
     onCancelar: () -> Unit,
     onReprogramar: () -> Unit,
     accionesHabilitadas: Boolean = false,
-    cancelarHabilitado: Boolean = false
+    cancelarHabilitado: Boolean = false,
+    onPresupuesto: (() -> Unit)? = null,
+    presupuestoHabilitado: Boolean = true
 ) {
     val (estadoColor, estadoTexto) = when (cita.estado.uppercase(Locale.ROOT)) {
         "CONFIRMADA" -> Color(0xFF2E7D32) to "CONFIRMADA"
@@ -348,6 +353,9 @@ fun CitaCard(
                 Text(text = "${cita.fecha} - ${cita.hora}" + if (cita.horaFin.isNotBlank()) " a ${cita.horaFin}" else "", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
 
+            onPresupuesto?.let { consultar ->
+                TextButton(onClick = consultar, enabled = presupuestoHabilitado) { Text("Consultar presupuesto") }
+            }
             if (cita.estado == "CONFIRMADA" || cita.estado == "PENDIENTE") {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 Row(

@@ -114,7 +114,7 @@ fun FotosDeficienciaScreen(idOrden: Long, idDeficiencia: Long, editable: Boolean
 }
 
 @Composable
-private fun ImagenEvidencia(clave: String, descripcion: String, cargar: suspend () -> Result<ByteArray>) {
+internal fun ImagenEvidencia(clave: String, descripcion: String, cargar: suspend () -> Result<ByteArray>) {
     var intento by remember(clave) { mutableIntStateOf(0) }
     val imagen by produceState<Result<Bitmap>?>(null, clave, intento) {
         value = null

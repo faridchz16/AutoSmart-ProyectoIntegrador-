@@ -101,7 +101,7 @@ private fun SelectorDeficiencia(label: String, valor: String, opciones: List<Str
     }
 }
 
-private fun String?.etiquetaDeficiencia(): String = when (this) {
+internal fun String?.etiquetaDeficiencia(): String = when (this) {
     "MOTOR" -> "Motor"; "FRENOS" -> "Frenos"; "SUSPENSION" -> "Suspensión"; "ELECTRICO" -> "Eléctrico"
     "NEUMATICOS" -> "Neumáticos"; "CARROCERIA" -> "Carrocería"; "FLUIDOS" -> "Fluidos"; "OTRO" -> "Otro"
     "LEVE" -> "Leve"; "MODERADA" -> "Moderada"; "CRITICA" -> "Crítica"; else -> datoCita()
