@@ -1,5 +1,8 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.dto.DecisionPresupuestoRequest;
+import com.tecsup.autosmart.exception.BadRequestException;
+import com.tecsup.autosmart.model.EstadoPresupuesto;
 import com.tecsup.autosmart.dto.PresupuestoRequest;
 import com.tecsup.autosmart.dto.PresupuestoResponse;
 import com.tecsup.autosmart.exception.ConflictException;
@@ -99,6 +102,30 @@ public class PresupuestoService {
         OrdenTrabajo orden = ordenRepository.findByCita_IdCita(idCita)
                 .orElseThrow(() -> new NotFoundException("La cita aun no tiene presupuesto"));
         return aRespuesta(ultimoDeLaOrden(orden.getIdOrden()));
+    }
+
+    @Transactional
+    public PresupuestoResponse decidir(String correoCliente, Long idPresupuesto, DecisionPresupuestoRequest req) {
+        if (req.getDecision() == EstadoPresupuesto.PENDIENTE) {
+            throw new BadRequestException("La decision debe ser APROBADO o RECHAZADO");
+        }
+        Presupuesto presupuesto = presupuestoRepository.findById(idPresupuesto)
+                .orElseThrow(() -> new NotFoundException("Presupuesto no encontrado"));
+        Cita cita = presupuesto.getOrden().getCita();
+        if (!cita.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
+            throw new ForbiddenException("Solo el cliente de la cita puede decidir sobre este presupuesto");
+        }
+        if (presupuesto.getEstado() != EstadoPresupuesto.PENDIENTE) {
+            throw new ConflictException("El presupuesto ya fue " + presupuesto.getEstado());
+        }
+
+        presupuesto.setEstado(req.getDecision());
+        presupuesto.setFechaDecision(LocalDateTime.now(ZONA_LIMA).withNano(0));
+
+        cita.setEstado(EstadoCita.EN_PROCESO);
+        citaRepository.save(cita);
+
+        return aRespuesta(presupuestoRepository.save(presupuesto));
     }
 
     private Presupuesto ultimoDeLaOrden(Long idOrden) {
