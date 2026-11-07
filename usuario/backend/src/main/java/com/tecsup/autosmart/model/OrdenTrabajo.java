@@ -29,7 +29,7 @@ public class OrdenTrabajo {
     @Column(name = "fecha_diagnostico")
     private LocalDateTime fechaDiagnostico;
 
-    @Column(name = "costo_repuestos", nullable = false, columnDefinition = "DECIMAL(10,2) NOT NULL DEFAULT 0")
+    @Column(name = "costo_repuestos", nullable = false, precision = 10, scale = 2)
     private BigDecimal costoRepuestos = BigDecimal.ZERO;
 
     public OrdenTrabajo() {}
