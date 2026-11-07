@@ -283,3 +283,21 @@ CREATE TABLE IF NOT EXISTS movimientos_inventario (
     FOREIGN KEY (id_material) REFERENCES materiales(id_material),
     FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
 );
+
+-- ---------- Solicitudes de repuestos del mecanico (T50.1) ----------
+
+CREATE TABLE IF NOT EXISTS solicitudes_material (
+    id_solicitud BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT NOT NULL,
+    id_material BIGINT NOT NULL,
+    cantidad INT NOT NULL,
+    motivo VARCHAR(200) NULL,
+    estado VARCHAR(10) NOT NULL DEFAULT 'PENDIENTE',   -- PENDIENTE, APROBADA, RECHAZADA
+    solicitado_por VARCHAR(100) NOT NULL,              -- correo del mecanico
+    fecha_solicitud DATETIME NOT NULL,
+    atendido_por VARCHAR(100) NULL,                    -- correo del admin (T59.1)
+    fecha_atencion DATETIME NULL,
+    observacion VARCHAR(200) NULL,
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden),
+    FOREIGN KEY (id_material) REFERENCES materiales(id_material)
+);
