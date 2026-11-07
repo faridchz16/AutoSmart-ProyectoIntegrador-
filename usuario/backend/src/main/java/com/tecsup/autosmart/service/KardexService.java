@@ -2,14 +2,18 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.IngresoStockRequest;
 import com.tecsup.autosmart.dto.MovimientoResponse;
+import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.model.Material;
 import com.tecsup.autosmart.model.MovimientoInventario;
+import com.tecsup.autosmart.model.OrdenTrabajo;
 import com.tecsup.autosmart.model.TipoMovimiento;
 import com.tecsup.autosmart.repository.MaterialRepository;
 import com.tecsup.autosmart.repository.MovimientoInventarioRepository;
+import com.tecsup.autosmart.repository.OrdenTrabajoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -24,13 +28,16 @@ public class KardexService {
     private final MovimientoInventarioRepository movimientoRepository;
     private final MaterialRepository materialRepository;
     private final MaterialService materialService;
+    private final OrdenTrabajoRepository ordenRepository;
 
     public KardexService(MovimientoInventarioRepository movimientoRepository,
                          MaterialRepository materialRepository,
-                         MaterialService materialService) {
+                         MaterialService materialService,
+                         OrdenTrabajoRepository ordenRepository) {
         this.movimientoRepository = movimientoRepository;
         this.materialRepository = materialRepository;
         this.materialService = materialService;
+        this.ordenRepository = ordenRepository;
     }
 
     @Transactional
@@ -55,6 +62,43 @@ public class KardexService {
         movimiento.setFecha(LocalDateTime.now(ZONA_LIMA).withNano(0));
 
         return aRespuesta(movimientoRepository.save(movimiento));
+    }
+
+    @Transactional
+    public MovimientoResponse registrarSalida(OrdenTrabajo orden, Long idMaterial, int cantidad,
+                                              String correoUsuario, String referencia) {
+        Material material = materialService.buscarPorId(idMaterial);
+        if (material.getStockActual() < cantidad) {
+            throw new ConflictException("Stock insuficiente de " + material.getNombre()
+                    + ": disponible " + material.getStockActual() + ", requerido " + cantidad);
+        }
+        material.setStockActual(material.getStockActual() - cantidad);
+        materialRepository.saveAndFlush(material);
+
+        BigDecimal costo = material.getCostoUnitario().multiply(BigDecimal.valueOf(cantidad));
+        orden.setCostoRepuestos(orden.getCostoRepuestos().add(costo));
+        ordenRepository.save(orden);
+
+        MovimientoInventario movimiento = new MovimientoInventario();
+        movimiento.setMaterial(material);
+        movimiento.setTipo(TipoMovimiento.SALIDA);
+        movimiento.setCantidad(cantidad);
+        movimiento.setCostoUnitario(material.getCostoUnitario());
+        movimiento.setStockResultante(material.getStockActual());
+        movimiento.setReferencia(referencia == null || referencia.isBlank() ? null : referencia.trim());
+        movimiento.setOrden(orden);
+        movimiento.setRegistradoPor(correoUsuario);
+        movimiento.setFecha(LocalDateTime.now(ZONA_LIMA).withNano(0));
+
+        return aRespuesta(movimientoRepository.save(movimiento));
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovimientoResponse> consumosDeOrden(Long idOrden) {
+        return movimientoRepository.findByOrden_IdOrdenAndTipoOrderByIdMovimientoAsc(idOrden, TipoMovimiento.SALIDA)
+                .stream()
+                .map(this::aRespuesta)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
