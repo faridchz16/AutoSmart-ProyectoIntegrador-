@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tecsup.autosmart.data.model.Servicio
+import com.tecsup.autosmart.model.Servicio
 import java.util.Locale
 
 fun formatearPrecio(precio: Double): String = "S/ " + String.format(Locale.US, "%.2f", precio)

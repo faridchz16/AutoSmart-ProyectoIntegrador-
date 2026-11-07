@@ -1,9 +1,9 @@
 package com.tecsup.autosmart
 
 import com.google.gson.Gson
-import com.tecsup.autosmart.data.model.AgendaMecanicoDto
-import com.tecsup.autosmart.data.model.CitaDetalleMecanicoDto
-import com.tecsup.autosmart.data.network.AgendaMecanicoApi
+import com.tecsup.autosmart.model.AgendaMecanicoDto
+import com.tecsup.autosmart.model.CitaDetalleMecanicoDto
+import com.tecsup.autosmart.data.remote.AgendaMecanicoApi
 import com.tecsup.autosmart.data.repository.AgendaMecanicoRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking

@@ -1,10 +1,10 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.AgendaMecanicoDto
-import com.tecsup.autosmart.data.model.CitaDetalleMecanicoDto
-import com.tecsup.autosmart.data.network.AgendaMecanicoApi
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.AgendaMecanicoDto
+import com.tecsup.autosmart.model.CitaDetalleMecanicoDto
+import com.tecsup.autosmart.data.remote.AgendaMecanicoApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class AgendaMecanicoRepository(private val api: AgendaMecanicoApi = RetrofitClient.agendaMecanicoApi) {

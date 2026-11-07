@@ -1,7 +1,7 @@
 package com.tecsup.autosmart
 
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.*
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.*
 import com.tecsup.autosmart.data.repository.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking

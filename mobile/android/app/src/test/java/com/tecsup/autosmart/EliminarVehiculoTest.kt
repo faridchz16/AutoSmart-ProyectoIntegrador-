@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
-import com.tecsup.autosmart.data.model.VehiculoRequest
-import com.tecsup.autosmart.data.model.VehiculoResponse
-import com.tecsup.autosmart.data.network.VehiculoApi
+import com.tecsup.autosmart.model.VehiculoRequest
+import com.tecsup.autosmart.model.VehiculoResponse
+import com.tecsup.autosmart.data.remote.VehiculoApi
 import com.tecsup.autosmart.data.repository.EliminacionInciertaException
 import com.tecsup.autosmart.data.repository.VehiculoRepository
 import kotlinx.coroutines.CancellationException

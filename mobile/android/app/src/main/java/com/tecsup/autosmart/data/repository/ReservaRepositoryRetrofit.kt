@@ -2,10 +2,10 @@
 package com.tecsup.autosmart.data.repository
 
 import android.util.Log
-import com.tecsup.autosmart.data.model.MecanicoDisponible
-import com.tecsup.autosmart.data.model.Turno
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.MecanicoDisponible
+import com.tecsup.autosmart.model.Turno
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 
 class ReservaRepositoryRetrofit : ReservaRepository {
 

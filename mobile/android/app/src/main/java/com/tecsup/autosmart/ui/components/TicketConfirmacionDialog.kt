@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.tecsup.autosmart.data.model.CitaCreadaResponse
+import com.tecsup.autosmart.model.CitaCreadaResponse
 import java.math.RoundingMode
 import java.util.Locale
 

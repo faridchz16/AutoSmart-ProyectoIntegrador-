@@ -1,10 +1,10 @@
 package com.tecsup.autosmart.data.repository
 
 import com.google.gson.JsonParser
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.PresupuestoApi
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.PresupuestoApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 import java.math.BigDecimal
 

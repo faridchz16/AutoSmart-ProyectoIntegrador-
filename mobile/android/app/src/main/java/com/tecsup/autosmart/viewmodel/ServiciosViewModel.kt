@@ -2,7 +2,7 @@ package com.tecsup.autosmart.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.tecsup.autosmart.data.model.Servicio
+import com.tecsup.autosmart.model.Servicio
 import com.tecsup.autosmart.data.repository.ServicioRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

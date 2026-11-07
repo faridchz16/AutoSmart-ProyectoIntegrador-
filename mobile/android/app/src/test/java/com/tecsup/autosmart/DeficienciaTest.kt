@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
 import com.google.gson.Gson
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.DeficienciaApi
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.DeficienciaApi
 import com.tecsup.autosmart.data.repository.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking

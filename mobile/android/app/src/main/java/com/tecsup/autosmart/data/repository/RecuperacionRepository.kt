@@ -1,9 +1,9 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.ForgotPasswordRequest
-import com.tecsup.autosmart.data.model.ResetPasswordRequest
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.ForgotPasswordRequest
+import com.tecsup.autosmart.model.ResetPasswordRequest
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import retrofit2.Response
 import kotlin.coroutines.cancellation.CancellationException
 

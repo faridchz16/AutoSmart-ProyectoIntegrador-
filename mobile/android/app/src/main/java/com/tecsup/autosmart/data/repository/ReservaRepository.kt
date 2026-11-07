@@ -1,7 +1,7 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.MecanicoDisponible
-import com.tecsup.autosmart.data.model.Turno
+import com.tecsup.autosmart.model.MecanicoDisponible
+import com.tecsup.autosmart.model.Turno
 
 interface ReservaRepository {
     suspend fun mecanicosPorServicio(idServicio: Long): Result<List<MecanicoDisponible>>

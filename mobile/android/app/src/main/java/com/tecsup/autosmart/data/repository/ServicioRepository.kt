@@ -1,8 +1,8 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.Servicio
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.Servicio
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlin.coroutines.cancellation.CancellationException
 
 class ServicioRepository {

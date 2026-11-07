@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
 import com.google.gson.Gson
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.ChecklistApi
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.ChecklistApi
 import com.tecsup.autosmart.data.repository.ChecklistRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking

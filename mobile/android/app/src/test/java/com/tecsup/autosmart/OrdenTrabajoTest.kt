@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
 import com.google.gson.Gson
-import com.tecsup.autosmart.data.model.OrdenTrabajoDto
-import com.tecsup.autosmart.data.network.OrdenTrabajoApi
+import com.tecsup.autosmart.model.OrdenTrabajoDto
+import com.tecsup.autosmart.data.remote.OrdenTrabajoApi
 import com.tecsup.autosmart.data.repository.OrdenTrabajoRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking

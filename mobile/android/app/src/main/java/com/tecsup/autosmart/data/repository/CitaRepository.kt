@@ -1,11 +1,11 @@
 
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.CitaRequest
-import com.tecsup.autosmart.data.model.CitaCreadaResponse
-import com.tecsup.autosmart.data.network.CitaApi
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.CitaRequest
+import com.tecsup.autosmart.model.CitaCreadaResponse
+import com.tecsup.autosmart.data.remote.CitaApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class CitaRepository(

@@ -1,9 +1,9 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.OrdenTrabajoDto
-import com.tecsup.autosmart.data.network.OrdenTrabajoApi
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.OrdenTrabajoDto
+import com.tecsup.autosmart.data.remote.OrdenTrabajoApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class OrdenTrabajoRepository(private val api: OrdenTrabajoApi = RetrofitClient.ordenTrabajoApi) {

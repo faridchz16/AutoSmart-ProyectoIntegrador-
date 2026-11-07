@@ -1,9 +1,9 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.FotoApi
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.FotoApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
 import com.google.gson.Gson
-import com.tecsup.autosmart.data.model.*
-import com.tecsup.autosmart.data.network.PresupuestoApi
+import com.tecsup.autosmart.model.*
+import com.tecsup.autosmart.data.remote.PresupuestoApi
 import com.tecsup.autosmart.data.repository.PresupuestoRepository
 import com.tecsup.autosmart.data.repository.presupuestoValido
 import kotlinx.coroutines.CancellationException

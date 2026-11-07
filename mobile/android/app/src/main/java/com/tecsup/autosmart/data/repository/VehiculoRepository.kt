@@ -1,10 +1,10 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.VehiculoRequest
-import com.tecsup.autosmart.data.model.VehiculoResponse
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.VehiculoApi
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.VehiculoRequest
+import com.tecsup.autosmart.model.VehiculoResponse
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.VehiculoApi
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class VehiculoRepository(private val api: VehiculoApi = RetrofitClient.vehiculoApi) {
