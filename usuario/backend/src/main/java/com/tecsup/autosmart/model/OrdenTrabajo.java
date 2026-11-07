@@ -1,6 +1,7 @@
 package com.tecsup.autosmart.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -28,6 +29,9 @@ public class OrdenTrabajo {
     @Column(name = "fecha_diagnostico")
     private LocalDateTime fechaDiagnostico;
 
+    @Column(name = "costo_repuestos", nullable = false, columnDefinition = "DECIMAL(10,2) NOT NULL DEFAULT 0")
+    private BigDecimal costoRepuestos = BigDecimal.ZERO;
+
     public OrdenTrabajo() {}
 
     public Long getIdOrden() { return idOrden; }
@@ -42,4 +46,6 @@ public class OrdenTrabajo {
     public void setDiagnostico(String diagnostico) { this.diagnostico = diagnostico; }
     public LocalDateTime getFechaDiagnostico() { return fechaDiagnostico; }
     public void setFechaDiagnostico(LocalDateTime fechaDiagnostico) { this.fechaDiagnostico = fechaDiagnostico; }
+    public BigDecimal getCostoRepuestos() { return costoRepuestos; }
+    public void setCostoRepuestos(BigDecimal costoRepuestos) { this.costoRepuestos = costoRepuestos; }
 }
