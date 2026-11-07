@@ -254,3 +254,15 @@ CREATE TABLE IF NOT EXISTS presupuesto_items (
     subtotal DECIMAL(10,2) NOT NULL,
     FOREIGN KEY (id_presupuesto) REFERENCES presupuestos(id_presupuesto)
 );
+
+-- ---------- Tareas de la orden con avance (T49.1) ----------
+
+CREATE TABLE IF NOT EXISTS tareas_orden (
+    id_tarea BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT NOT NULL,
+    descripcion VARCHAR(200) NOT NULL,
+    completada BIT NOT NULL DEFAULT 0,
+    fecha_creacion DATETIME NOT NULL,
+    fecha_completada DATETIME NULL,
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
+);
