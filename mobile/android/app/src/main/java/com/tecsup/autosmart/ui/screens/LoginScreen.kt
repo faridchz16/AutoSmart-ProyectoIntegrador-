@@ -5,7 +5,6 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,6 +13,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,11 +27,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathData
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.tecsup.autosmart.R
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -37,7 +41,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tecsup.autosmart.R
 import com.tecsup.autosmart.data.local.TokenManager
 
 private val VectorEyeOpen: ImageVector by lazy {
@@ -120,8 +123,8 @@ private val VectorEyeOff: ImageVector by lazy {
 
 @Composable
 private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color.Black.copy(alpha = 0.35f),
-    unfocusedContainerColor = Color.Black.copy(alpha = 0.25f),
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
     focusedTextColor = Color.White,
     unfocusedTextColor = Color.White,
     focusedBorderColor = Color(0xFF3B82F6),
@@ -155,30 +158,38 @@ fun LoginScreen(
     val encabezado: @Composable () -> Unit = {
         Text(
             text = "AutoSmart",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.ExtraBold,
+            fontSize = if (isLandscape) 30.sp else 34.sp,
+            fontWeight = FontWeight.Bold,
+            fontStyle = FontStyle.Italic,
             color = Color.White
         )
         Text(
             text = "Inicia sesión para gestionar tus vehículos",
-            fontSize = 12.sp,
-            color = Color.White.copy(alpha = 0.85f),
-            modifier = Modifier.padding(top = 4.dp)
+            fontSize = 14.sp,
+            color = Color(0xFFCBD5E1),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
     }
 
     val botonGoogle: @Composable () -> Unit = {
-        OutlinedButton(
+        Button(
             onClick = onGoogleClick,
             enabled = !isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(if (isLandscape) 44.dp else 50.dp),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(50),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.White,
+                contentColor = Color.Black
+            )
         ) {
-            Text("Continuar con Google", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Image(
+                painter = painterResource(R.drawable.ic_google_g),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text("Continuar con Google", fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }
 
@@ -191,6 +202,7 @@ fun LoginScreen(
                 errorMessage = null
             },
             label = { Text("Correo electrónico") },
+            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFF94A3B8)) },
             singleLine = true,
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
@@ -215,6 +227,7 @@ fun LoginScreen(
                 errorMessage = null
             },
             label = { Text("Contraseña") },
+            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFF94A3B8)) },
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                     Icon(
@@ -271,11 +284,11 @@ fun LoginScreen(
             enabled = !isLoading && correo.isNotBlank() && password.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isLandscape) 42.dp else 50.dp),
-            shape = RoundedCornerShape(14.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2563EB),
-                disabledContainerColor = Color(0xFF2563EB).copy(alpha = 0.45f)
+                containerColor = Color(0xFF1D4ED8),
+                disabledContainerColor = Color(0xFF596579)
             )
         ) {
             if (isLoading) {
@@ -286,7 +299,7 @@ fun LoginScreen(
                 )
             } else {
                 Text(
-                    text = "Ingresar",
+                    text = "INGRESAR",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -294,129 +307,83 @@ fun LoginScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 12.dp))
-
-
-        botonGoogle()
     }
 
 
-    val colorAzul = Color(0xFF3B82F6)
+    val colorAzul = Color(0xFF93B4F4)
     val avisoOlvido = onForgotPasswordClick
 
     val olvidoPassword: @Composable () -> Unit = {
         TextButton(onClick = avisoOlvido, enabled = !isLoading) {
             Text(
                 text = "¿Olvidaste tu contraseña?",
-                color = Color.White,
-                fontSize = if (isLandscape) 13.sp else 14.sp,
+                color = colorAzul,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
     }
 
-    val botonRegistrarse: @Composable () -> Unit = {
-        OutlinedButton(
-            onClick = onNavigateToRegister,
-            enabled = !isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(if (isLandscape) 44.dp else 50.dp),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, colorAzul),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = colorAzul)
+    val enlaceRegistro: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Registrarse",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("¿No tienes una cuenta?", color = Color.White, fontSize = 14.sp)
+            TextButton(onClick = onNavigateToRegister, enabled = !isLoading,
+                contentPadding = PaddingValues(horizontal = 4.dp)) {
+                Text("Regístrate", color = colorAzul, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 
     // ---------- Pantalla ----------
-
-    Box(modifier = Modifier.fillMaxSize()) {
-
-        Image(
-            painter = painterResource(id = R.drawable.fondo_login),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
-
-        // Overlay cinemático
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.55f),
-                            Color.Black.copy(alpha = 0.35f),
-                            Color.Black.copy(alpha = 0.70f)
-                        )
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF070C14),
+                        Color(0xFF0F172A),
+                        Color(0xFF030712)
                     )
                 )
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            contentAlignment = Alignment.Center
+            )
+            .imePadding(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        val altura = maxHeight
+        Column(
+            modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .heightIn(min = altura)
+                .padding(horizontal = 24.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = if (isLandscape) 760.dp else 450.dp)
-                    .fillMaxWidth(0.88f)
-                    .padding(vertical = if (isLandscape) 4.dp else 16.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = if (altura < 640.dp) 12.dp else 60.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (isLandscape) {
-                    // HORIZONTAL: izquierda título + Registrarse; derecha formulario + olvidaste contraseña
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            encabezado()
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(modifier = Modifier.fillMaxWidth(0.8f)) {
-                                botonRegistrarse()
-                            }
-                        }
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            formulario()
-                            olvidoPassword()
-                        }
-                    }
-                } else {
-                    // VERTICAL: todo en una columna
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 28.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        encabezado()
-                        Spacer(modifier = Modifier.height(24.dp))
-                        formulario()
-                        Spacer(modifier = Modifier.height(16.dp))
-                        olvidoPassword()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        botonRegistrarse()
-                    }
+                encabezado()
+                Spacer(Modifier.height(28.dp))
+                formulario()
+                Spacer(Modifier.height(12.dp))
+                olvidoPassword()
+                Spacer(Modifier.height(24.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
+                    Text("ó", color = Color(0xFFCBD5E1), fontSize = 16.sp)
+                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
                 }
+                Spacer(Modifier.height(24.dp))
+                botonGoogle()
             }
+            Spacer(Modifier.height(40.dp))
+            enlaceRegistro()
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.tecsup.autosmart.ui.screens
 
-import android.content.res.Configuration
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -19,11 +18,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tecsup.autosmart.R
@@ -33,10 +31,7 @@ fun WelcomeScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
-    val isLandscape =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -49,99 +44,79 @@ fun WelcomeScreen(
                 )
             )
     ) {
-        if (isLandscape) {
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 32.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        LogoYFrase(logoSize = 130.dp, fontSize = 18.sp, lineHeight = 24.sp)
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        BotonPrincipalBienvenida(
-                            texto = "Iniciar sesión",
-                            onClick = onNavigateToLogin
-                        )
-                        BotonSecundarioBienvenida(
-                            texto = "Registrarse",
-                            onClick = onNavigateToRegister
-                        )
-                    }
-                }
-            }
-        } else {
-
+        val horizontal = maxWidth > maxHeight && maxWidth >= 600.dp
+        val botones: @Composable () -> Unit = {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(vertical = 32.dp, horizontal = 40.dp),
+                modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-
-                LogoYFrase(logoSize = 200.dp, fontSize = 20.sp, lineHeight = 28.sp)
-
-                Spacer(modifier = Modifier.weight(1f))
-
+                BotonPrincipalBienvenida("Iniciar sesión", onNavigateToLogin)
+                BotonSecundarioBienvenida("Registrarse", onNavigateToRegister)
+            }
+        }
+        if (horizontal) {
+            Row(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp, vertical = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.weight(1f)) { MarcaBienvenida(compacto = true) }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { botones() }
+            }
+        } else {
+            val altura = maxHeight
+            val compacto = maxHeight < 640.dp || maxWidth < 360.dp
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                    .heightIn(min = altura).padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(bottom = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.widthIn(max = 400.dp).fillMaxWidth()
+                        .padding(top = if (compacto) 12.dp else altura * 0.14f),
                     horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    BotonPrincipalBienvenida(
-                        texto = "Iniciar sesión",
-                        onClick = onNavigateToLogin
-                    )
-                    BotonSecundarioBienvenida(
-                        texto = "Registrarse",
-                        onClick = onNavigateToRegister
-                    )
-                }
+                ) { MarcaBienvenida(compacto) }
+                Spacer(Modifier.height(40.dp))
+                Box(Modifier.padding(bottom = 24.dp)) { botones() }
             }
         }
     }
 }
 
-/** Logo con la frase casi pegada debajo, en negrita. */
 @Composable
-private fun LogoYFrase(
-    logoSize: Dp,
-    fontSize: androidx.compose.ui.unit.TextUnit,
-    lineHeight: androidx.compose.ui.unit.TextUnit
-) {
+private fun MarcaBienvenida(compacto: Boolean) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Image(
             painter = painterResource(id = R.drawable.ic_autosmart_logo),
             contentDescription = "Logo AutoSmart",
             contentScale = ContentScale.Fit,
-            modifier = Modifier.size(logoSize)
+            modifier = Modifier.size(if (compacto) 110.dp else 120.dp)
         )
-
+        Spacer(Modifier.height(8.dp))
         Text(
-            text = "Gestiona tus vehículos fácil y rápido ",
-            fontSize = fontSize,
-            lineHeight = lineHeight,
+            text = "AutoSmart",
+            color = Color.White,
+            fontSize = if (compacto) 30.sp else 34.sp,
             fontWeight = FontWeight.Bold,
+            fontStyle = FontStyle.Italic,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Gestiona tus vehículos fácil y rápido",
+            fontSize = if (compacto) 18.sp else 20.sp,
+            lineHeight = if (compacto) 25.sp else 28.sp,
+            fontWeight = FontWeight.SemiBold,
             color = Color(0xFFE2E8F0),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            maxLines = 2
         )
     }
 }
