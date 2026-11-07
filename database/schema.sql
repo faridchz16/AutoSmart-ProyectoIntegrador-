@@ -266,3 +266,20 @@ CREATE TABLE IF NOT EXISTS tareas_orden (
     fecha_completada DATETIME NULL,
     FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
 );
+
+-- ---------- Kardex: movimientos de inventario (T58.1) ----------
+
+CREATE TABLE IF NOT EXISTS movimientos_inventario (
+    id_movimiento BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_material BIGINT NOT NULL,
+    tipo VARCHAR(10) NOT NULL,              -- ENTRADA, SALIDA
+    cantidad INT NOT NULL,
+    costo_unitario DECIMAL(10,2) NOT NULL,
+    stock_resultante INT NOT NULL,          -- stock del material despues del movimiento
+    referencia VARCHAR(200) NULL,           -- factura, guia, motivo
+    id_orden BIGINT NULL,                   -- salidas por consumo en una orden (T51.1)
+    registrado_por VARCHAR(100) NOT NULL,   -- correo de quien registra
+    fecha DATETIME NOT NULL,
+    FOREIGN KEY (id_material) REFERENCES materiales(id_material),
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden)
+);
