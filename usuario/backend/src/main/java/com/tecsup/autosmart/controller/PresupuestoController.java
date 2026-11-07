@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.controller;
 
+import com.tecsup.autosmart.dto.DecisionPresupuestoRequest;
 import com.tecsup.autosmart.dto.PresupuestoRequest;
 import com.tecsup.autosmart.dto.PresupuestoResponse;
 import com.tecsup.autosmart.service.PresupuestoService;
@@ -35,5 +36,12 @@ public class PresupuestoController {
     @GetMapping("/appointments/{idCita}/quote")
     public ResponseEntity<PresupuestoResponse> verComoCliente(@PathVariable Long idCita, Authentication auth) {
         return ResponseEntity.ok(presupuestoService.obtenerParaCliente(auth.getName(), idCita));
+    }
+
+    @PutMapping("/quotes/{idPresupuesto}/decision")
+    public ResponseEntity<PresupuestoResponse> decidir(@PathVariable Long idPresupuesto,
+                                                       @Valid @RequestBody DecisionPresupuestoRequest request,
+                                                       Authentication auth) {
+        return ResponseEntity.ok(presupuestoService.decidir(auth.getName(), idPresupuesto, request));
     }
 }
