@@ -1,8 +1,10 @@
 from django import forms
 from django.contrib import admin
 
-from .models import (Cita, ConfiguracionTaller, Especialidad, FechaBloqueada, Feriado,
-                     HorarioMecanico, Servicio, Usuario, Vehiculo)
+from .models import (Checklist, ChecklistItem, Cita, ConfiguracionTaller, Deficiencia, Especialidad,
+                     FechaBloqueada, Feriado, HorarioMecanico, Material, MovimientoInventario,
+                     OrdenTrabajo, Presupuesto, PresupuestoItem, Servicio, SolicitudMaterial,
+                     TareaOrden, Usuario, Vehiculo)
 
 
 class SoloLecturaAdmin(admin.ModelAdmin):
@@ -15,6 +17,18 @@ class SoloLecturaAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class InlineSoloLectura(admin.TabularInline):
+    """Detalle dentro de otra pagina, sin editar."""
+    extra = 0
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False
 
 
@@ -188,3 +202,138 @@ class ConfiguracionTallerAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+# --------------------------------------------------------------------------
+# Ordenes de trabajo (solo lectura: el flujo y sus estados los controla Spring)
+# --------------------------------------------------------------------------
+
+class DeficienciaInline(InlineSoloLectura):
+    model = Deficiencia
+    fields = ("categoria", "severidad", "descripcion", "fotos", "fecha_registro")
+    readonly_fields = fields
+
+    @admin.display(description="fotos")
+    def fotos(self, obj):
+        return obj.fotos.count()
+
+
+class TareaInline(InlineSoloLectura):
+    model = TareaOrden
+    fields = ("descripcion", "completada", "fecha_creacion", "fecha_completada")
+    readonly_fields = fields
+
+
+class PresupuestoInline(InlineSoloLectura):
+    model = Presupuesto
+    fields = ("descripcion", "estado", "total", "fecha_creacion", "fecha_decision")
+    readonly_fields = fields
+    show_change_link = True
+
+
+class ConsumoInline(InlineSoloLectura):
+    model = MovimientoInventario
+    verbose_name = "repuesto consumido"
+    verbose_name_plural = "repuestos consumidos"
+    fields = ("material", "cantidad", "costo_unitario", "registrado_por", "fecha")
+    readonly_fields = fields
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(tipo=MovimientoInventario.Tipo.SALIDA)
+
+
+class SolicitudInline(InlineSoloLectura):
+    model = SolicitudMaterial
+    fields = ("material", "cantidad", "estado", "solicitado_por", "fecha_solicitud", "atendido_por")
+    readonly_fields = fields
+
+
+@admin.register(OrdenTrabajo)
+class OrdenTrabajoAdmin(SoloLecturaAdmin):
+    list_display = ("id_orden", "ticket", "estado", "mecanico", "placa", "fecha_inicio", "fecha_fin",
+                    "costo_repuestos")
+    list_filter = ("cita__estado", "cita__mecanico")
+    search_fields = ("cita__ticket", "cita__vehiculo__placa", "cita__cliente__nombre")
+    date_hierarchy = "fecha_inicio"
+    list_select_related = ("cita", "cita__mecanico", "cita__vehiculo")
+    inlines = (DeficienciaInline, TareaInline, PresupuestoInline, SolicitudInline, ConsumoInline)
+
+    @admin.display(description="ticket", ordering="cita__ticket")
+    def ticket(self, obj):
+        return obj.cita.ticket
+
+    @admin.display(description="estado", ordering="cita__estado")
+    def estado(self, obj):
+        return obj.cita.get_estado_display()
+
+    @admin.display(description="mecánico")
+    def mecanico(self, obj):
+        return obj.cita.mecanico.nombre
+
+    @admin.display(description="placa")
+    def placa(self, obj):
+        return obj.cita.vehiculo.placa
+
+
+class ChecklistItemInline(InlineSoloLectura):
+    model = ChecklistItem
+    fields = ("elemento", "estado", "observacion")
+    readonly_fields = fields
+
+
+@admin.register(Checklist)
+class ChecklistAdmin(SoloLecturaAdmin):
+    list_display = ("orden", "fecha_registro", "observacion_general")
+    list_select_related = ("orden", "orden__cita")
+    inlines = (ChecklistItemInline,)
+
+
+class PresupuestoItemInline(InlineSoloLectura):
+    model = PresupuestoItem
+    fields = ("tipo", "descripcion", "cantidad", "precio_unitario", "subtotal")
+    readonly_fields = fields
+
+
+@admin.register(Presupuesto)
+class PresupuestoAdmin(SoloLecturaAdmin):
+    list_display = ("id_presupuesto", "orden", "estado", "total", "fecha_creacion", "fecha_decision")
+    list_filter = ("estado",)
+    date_hierarchy = "fecha_creacion"
+    list_select_related = ("orden", "orden__cita")
+    inlines = (PresupuestoItemInline,)
+
+
+# --------------------------------------------------------------------------
+# Inventario (solo lectura: el stock usa @Version en Spring y solo cambia con el kardex)
+# --------------------------------------------------------------------------
+
+@admin.register(Material)
+class MaterialAdmin(SoloLecturaAdmin):
+    list_display = ("codigo", "nombre", "unidad", "costo_unitario", "stock_actual", "stock_minimo",
+                    "alerta_stock")
+    search_fields = ("codigo", "nombre")
+    exclude = ("version",)
+
+    @admin.display(description="stock OK", boolean=True)
+    def alerta_stock(self, obj):
+        return not obj.bajo_stock
+
+
+@admin.register(MovimientoInventario)
+class MovimientoInventarioAdmin(SoloLecturaAdmin):
+    list_display = ("fecha", "material", "tipo", "cantidad", "costo_unitario", "stock_resultante", "orden",
+                    "registrado_por", "referencia")
+    list_filter = ("tipo", "material")
+    search_fields = ("material__codigo", "material__nombre", "referencia", "registrado_por")
+    date_hierarchy = "fecha"
+    list_select_related = ("material", "orden", "orden__cita")
+
+
+@admin.register(SolicitudMaterial)
+class SolicitudMaterialAdmin(SoloLecturaAdmin):
+    list_display = ("id_solicitud", "orden", "material", "cantidad", "estado", "solicitado_por",
+                    "fecha_solicitud", "atendido_por")
+    list_filter = ("estado",)
+    search_fields = ("material__codigo", "material__nombre", "solicitado_por")
+    date_hierarchy = "fecha_solicitud"
+    list_select_related = ("orden", "orden__cita", "material")
