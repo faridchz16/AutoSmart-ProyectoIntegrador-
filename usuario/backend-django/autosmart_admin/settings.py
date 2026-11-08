@@ -84,3 +84,15 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Login: superusuarios de Django + ADMIN de AutoSmart con su misma contrasena de Spring
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "panel.auth_backend.AutoSmartAdminBackend",
+]
+
+# Login: superusuarios de Django + ADMIN de AutoSmart con su misma contrasena de Spring
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "panel.auth_backend.AutoSmartAdminBackend",
+]
