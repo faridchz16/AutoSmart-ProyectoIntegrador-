@@ -6,11 +6,30 @@ import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.data.remote.CitaApi
 import com.tecsup.autosmart.data.remote.RetrofitClient
 import com.tecsup.autosmart.data.remote.mensajeDeError
+import com.tecsup.autosmart.model.SeguimientoDto
 import kotlinx.coroutines.CancellationException
 
 class CitaRepository(
     private val api: CitaApi = RetrofitClient.citaApi
 ) {
+    suspend fun seguimiento(idCita: Long): Result<SeguimientoDto> = try {
+        require(idCita > 0) { "La cita no es válida." }
+        val respuesta = api.seguimiento(idCita)
+        if (!respuesta.isSuccessful) {
+            Result.failure(Exception(mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())))
+        } else {
+            val datos = respuesta.body()
+            require(datos != null && seguimientoValido(datos, idCita)) {
+                "El servidor no devolvió un seguimiento válido para esta cita."
+            }
+            Result.success(datos)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
 
     suspend fun crearCita(
         request: CitaRequest
@@ -97,3 +116,12 @@ class CitaRepository(
 
 class CancelacionInciertaException(mensaje: String, causa: Throwable? = null) :
     Exception(mensaje, causa)
+
+internal fun seguimientoValido(datos: SeguimientoDto, idCita: Long): Boolean {
+    val hitos = datos.lineaDeTiempo ?: return false
+    return idCita > 0 && datos.idCita == idCita && !datos.estado.isNullOrBlank() &&
+        datos.porcentajeAvance?.let { it in 0..100 } == true &&
+        hitos.isNotEmpty() && hitos.all {
+            it != null && !it.clave.isNullOrBlank() && !it.titulo.isNullOrBlank() && it.completado != null
+        } && hitos.distinctBy { it?.clave }.size == hitos.size
+}

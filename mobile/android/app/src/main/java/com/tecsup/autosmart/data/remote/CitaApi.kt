@@ -3,6 +3,7 @@ package com.tecsup.autosmart.data.remote
 
 import com.tecsup.autosmart.model.CitaRequest
 import com.tecsup.autosmart.model.CitaCreadaResponse
+import com.tecsup.autosmart.model.SeguimientoDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -22,6 +23,9 @@ interface CitaApi {
     suspend fun listarMisCitas(
         @Query("futuras") futuras: Boolean = false
     ): Response<List<CitaCreadaResponse>>
+
+    @GET("appointments/{id}/tracking")
+    suspend fun seguimiento(@Path("id") idCita: Long): Response<SeguimientoDto>
 
     @PUT("appointments/{id}/cancel")
     suspend fun cancelarCita(

@@ -26,11 +26,14 @@ import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.DecisionPresupuesto
 import com.tecsup.autosmart.model.DeficienciaResponse
 import com.tecsup.autosmart.model.FotoReferenciaDto
+import com.tecsup.autosmart.model.HitoSeguimiento
+import com.tecsup.autosmart.model.SeguimientoDto
 import com.tecsup.autosmart.model.OrdenTrabajoDto
 import com.tecsup.autosmart.model.PresupuestoItemDto
 import com.tecsup.autosmart.model.PresupuestoResponse
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.PresupuestoScreen
+import com.tecsup.autosmart.ui.cliente.SeguimientoScreen
 import com.tecsup.autosmart.ui.mecanico.ChecklistScreen
 import com.tecsup.autosmart.ui.mecanico.DeficienciasScreen
 import com.tecsup.autosmart.ui.mecanico.FotosDeficienciaScreen
@@ -42,6 +45,7 @@ import com.tecsup.autosmart.viewmodel.FotosDeficienciaViewModel
 import com.tecsup.autosmart.viewmodel.MisCitasViewModel
 import com.tecsup.autosmart.viewmodel.OrdenesMecanicoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
+import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import kotlinx.coroutines.CompletableDeferred
@@ -208,6 +212,45 @@ class FlujosSprint03Test {
         scrollHasta("Estado: Aprobado")
         compose.onNodeWithText("Estado: Aprobado").assertIsDisplayed()
         compose.runOnIdle { assertEquals(1, solicitudes) }
+    }
+
+    @Test
+    fun misCitasMuestraLaLineaDeTiempoYActualizaElAvance() {
+        var avance = 33
+        val citas = MisCitasViewModel(consultar = { Result.success(listOf(cita)) })
+        val seguimiento = SeguimientoViewModel(consultar = { id ->
+            assertEquals(12L, id)
+            Result.success(SeguimientoDto(id, "AS-12", "EN_PROCESO", "Mantenimiento",
+                "ABC-123", "Mecánico", "2026-11-06", "09:00", avance,
+                listOf(
+                    HitoSeguimiento("RECIBIDO", "Vehículo recibido en el taller", true,
+                        "2026-11-06T09:10", null),
+                    HitoSeguimiento("FINALIZADA", "Vehículo listo para recoger", false, null, null)
+                )))
+        })
+        compose.setContent {
+            AutoSmartAppTheme {
+                var idCita by remember { mutableStateOf<Long?>(null) }
+                val id = idCita
+                if (id == null) {
+                    MisCitasScreen(viewModel = citas, onSeguimiento = { idCita = it })
+                } else {
+                    SeguimientoScreen(id, seguimiento) { idCita = null }
+                }
+            }
+        }
+        compose.onNodeWithText("Ver seguimiento").performScrollTo().performClick()
+        compose.onNodeWithText("Avance: 33 %").assertIsDisplayed()
+        scrollHasta("Vehículo recibido en el taller")
+        compose.onNodeWithText("Completado").assertIsDisplayed()
+        scrollHasta("Vehículo listo para recoger")
+        compose.onNodeWithText("Pendiente").assertIsDisplayed()
+        compose.runOnIdle { avance = 67 }
+        compose.onNodeWithText("Actualizar").performClick()
+        scrollHasta("Avance: 67 %")
+        compose.onNodeWithText("Avance: 67 %").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Volver a Mis citas").performClick()
+        compose.onNodeWithText("Mis Citas").assertIsDisplayed()
     }
 
     private fun mostrarMisCitas(

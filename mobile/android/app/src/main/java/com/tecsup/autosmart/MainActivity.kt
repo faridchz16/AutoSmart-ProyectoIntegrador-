@@ -47,6 +47,8 @@ import com.tecsup.autosmart.ui.auth.RegisterScreen
 import com.tecsup.autosmart.ui.servicios.ReservaScreen
 import com.tecsup.autosmart.ui.cliente.PerfilScreen
 import com.tecsup.autosmart.ui.cliente.PresupuestoScreen
+import com.tecsup.autosmart.ui.cliente.SeguimientoScreen
+import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
@@ -79,6 +81,11 @@ class MainActivity : ComponentActivity() {
 
                 var presupuestoCitaId by rememberSaveable { mutableStateOf(0L) }
                 val presupuestoVm: PresupuestoViewModel = viewModel()
+                var seguimientoCitaId by rememberSaveable { mutableStateOf(0L) }
+                val seguimientoVm: SeguimientoViewModel = viewModel()
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen != "seguimiento") seguimientoVm.limpiar()
+                }
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "presupuesto") presupuestoVm.limpiar()
                 }
@@ -335,10 +342,15 @@ class MainActivity : ComponentActivity() {
                                 PresupuestoScreen(presupuestoCitaId, presupuestoVm,
                                     onBack = { currentScreen = "mis_citas" })
                             }
+                            "seguimiento" -> {
+                                SeguimientoScreen(seguimientoCitaId, seguimientoVm,
+                                    onBack = { currentScreen = "mis_citas" })
+                            }
                             "mis_citas" -> {
                                 MisCitasScreen(
                                     onNavigateBack = { currentScreen = "vehiculos" },
-                                    onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" }
+                                    onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" },
+                                    onSeguimiento = { id -> seguimientoCitaId = id; currentScreen = "seguimiento" }
                                 )
                             }
 
