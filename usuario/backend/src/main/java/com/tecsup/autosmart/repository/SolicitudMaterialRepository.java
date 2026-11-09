@@ -11,4 +11,7 @@ import java.util.List;
 public interface SolicitudMaterialRepository extends JpaRepository<SolicitudMaterial, Long> {
     List<SolicitudMaterial> findByOrden_IdOrdenOrderByIdSolicitudAsc(Long idOrden);
     boolean existsByOrden_IdOrdenAndEstado(Long idOrden, EstadoSolicitud estado);
+
+    List<SolicitudMaterial> findByEstadoOrderByFechaSolicitudAsc(EstadoSolicitud estado);
+    List<SolicitudMaterial> findAllByOrderByFechaSolicitudDesc();
 }
