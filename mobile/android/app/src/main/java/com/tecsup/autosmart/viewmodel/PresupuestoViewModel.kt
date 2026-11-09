@@ -2,6 +2,7 @@ package com.tecsup.autosmart.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tecsup.autosmart.model.DecisionPresupuesto
 import com.tecsup.autosmart.model.PresupuestoResponse
 import com.tecsup.autosmart.data.repository.PresupuestoRepository
 import com.tecsup.autosmart.data.repository.FotoRepository
@@ -11,12 +12,16 @@ import kotlinx.coroutines.flow.StateFlow
 
 data class PresupuestoEstado(
     val idCita: Long = 0, val cargando: Boolean = true,
-    val presupuesto: PresupuestoResponse? = null, val error: String? = null
+    val presupuesto: PresupuestoResponse? = null, val error: String? = null,
+    val enviandoDecision: Boolean = false,
+    val errorDecision: String? = null
 )
 
 class PresupuestoViewModel(
     private val consultar: suspend (Long) -> Result<PresupuestoResponse?> = { PresupuestoRepository().obtener(it) },
-    private val verFoto: suspend (Long) -> Result<ByteArray> = { FotoRepository().obtener(it) }
+    private val verFoto: suspend (Long) -> Result<ByteArray> = { FotoRepository().obtener(it) },
+    private val enviarDecision: suspend (PresupuestoResponse, DecisionPresupuesto) -> Result<PresupuestoResponse> =
+        { presupuesto, decision -> PresupuestoRepository().decidir(presupuesto, decision) }
 ) : ViewModel() {
     private val _estado = MutableStateFlow(PresupuestoEstado())
     val estado: StateFlow<PresupuestoEstado> = _estado
@@ -31,6 +36,7 @@ class PresupuestoViewModel(
     fun actualizar() { cargar(_estado.value.idCita) }
 
     private fun cargar(idCita: Long) {
+        if (_estado.value.enviandoDecision) return
         if (tarea?.isActive == true && _estado.value.idCita == idCita) return
         tarea?.cancel()
         iniciada = true
@@ -43,6 +49,25 @@ class PresupuestoViewModel(
             result.onSuccess { _estado.value = PresupuestoEstado(idCita, cargando = false, presupuesto = it) }
                 .onFailure { _estado.value = PresupuestoEstado(idCita, cargando = false,
                     error = it.message ?: "No se pudo consultar el presupuesto.") }
+        }
+    }
+
+    fun decidir(idPresupuesto: Long, decision: DecisionPresupuesto) {
+        val actual = _estado.value
+        val presupuesto = actual.presupuesto ?: return
+        if (actual.cargando || actual.enviandoDecision || actual.errorDecision != null ||
+            presupuesto.idPresupuesto != idPresupuesto || presupuesto.estado != "PENDIENTE") return
+
+        _estado.value = actual.copy(enviandoDecision = true)
+        tarea = viewModelScope.launch {
+            val resultado = try { enviarDecision(presupuesto, decision) }
+            catch (e: CancellationException) { throw e }
+            catch (e: Exception) { Result.failure(e) }
+            currentCoroutineContext().ensureActive()
+            _estado.value = resultado.fold(
+                onSuccess = { actual.copy(presupuesto = it) },
+                onFailure = { actual.copy(errorDecision = it.message ?: "No se pudo confirmar la decisión.") }
+            )
         }
     }
 

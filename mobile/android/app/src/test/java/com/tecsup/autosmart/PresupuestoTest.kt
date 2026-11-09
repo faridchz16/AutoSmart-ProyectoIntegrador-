@@ -16,8 +16,14 @@ import java.math.BigDecimal
 class PresupuestoTest {
     private val json = """{"idPresupuesto":9,"idOrden":81,"idCita":12,"estado":"PENDIENTE","descripcion":"Reparación adicional","fechaCreacion":"2026-11-05T10:00:00","fechaDecision":null,"items":[{"tipo":"REPUESTO","descripcion":"Pastillas","cantidad":2,"precioUnitario":12.30,"subtotal":24.60},{"tipo":"MANO_OBRA","descripcion":"Instalación","cantidad":1,"precioUnitario":20.00,"subtotal":20.00}],"total":44.60,"deficiencias":[{"idDeficiencia":24,"idOrden":81,"categoria":"FRENOS","severidad":"CRITICA","descripcion":"Desgaste","fechaRegistro":"2026-11-05T09:00:00","fotos":[{"idFoto":7,"url":"/photos/7"}]}]}"""
     private val body = Gson().fromJson(json, PresupuestoResponse::class.java)
-    private fun api(call: suspend (Long) -> Response<PresupuestoResponse> = { Response.success(body) }) = object : PresupuestoApi {
+    private fun api(
+        decidir: suspend (Long, DecisionPresupuestoRequest) -> Response<PresupuestoResponse> = { _, _ ->
+            error("No se esperaba una decisión")
+        },
+        call: suspend (Long) -> Response<PresupuestoResponse> = { Response.success(body) }) = object : PresupuestoApi {
         override suspend fun obtener(idCita: Long) = call(idCita)
+        override suspend fun decidir(idPresupuesto: Long, request: DecisionPresupuestoRequest) =
+            decidir.invoke(idPresupuesto, request)
     }
 
     @Test fun consultaPorIdCitaYConservaIdsDiferentes() = runBlocking {
@@ -86,6 +92,33 @@ class PresupuestoTest {
     @Test fun propagaCancelacion() = runBlocking {
         try { PresupuestoRepository(api { throw CancellationException() }).obtener(12);fail("Debe cancelar") }
         catch (_:CancellationException) { }
+    }
+
+    @Test fun enviaLaDecisionPorIdPresupuestoYValidaLaRespuesta() = runBlocking {
+        for (decision in DecisionPresupuesto.entries) {
+            val confirmado = body.copy(estado = decision.name, fechaDecision = "2026-11-05T12:00:00")
+            val repo = PresupuestoRepository(api(decidir = { id, request ->
+                assertEquals(9L, id)
+                assertEquals("""{"decision":"${decision.name}"}""", Gson().toJson(request))
+                Response.success(confirmado)
+            }))
+            assertEquals(confirmado, repo.decidir(body, decision).getOrThrow())
+            assertTrue(repo.decidir(confirmado, decision).isFailure)
+        }
+    }
+
+    @Test fun rechazaConfirmacionesIncoherentesYConflictos() = runBlocking {
+        val confirmado = body.copy(estado = "APROBADO", fechaDecision = "2026-11-05T12:00:00")
+        val invalidos = listOf(body, confirmado.copy(idPresupuesto = 10), confirmado.copy(idOrden = 4),
+            confirmado.copy(idCita = 13), confirmado.copy(fechaDecision = null))
+        for (invalido in invalidos) {
+            val repo = PresupuestoRepository(api(decidir = { _, _ -> Response.success(invalido) }))
+            assertTrue(repo.decidir(body, DecisionPresupuesto.APROBADO).isFailure)
+        }
+        val conflicto = PresupuestoRepository(api(decidir = { _, _ ->
+            Response.error(409, "{}".toResponseBody())
+        }))
+        assertTrue(conflicto.decidir(body, DecisionPresupuesto.APROBADO).isFailure)
     }
 
     @Test fun contratoHttpGetDelCliente() = runBlocking {

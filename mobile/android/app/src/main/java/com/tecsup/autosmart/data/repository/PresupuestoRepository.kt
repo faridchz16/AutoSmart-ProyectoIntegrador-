@@ -9,6 +9,31 @@ import kotlinx.coroutines.CancellationException
 import java.math.BigDecimal
 
 class PresupuestoRepository(private val api: PresupuestoApi = RetrofitClient.presupuestoApi) {
+    suspend fun decidir(
+        presupuesto: PresupuestoResponse,
+        decision: DecisionPresupuesto
+    ): Result<PresupuestoResponse> = try {
+        require(presupuesto.idPresupuesto > 0 && presupuesto.estado == "PENDIENTE") {
+            "El presupuesto no admite una decisión."
+        }
+        val response = api.decidir(presupuesto.idPresupuesto, DecisionPresupuestoRequest(decision))
+        if (!response.isSuccessful) {
+            Result.failure(Exception(mensajeDeError(response.errorBody()?.string(), response.code())))
+        } else {
+            val body = response.body()
+            require(body != null && presupuestoValido(body, presupuesto.idCita) &&
+                body.idPresupuesto == presupuesto.idPresupuesto && body.idOrden == presupuesto.idOrden &&
+                body.estado == decision.name && !body.fechaDecision.isNullOrBlank()) {
+                "El servidor no confirmó la decisión."
+            }
+            Result.success(body)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     suspend fun obtener(idCita: Long): Result<PresupuestoResponse?> = try {
         require(idCita > 0) { "La cita no es válida." }
         val response = api.obtener(idCita)

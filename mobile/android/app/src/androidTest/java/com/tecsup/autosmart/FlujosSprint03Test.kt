@@ -23,6 +23,7 @@ import com.tecsup.autosmart.model.ChecklistItemDto
 import com.tecsup.autosmart.model.ChecklistRequest
 import com.tecsup.autosmart.model.ChecklistResponse
 import com.tecsup.autosmart.model.CitaCreadaResponse
+import com.tecsup.autosmart.model.DecisionPresupuesto
 import com.tecsup.autosmart.model.DeficienciaResponse
 import com.tecsup.autosmart.model.FotoReferenciaDto
 import com.tecsup.autosmart.model.OrdenTrabajoDto
@@ -43,6 +44,7 @@ import com.tecsup.autosmart.viewmodel.OrdenesMecanicoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -182,7 +184,37 @@ class FlujosSprint03Test {
         compose.onNodeWithText("Sesión expirada").assertDoesNotExist()
     }
 
-    private fun mostrarMisCitas(consultar: suspend () -> Result<PresupuestoResponse?>) {
+    @Test
+    fun aprobarPideConfirmacionYEsperaRespuestaDelServidor() {
+        val respuesta = CompletableDeferred<Result<PresupuestoResponse>>()
+        var solicitudes = 0
+        mostrarMisCitas(enviarDecision = { p, decision ->
+            assertEquals(9L, p.idPresupuesto)
+            assertEquals(DecisionPresupuesto.APROBADO, decision)
+            solicitudes++
+            respuesta.await()
+        }) { Result.success(presupuesto) }
+        abrirPresupuesto()
+        scrollHasta("Aprobar")
+        compose.onNodeWithText("Aprobar").performClick()
+        compose.runOnIdle { assertEquals(0, solicitudes) }
+        compose.onNodeWithText("Confirmar").performClick()
+        compose.onNodeWithText("Registrando decisión...").assertExists()
+        compose.onNodeWithText("Aprobar").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(1, solicitudes) }
+
+        respuesta.complete(Result.success(presupuesto.copy(estado = "APROBADO",
+            fechaDecision = "2026-11-06T10:30:00")))
+        scrollHasta("Estado: Aprobado")
+        compose.onNodeWithText("Estado: Aprobado").assertIsDisplayed()
+        compose.runOnIdle { assertEquals(1, solicitudes) }
+    }
+
+    private fun mostrarMisCitas(
+        enviarDecision: suspend (PresupuestoResponse, DecisionPresupuesto) -> Result<PresupuestoResponse> =
+            { _, _ -> error("Esta prueba solo consulta presupuestos") },
+        consultar: suspend () -> Result<PresupuestoResponse?>
+    ) {
         val citas = MisCitasViewModel(
             cancelar = { error("Consultar presupuesto no debe cancelar una cita") },
             consultar = { Result.success(listOf(cita)) }
@@ -190,7 +222,7 @@ class FlujosSprint03Test {
         val vm = PresupuestoViewModel(consultar = { id ->
             assertEquals(12L, id)
             consultar()
-        }, verFoto = ::leerFoto)
+        }, verFoto = ::leerFoto, enviarDecision = enviarDecision)
         compose.setContent {
             AutoSmartAppTheme {
                 var idCita by remember { mutableStateOf<Long?>(null) }

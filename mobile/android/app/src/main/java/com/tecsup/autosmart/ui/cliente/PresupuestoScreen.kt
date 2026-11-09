@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.tecsup.autosmart.model.DecisionPresupuesto
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
@@ -21,12 +23,32 @@ import java.math.RoundingMode
 @Composable
 fun PresupuestoScreen(idCita: Long, viewModel: PresupuestoViewModel, onBack: () -> Unit) {
     val estado by viewModel.estado.collectAsState()
-    BackHandler(onBack = onBack)
+    var confirmar by rememberSaveable(idCita) { mutableStateOf<DecisionPresupuesto?>(null) }
+    val volver: () -> Unit = { if (!estado.enviandoDecision) onBack() }
+    BackHandler(onBack = volver)
     LaunchedEffect(idCita) { viewModel.iniciar(idCita) }
+    val presupuesto = estado.presupuesto
+    confirmar?.let { decision ->
+        if (presupuesto?.estado == "PENDIENTE" && estado.errorDecision == null && !estado.enviandoDecision) {
+            val accion = if (decision == DecisionPresupuesto.APROBADO) "Aprobar" else "Rechazar"
+            AlertDialog(
+                onDismissRequest = { confirmar = null },
+                title = { Text("¿$accion presupuesto?") },
+                text = { Text("Total: ${presupuesto.total.importePresupuesto()}. Esta decisión es definitiva.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmar = null
+                        viewModel.decidir(presupuesto.idPresupuesto, decision)
+                    }) { Text("Confirmar") }
+                },
+                dismissButton = { TextButton(onClick = { confirmar = null }) { Text("Volver") } }
+            )
+        }
+    }
     Scaffold(topBar = {
         TopAppBar(title = { Text("Presupuesto") }, navigationIcon = {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a Mis citas") }
-        }, actions = { TextButton(onClick = viewModel::actualizar, enabled = !estado.cargando) { Text("Actualizar") } })
+            IconButton(onClick = volver, enabled = !estado.enviandoDecision) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a Mis citas") }
+        }, actions = { TextButton(onClick = viewModel::actualizar, enabled = !estado.cargando && !estado.enviandoDecision) { Text("Actualizar") } })
     }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("Cita: $idCita") }
@@ -66,6 +88,19 @@ fun PresupuestoScreen(idCita: Long, viewModel: PresupuestoViewModel, onBack: () 
                         }
                     }
                     item { Text("Total: ${p.total.importePresupuesto()}", style = MaterialTheme.typography.titleLarge) }
+                    if (p.estado == "PENDIENTE") item {
+                        when {
+                            estado.enviandoDecision -> Text("Registrando decisión...")
+                            estado.errorDecision != null -> {
+                                Text(estado.errorDecision.orEmpty(), color = MaterialTheme.colorScheme.error)
+                                TextButton(onClick = viewModel::actualizar) { Text("Consultar estado antes de reintentar") }
+                            }
+                            else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { confirmar = DecisionPresupuesto.APROBADO }) { Text("Aprobar") }
+                                OutlinedButton(onClick = { confirmar = DecisionPresupuesto.RECHAZADO }) { Text("Rechazar") }
+                            }
+                        }
+                    }
                     item { Text("Deficiencias y evidencias", style = MaterialTheme.typography.titleMedium) }
                     if (p.deficiencias.isNullOrEmpty()) item { Text("El presupuesto no incluye deficiencias registradas.") }
                     items(p.deficiencias.orEmpty(), key = { it.idDeficiencia }) { deficiencia ->

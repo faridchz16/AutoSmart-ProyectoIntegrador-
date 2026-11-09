@@ -2,6 +2,10 @@ package com.tecsup.autosmart.model
 
 import java.math.BigDecimal
 
+enum class DecisionPresupuesto { APROBADO, RECHAZADO }
+
+data class DecisionPresupuestoRequest(val decision: DecisionPresupuesto)
+
 data class PresupuestoItemDto(
     val tipo: String?, val descripcion: String?, val cantidad: Int?,
     val precioUnitario: BigDecimal?, val subtotal: BigDecimal?
