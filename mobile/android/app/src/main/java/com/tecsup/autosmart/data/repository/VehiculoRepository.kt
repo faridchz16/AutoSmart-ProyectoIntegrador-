@@ -1,13 +1,31 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.VehiculoRequest
-import com.tecsup.autosmart.data.model.VehiculoResponse
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.VehiculoApi
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.HistorialVehiculoDto
+import com.tecsup.autosmart.model.VehiculoRequest
+import com.tecsup.autosmart.model.VehiculoResponse
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.VehiculoApi
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class VehiculoRepository(private val api: VehiculoApi = RetrofitClient.vehiculoApi) {
+    suspend fun historial(id: Long): Result<HistorialVehiculoDto> = try {
+        val respuesta = api.historial(id)
+        val historial = respuesta.body()
+        when {
+            !respuesta.isSuccessful -> Result.failure(Exception(
+                mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())
+            ))
+            historial == null || historial.idVehiculo != id ->
+                Result.failure(Exception("El servidor no devolvió el historial del vehículo seleccionado."))
+            else -> Result.success(historial)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo consultar el historial. Revisa tu conexión.", e))
+    }
+
     suspend fun listar(): Result<List<VehiculoResponse>> = try {
         val respuesta = api.listarVehiculos()
         when {

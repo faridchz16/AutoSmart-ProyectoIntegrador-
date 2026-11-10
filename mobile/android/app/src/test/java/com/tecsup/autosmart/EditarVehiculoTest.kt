@@ -1,10 +1,10 @@
 package com.tecsup.autosmart
 
-import com.tecsup.autosmart.data.model.VehiculoRequest
-import com.tecsup.autosmart.data.model.VehiculoResponse
-import com.tecsup.autosmart.data.network.VehiculoApi
+import com.tecsup.autosmart.model.VehiculoRequest
+import com.tecsup.autosmart.model.VehiculoResponse
+import com.tecsup.autosmart.data.remote.VehiculoApi
 import com.tecsup.autosmart.data.repository.VehiculoRepository
-import com.tecsup.autosmart.ui.viewmodel.EditarVehiculoEstado
+import com.tecsup.autosmart.viewmodel.EditarVehiculoEstado
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -17,6 +17,7 @@ class EditarVehiculoTest {
     private val datos = VehiculoRequest("ABC-123", "Toyota", "Yaris", 2021, 21000)
     private val estado = EditarVehiculoEstado(original, "Toyota", "Yaris", "2021", "21000")
     private fun api(responder: suspend (Long, VehiculoRequest) -> Response<VehiculoResponse>) = object : VehiculoApi {
+        override suspend fun historial(id: Long) = error("Esta prueba no consulta el historial")
         override suspend fun eliminarVehiculo(id: Long): Response<Unit> = error("No debe eliminar")
         override suspend fun listarVehiculos(): Response<List<VehiculoResponse>> = error("No debe listar")
         override suspend fun registrarVehiculo(request: VehiculoRequest): Response<VehiculoResponse> = error("No debe registrar")

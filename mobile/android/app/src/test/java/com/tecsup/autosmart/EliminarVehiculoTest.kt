@@ -1,8 +1,8 @@
 package com.tecsup.autosmart
 
-import com.tecsup.autosmart.data.model.VehiculoRequest
-import com.tecsup.autosmart.data.model.VehiculoResponse
-import com.tecsup.autosmart.data.network.VehiculoApi
+import com.tecsup.autosmart.model.VehiculoRequest
+import com.tecsup.autosmart.model.VehiculoResponse
+import com.tecsup.autosmart.data.remote.VehiculoApi
 import com.tecsup.autosmart.data.repository.EliminacionInciertaException
 import com.tecsup.autosmart.data.repository.VehiculoRepository
 import kotlinx.coroutines.CancellationException
@@ -23,6 +23,7 @@ class EliminarVehiculoTest {
         borrar: suspend (Long) -> Response<Unit> = { Response.success<Unit>(204, null) },
         listar: suspend () -> Response<List<VehiculoResponse>> = { Response.success(listOf(vehiculo)) }
     ) = object : VehiculoApi {
+        override suspend fun historial(id: Long) = error("Esta prueba no consulta el historial")
         override suspend fun eliminarVehiculo(id: Long) = borrar(id)
         override suspend fun listarVehiculos() = listar()
         override suspend fun registrarVehiculo(request: VehiculoRequest): Response<VehiculoResponse> = error("No registrar")

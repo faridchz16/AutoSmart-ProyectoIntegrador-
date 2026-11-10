@@ -1,0 +1,47 @@
+package com.tecsup.autosmart.data.repository
+
+import com.tecsup.autosmart.model.DetalleMantenimientoDto
+import com.tecsup.autosmart.model.OrdenTrabajoDto
+import com.tecsup.autosmart.data.remote.OrdenTrabajoApi
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.mensajeDeError
+import kotlinx.coroutines.CancellationException
+
+class OrdenTrabajoRepository(private val api: OrdenTrabajoApi = RetrofitClient.ordenTrabajoApi) {
+    suspend fun detalle(idOrden: Long): Result<DetalleMantenimientoDto> = try {
+        require(idOrden > 0) { "La orden no es válida." }
+        val respuesta = api.detalle(idOrden)
+        val detalle = respuesta.body()
+        when {
+            !respuesta.isSuccessful -> Result.failure(Exception(
+                mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())))
+            detalle == null || detalle.idOrden != idOrden || detalle.idCita <= 0 ->
+                Result.failure(Exception("El servidor no devolvió el detalle de esta orden."))
+            else -> Result.success(detalle)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: IllegalArgumentException) {
+        Result.failure(e)
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudo consultar el mantenimiento. Revisa tu conexión.", e))
+    }
+
+    suspend fun listar(): Result<List<OrdenTrabajoDto>> = try {
+        val respuesta = api.listar()
+        val ordenes = respuesta.body()
+        when {
+            !respuesta.isSuccessful -> Result.failure(Exception(
+                mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())))
+            ordenes == null || ordenes.any { it.idOrden <= 0 || it.idCita <= 0 ||
+                it.estado !in setOf("EN_PROCESO", "ESPERA_APROBACION") } ||
+                ordenes.distinctBy { it.idOrden }.size != ordenes.size ->
+                Result.failure(Exception("El servidor no devolvió órdenes activas válidas."))
+            else -> Result.success(ordenes)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(Exception("No se pudieron consultar las órdenes. Revisa tu conexión.", e))
+    }
+}

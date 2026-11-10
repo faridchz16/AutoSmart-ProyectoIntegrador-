@@ -1,9 +1,9 @@
 package com.tecsup.autosmart.data.repository
 
-import com.tecsup.autosmart.data.model.PerfilResponse
-import com.tecsup.autosmart.data.network.RetrofitClient
-import com.tecsup.autosmart.data.network.UsuarioApi
-import com.tecsup.autosmart.data.network.mensajeDeError
+import com.tecsup.autosmart.model.PerfilResponse
+import com.tecsup.autosmart.data.remote.RetrofitClient
+import com.tecsup.autosmart.data.remote.UsuarioApi
+import com.tecsup.autosmart.data.remote.mensajeDeError
 import kotlinx.coroutines.CancellationException
 
 class PerfilRepository(
