@@ -6,6 +6,8 @@ import {
   obtenerChecklist,
   listarDeficiencias,
   obtenerDiagnostico,
+  listarTareas,
+  TAREAS_VACIAS,
   cargarFoto,
   textoCategoria,
   minutosEntre,
@@ -18,6 +20,7 @@ import { ESTADOS_CITA } from "../../services/agendaService";
 import { hoyLima, horaLima, fechaCorta, fechaLarga, aFecha, isoDe } from "../../services/bloqueosService";
 import { formatoHoras } from "../../services/horariosService";
 import DiagnosticoOrden from "./DiagnosticoOrden";
+import TareasOrden from "./TareasOrden";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -26,6 +29,7 @@ import "./OrdenTrabajo.css";
    que el mecánico registra desde la app (checklist, deficiencias y fotos).
    Se abre desde el detalle de una cita en proceso, en espera de aprobación o finalizada.
    T45.2: área de diagnóstico técnico (se registra y edita aquí mientras la orden está EN_PROCESO).
+   T49.2: tareas con casilla y porcentaje de avance.
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -309,13 +313,14 @@ function OrdenTrabajo() {
     let vigente = true;
     Promise.all([obtenerCita(idCita), obtenerOrdenDeCita(idCita)])
       .then(async ([cita, orden]) => {
-        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null };
-        const [checklist, deficiencias, diagnostico] = await Promise.all([
+        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS };
+        const [checklist, deficiencias, diagnostico, tareas] = await Promise.all([
           obtenerChecklist(orden.idOrden),
           listarDeficiencias(orden.idOrden),
           obtenerDiagnostico(orden.idOrden),
+          listarTareas(orden.idOrden),
         ]);
-        return { cita, orden, checklist, deficiencias, diagnostico };
+        return { cita, orden, checklist, deficiencias, diagnostico, tareas };
       })
       .then((d) => {
         if (vigente) setResultado({ clave, datosDe: idCita, ...d, error: "", fallo: "", actualizado: horaLima() });
@@ -401,7 +406,9 @@ function OrdenTrabajo() {
     );
   }
 
-  const { cita, orden, checklist, deficiencias, diagnostico, fallo, actualizado } = datos;
+  const { cita, orden, checklist, deficiencias, diagnostico, tareas, fallo, actualizado } = datos;
+  const recargar = () => setRecarga((n) => n + 1);
+  const cambiar = (campo) => (valor) => setResultado((r) => ({ ...r, [campo]: valor }));
   const estado = orden?.estado ?? cita.estado;
 
   /* ----- La cita aún no tiene orden (o no se encontró) ----- */
@@ -540,18 +547,18 @@ function OrdenTrabajo() {
               : "Ninguna registrada"}
           </span>
         </a>
-        <a href="#ot-deficiencias" className="ot-res">
-          <span className="ot-res-num">{totalFotos}</span>
-          <span>
-            <strong>{totalFotos === 1 ? "Foto" : "Fotos"}</strong>
-            de evidencia
-          </span>
-        </a>
         <a href="#ot-diagnostico" className={diagnostico ? "ot-res hecho" : "ot-res"}>
           <span className="ot-res-num" aria-hidden="true">{diagnostico ? "✓" : "—"}</span>
           <span>
             <strong>Diagnóstico</strong>
             {diagnostico ? "Registrado" : estado === "EN_PROCESO" ? "Por registrar" : "Sin registrar"}
+          </span>
+        </a>
+        <a href="#ot-tareas" className={tareas.total && tareas.porcentaje === 100 ? "ot-res hecho" : "ot-res"}>
+          <span className="ot-res-num">{tareas.total ? `${tareas.porcentaje}%` : "—"}</span>
+          <span>
+            <strong>Avance</strong>
+            {tareas.total ? `${tareas.completadas} de ${plural(tareas.total, "tarea", "tareas")}` : "Sin tareas"}
           </span>
         </a>
       </nav>
@@ -574,7 +581,9 @@ function OrdenTrabajo() {
           <header className="ot-panel-cab">
             <h3 id="ot-def-titulo">Deficiencias detectadas</h3>
             {deficiencias.length > 0 && (
-              <span className="ot-panel-extra">{plural(deficiencias.length, "registrada", "registradas")}</span>
+              <span className="ot-panel-extra">
+                {plural(deficiencias.length, "registrada", "registradas")} · {plural(totalFotos, "foto", "fotos")}
+              </span>
             )}
           </header>
           <Deficiencias
@@ -585,22 +594,41 @@ function OrdenTrabajo() {
         </section>
       </div>
 
-      {/* ---------- Diagnóstico técnico (T45.2) ---------- */}
-      <section className="ot-panel ot-diag-panel" id="ot-diagnostico" aria-labelledby="ot-diag-titulo">
-        <header className="ot-panel-cab">
-          <h3 id="ot-diag-titulo">Diagnóstico técnico</h3>
-          <span className="ot-panel-extra">Lo verá el cliente en la app</span>
-        </header>
-        <DiagnosticoOrden
-          idOrden={orden.idOrden}
-          diagnostico={diagnostico}
-          editable={estado === "EN_PROCESO"}
-          estado={estado}
-          deficiencias={deficiencias}
-          momento={momento}
-          alGuardar={(d) => setResultado((r) => ({ ...r, diagnostico: d }))}
-        />
-      </section>
+      {/* ---------- Trabajo del mecánico: diagnóstico (T45.2) y tareas (T49.2) ---------- */}
+      <div className="ot-cuerpo ot-trabajo">
+        <section className="ot-panel" id="ot-diagnostico" aria-labelledby="ot-diag-titulo">
+          <header className="ot-panel-cab">
+            <h3 id="ot-diag-titulo">Diagnóstico técnico</h3>
+            <span className="ot-panel-extra">Lo verá el cliente en la app</span>
+          </header>
+          <DiagnosticoOrden
+            idOrden={orden.idOrden}
+            diagnostico={diagnostico}
+            editable={estado === "EN_PROCESO"}
+            estado={estado}
+            deficiencias={deficiencias}
+            momento={momento}
+            alGuardar={cambiar("diagnostico")}
+            alConflicto={recargar}
+          />
+        </section>
+
+        <section className="ot-panel" id="ot-tareas" aria-labelledby="ot-tareas-titulo">
+          <header className="ot-panel-cab">
+            <h3 id="ot-tareas-titulo">Tareas</h3>
+            {tareas.total > 0 && <span className="ot-panel-extra">{tareas.completadas}/{tareas.total} completadas</span>}
+          </header>
+          <TareasOrden
+            idOrden={orden.idOrden}
+            resumen={tareas}
+            editable={estado === "EN_PROCESO"}
+            estado={estado}
+            momento={momento}
+            alCambiar={cambiar("tareas")}
+            alConflicto={recargar}
+          />
+        </section>
+      </div>
 
       {visor && (
         <Visor

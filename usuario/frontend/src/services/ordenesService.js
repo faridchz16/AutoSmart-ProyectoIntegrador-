@@ -12,12 +12,17 @@ import * as prueba from "./datosPrueba";
        [{ idDeficiencia, categoria, severidad LEVE|MODERADA|CRITICA, descripcion, fechaRegistro, fotos: [{ idFoto, url }] }]
      GET /photos/{idFoto}                  -> la imagen JPG o PNG (T44.1); url = "/photos/{idFoto}".
        Pide el token JWT (solo el mecánico asignado y el cliente dueño), por eso se descarga con apiArchivo.
-   Pendientes en el backend (se usan apenas existan; mientras tanto la pantalla los muestra vacíos):
-     GET /appointments/{idCita}/work-order -> orden de una cita ya finalizada (no sale en la lista de activas)
-     Diagnóstico técnico (T45.1), mismo estilo que el checklist:
-       GET /work-orders/{idOrden}/diagnosis -> { idOrden, diagnostico, fechaRegistro }; 404 si aún no se registra
-       PUT /work-orders/{idOrden}/diagnosis { diagnostico } -> lo crea o lo reemplaza (texto obligatorio).
-         409 si la orden no está EN_PROCESO (en espera de aprobación o finalizada no se edita)
+     Diagnóstico técnico (T45.1):
+       GET /work-orders/{idOrden}/diagnosis -> { idOrden, diagnostico, fechaDiagnostico }; 404 si aún no se registra
+       PUT /work-orders/{idOrden}/diagnosis { diagnostico } (obligatorio, máx. 2000) -> lo crea o lo reemplaza
+     Tareas de la orden (T49.1): las tres rutas devuelven el resumen completo
+       GET  /work-orders/{idOrden}/tasks
+       POST /work-orders/{idOrden}/tasks            { descripcion } (obligatoria, máx. 200)
+       PUT  /work-orders/{idOrden}/tasks/{idTarea}  { completada: true|false }
+       -> { idOrden, totalTareas, completadas, porcentajeAvance, tareas: [{ idTarea, descripcion, completada,
+            fechaCreacion, fechaCompletada }] }
+   Todo lo que cambia la orden responde 409 si no está EN_PROCESO
+   ("La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)").
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
 
 export const ELEMENTOS_CHECKLIST = [
@@ -154,11 +159,11 @@ export async function obtenerChecklist(idOrden) {
 /* ---------- Diagnóstico técnico (T45.2) ---------- */
 
 export const MIN_DIAGNOSTICO = 10;
-export const MAX_DIAGNOSTICO = 1000;
+export const MAX_DIAGNOSTICO = 2000;
 
 function normalizarDiagnostico(d) {
   const texto = String(d?.diagnostico ?? d?.descripcion ?? d?.texto ?? "").trim();
-  return texto ? { texto, fechaRegistro: d.fechaRegistro ?? d.fechaActualizacion ?? "" } : null;
+  return texto ? { texto, fechaRegistro: d.fechaDiagnostico ?? d.fechaRegistro ?? "" } : null;
 }
 
 // Diagnóstico de la orden, o null si aún no se registra (o el backend todavía no tiene la ruta)
@@ -182,13 +187,73 @@ export async function guardarDiagnostico(idOrden, texto) {
       : await apiFetch(`/work-orders/${idOrden}/diagnosis`, { metodo: "PUT", cuerpo });
     return normalizarDiagnostico({ ...cuerpo, ...datos }) ?? { texto: cuerpo.diagnostico, fechaRegistro: "" };
   } catch (e) {
-    if (e.status === 404 && !prueba.DATOS_PRUEBA) {
-      throw new Error("El servidor todavía no permite guardar el diagnóstico (falta PUT /work-orders/{id}/diagnosis).", {
-        cause: e,
-      });
-    }
+    throw mensajeConflicto(e);
+  }
+}
+
+// "La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)" -> texto claro para el mecánico
+export function mensajeConflicto(e) {
+  if (e.status !== 409) return e;
+  const estado = /estado: ([A-Z_]+)/.exec(e.message)?.[1];
+  if (!estado) return e;
+  const textos = {
+    ESPERA_APROBACION: "La orden está esperando que el cliente apruebe el presupuesto; por ahora no se puede modificar.",
+    FINALIZADA: "La orden ya fue finalizada; no se puede modificar.",
+  };
+  return Object.assign(new Error(textos[estado] ?? `La orden ya no está en proceso (${estado}).`), {
+    status: 409,
+    estado,
+    cause: e,
+  });
+}
+
+/* ---------- Tareas con avance (T49.2) ---------- */
+
+export const MAX_TAREA = 200;
+
+function normalizarTareas(r = {}) {
+  const tareas = (r.tareas ?? []).map((t) => ({
+    id: t.idTarea ?? t.id,
+    descripcion: t.descripcion ?? "",
+    completada: !!t.completada,
+    fechaCreacion: t.fechaCreacion ?? "",
+    fechaCompletada: t.fechaCompletada ?? "",
+  }));
+  const total = r.totalTareas ?? tareas.length;
+  const completadas = r.completadas ?? tareas.filter((t) => t.completada).length;
+  return {
+    tareas,
+    total,
+    completadas,
+    porcentaje: r.porcentajeAvance ?? (total ? Math.round((completadas * 100) / total) : 0),
+  };
+}
+
+export const TAREAS_VACIAS = normalizarTareas();
+
+export async function listarTareas(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA ? await prueba.listarTareas(idOrden) : await apiFetch(`/work-orders/${idOrden}/tasks`);
+    return normalizarTareas(datos);
+  } catch (e) {
+    if (esNoEncontrado(e)) return TAREAS_VACIAS;
     throw e;
   }
+}
+
+export async function agregarTarea(idOrden, descripcion) {
+  const cuerpo = { descripcion: descripcion.trim() };
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.agregarTarea(idOrden, cuerpo.descripcion)
+    : await apiFetch(`/work-orders/${idOrden}/tasks`, { metodo: "POST", cuerpo });
+  return normalizarTareas(datos);
+}
+
+export async function marcarTarea(idOrden, idTarea, completada) {
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.marcarTarea(idOrden, idTarea, completada)
+    : await apiFetch(`/work-orders/${idOrden}/tasks/${idTarea}`, { metodo: "PUT", cuerpo: { completada } });
+  return normalizarTareas(datos);
 }
 
 // Deficiencias de la orden, de la más grave a la más leve (y por hora de registro)

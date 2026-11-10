@@ -449,7 +449,7 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 }
 
 /* ---------- Diagnóstico técnico (T45.2) ---------- */
-.ot-diag-panel { margin-top: 16px; }
+.ot-trabajo { margin-top: 16px; align-items: start; }
 
 .ot-diag-form { display: grid; gap: 12px; }
 .ot-diag-form textarea { min-height: 120px; }
@@ -513,4 +513,106 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
   .ot-diag-acciones { flex-direction: column-reverse; align-items: stretch; }
   .ot-diag-botones { flex-direction: column-reverse; margin-left: 0; }
   .ot-diag-botones .btn { width: 100%; }
+}
+
+/* ---------- Tareas con avance (T49.2) ---------- */
+.ot-tareas { display: grid; gap: 14px; }
+
+.ot-avance { display: grid; gap: 8px; }
+.ot-avance-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: #5b6b88; font-size: 0.86rem; }
+.ot-avance-cab strong {
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ot-avance-barra { height: 10px; border-radius: 999px; background: #e8eef9; overflow: hidden; }
+.ot-avance-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1150e8, #3b82f6);
+  transition: width 0.4s ease;
+}
+.ot-avance-barra.completa span { background: linear-gradient(90deg, #059669, #10b981); }
+
+.ot-tareas-vacio {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed #c9d6ee;
+  border-radius: 12px;
+  background: #f8faff;
+  color: #5b6b88;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.ot-tareas-lista { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+.ot-tarea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 9px 12px;
+  border: 1px solid #e3e9f5;
+  border-radius: 12px;
+  background: #fff;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ot-tarea.hecha { border-color: #c6f0dd; background: #f3fcf7; }
+
+.ot-tarea-check { display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; }
+.ot-tarea-check.bloqueada { cursor: default; }
+.ot-tarea-check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+.ot-tarea-caja {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #b9c8e6;
+  border-radius: 7px;
+  background: #fff;
+  color: transparent;
+  font-size: 0.8rem;
+  font-weight: 900;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ot-tarea-caja .btn-spinner { width: 12px; height: 12px; border-color: #93b4ff; border-top-color: #1150e8; }
+.ot-tarea-check:not(.bloqueada):hover .ot-tarea-caja { border-color: #1150e8; }
+.ot-tarea-check input:checked + .ot-tarea-caja { border-color: #059669; background: #10b981; color: #fff; }
+.ot-tarea-check input:focus-visible + .ot-tarea-caja { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+.ot-tarea-texto { color: #0b1b3a; font-size: 0.92rem; line-height: 1.4; overflow-wrap: anywhere; }
+.ot-tarea.hecha .ot-tarea-texto { color: #4b6358; text-decoration: line-through; text-decoration-color: #86c7a8; }
+
+.ot-tarea-hora { flex: none; color: #9aa7bf; font-size: 0.76rem; white-space: nowrap; }
+.ot-tarea.hecha .ot-tarea-hora { color: #047857; }
+
+.ot-tarea-nueva { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.ot-tarea-nueva input {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.ot-tarea-nueva input:focus { outline: none; border-color: #1150e8; box-shadow: 0 0 0 3px #d6e4ff; }
+.ot-tarea-nueva input[aria-invalid="true"] { border-color: #e11d48; }
+.ot-tarea-error { grid-column: 1 / -1; margin: 0; }
+
+@media (max-width: 480px) {
+  .ot-tarea { flex-direction: column; align-items: flex-start; }
+  .ot-tarea-hora { padding-left: 32px; }
+  .ot-tarea-nueva { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ot-avance-barra span, .ot-tarea, .ot-tarea-caja { transition: none; }
 }

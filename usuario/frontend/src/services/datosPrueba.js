@@ -478,7 +478,7 @@ const diagnosticosPrueba = {
   2: {
     diagnostico:
       "Aceite degradado por kilometraje (9 800 km desde el último cambio). Se reemplazó el aceite y el filtro.\nNeumático trasero derecho con desgaste irregular: se recomienda alineamiento y balanceo en el próximo servicio.",
-    fechaRegistro: enHora(-1, "10:40"),
+    fechaDiagnostico: enHora(-1, "10:40"),
   },
 };
 
@@ -496,13 +496,69 @@ export async function obtenerDiagnostico(idOrden) {
 
 export async function guardarDiagnostico(idOrden, diagnostico) {
   await esperar(500);
+  ordenEnProceso(idOrden);
+  if (!diagnostico.trim()) throw conEstado("El diagnostico es obligatorio", 400);
+  diagnosticosPrueba[Number(idOrden)] = { diagnostico: diagnostico.trim(), fechaDiagnostico: ahoraEnLima() };
+  return { idOrden: Number(idOrden), ...diagnosticosPrueba[Number(idOrden)] };
+}
+
+// Como el backend: lo que cambia la orden solo se acepta con la cita EN_PROCESO
+function ordenEnProceso(idOrden) {
   const orden = ordenesPrueba.find((o) => o.idOrden === Number(idOrden));
   if (!orden) throw conEstado("Orden de trabajo no encontrada", 404);
   const { estado } = datosOrden(orden);
   if (estado !== "EN_PROCESO") throw conEstado(`La orden no esta EN_PROCESO (estado: ${estado})`, 409);
-  if (!diagnostico.trim()) throw conEstado("El diagnostico es obligatorio", 400);
-  diagnosticosPrueba[Number(idOrden)] = { diagnostico: diagnostico.trim(), fechaRegistro: ahoraEnLima() };
-  return { idOrden: Number(idOrden), ...diagnosticosPrueba[Number(idOrden)] };
+  return orden;
+}
+
+/* ---------- Tareas de la orden (T49.2) ---------- */
+
+const tareasPrueba = {
+  1: [
+    { idTarea: 1, descripcion: "Levantar el vehículo y revisar la suspensión delantera", completada: true, fechaCreacion: enHora(0, "12:25"), fechaCompletada: enHora(0, "12:38") },
+    { idTarea: 2, descripcion: "Cambiar amortiguadores delanteros", completada: false, fechaCreacion: enHora(0, "12:26"), fechaCompletada: null },
+    { idTarea: 3, descripcion: "Prueba de manejo", completada: false, fechaCreacion: enHora(0, "12:26"), fechaCompletada: null },
+  ],
+  2: [
+    { idTarea: 4, descripcion: "Drenar aceite usado", completada: true, fechaCreacion: enHora(-1, "10:15"), fechaCompletada: enHora(-1, "10:25") },
+    { idTarea: 5, descripcion: "Cambiar filtro y aceite 10W-30", completada: true, fechaCreacion: enHora(-1, "10:15"), fechaCompletada: enHora(-1, "10:45") },
+  ],
+};
+let siguienteTarea = 6;
+
+function resumenTareas(idOrden) {
+  const tareas = tareasPrueba[Number(idOrden)] ?? [];
+  const completadas = tareas.filter((t) => t.completada).length;
+  return {
+    idOrden: Number(idOrden),
+    totalTareas: tareas.length,
+    completadas,
+    porcentajeAvance: tareas.length ? Math.round((completadas * 100) / tareas.length) : 0,
+    tareas: copia(tareas),
+  };
+}
+
+export async function listarTareas(idOrden) {
+  await esperar(250);
+  return resumenTareas(idOrden);
+}
+
+export async function agregarTarea(idOrden, descripcion) {
+  await esperar(350);
+  ordenEnProceso(idOrden);
+  const lista = (tareasPrueba[Number(idOrden)] ??= []);
+  lista.push({ idTarea: siguienteTarea++, descripcion, completada: false, fechaCreacion: ahoraEnLima(), fechaCompletada: null });
+  return resumenTareas(idOrden);
+}
+
+export async function marcarTarea(idOrden, idTarea, completada) {
+  await esperar(300);
+  ordenEnProceso(idOrden);
+  const tarea = (tareasPrueba[Number(idOrden)] ?? []).find((t) => t.idTarea === Number(idTarea));
+  if (!tarea) throw conEstado("Tarea no encontrada en esta orden", 404);
+  tarea.completada = completada;
+  tarea.fechaCompletada = completada ? ahoraEnLima() : null;
+  return resumenTareas(idOrden);
 }
 
 export async function obtenerChecklist(idOrden) {

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { guardarDiagnostico, textoCategoria, SEVERIDADES, MIN_DIAGNOSTICO, MAX_DIAGNOSTICO } from "../../services/ordenesService";
+import { guardarDiagnostico, mensajeConflicto, textoCategoria, SEVERIDADES, MIN_DIAGNOSTICO, MAX_DIAGNOSTICO } from "../../services/ordenesService";
 
 /* T45.2 – Área de diagnóstico técnico en la vista web de la orden (API de T45.1).
    El mecánico explica la falla con sus palabras; el cliente lo leerá en la app.
@@ -28,7 +28,7 @@ function validar(texto) {
   return "";
 }
 
-function DiagnosticoOrden({ idOrden, diagnostico, editable, estado, deficiencias, momento, alGuardar }) {
+function DiagnosticoOrden({ idOrden, diagnostico, editable, estado, deficiencias, momento, alGuardar, alConflicto }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState("");
   const [error, setError] = useState("");
@@ -67,11 +67,13 @@ function DiagnosticoOrden({ idOrden, diagnostico, editable, estado, deficiencias
       setBorrador("");
       setRecienGuardado(true);
     } catch (err) {
-      setError(
-        err.status === 409
-          ? `${err.message}. La orden ya no se puede editar: pulsa Actualizar para ver su estado.`
-          : err.message
-      );
+      const conflicto = mensajeConflicto(err);
+      if (conflicto.status === 409 && conflicto.estado) {
+        setError(`${conflicto.message} Se actualizó la orden.`);
+        alConflicto?.();
+      } else {
+        setError(conflicto.message);
+      }
     } finally {
       setEnviando(false);
     }
