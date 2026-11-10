@@ -903,3 +903,58 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 @media (max-width: 1180px) {
   .ot-rep-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- Completar el mantenimiento (T52.2) ---------- */
+.ot-fin-panel { border-color: #c6f0dd; }
+.ot-completar { display: grid; gap: 12px; }
+.ot-req { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ot-req li { display: flex; align-items: center; gap: 10px; color: #0b1b3a; font-size: 0.9rem; }
+.ot-req li.info { color: #5b6b88; font-size: 0.86rem; }
+.ot-req a { color: #b45309; font-weight: 700; }
+.ot-req-marca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+.ot-req-marca.ok { background: #d1fae5; color: #047857; }
+.ot-req-marca.info { background: #eef2f9; color: #5b6b88; font-style: italic; }
+.ot-completar-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eef2f9;
+}
+.ot-completar-pie p { flex: 1 1 260px; margin: 0; color: #5b6b88; font-size: 0.88rem; }
+.btn.btn-exito { border-color: #059669; background: #059669; color: #fff; }
+.btn.btn-exito:hover:not(:disabled) { background: #047857; }
+.btn.btn-exito:disabled { border-color: #cbd5e1; background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
+
+.ot-completada {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid #a7f3d0;
+  border-radius: 14px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+.ot-completada strong { flex-basis: 100%; font-size: 1rem; }
+.ot-completada span { flex: 1 1 260px; }
+
+@media (max-width: 480px) {
+  .ot-completar-pie .btn { width: 100%; }
+}

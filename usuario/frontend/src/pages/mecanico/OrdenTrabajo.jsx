@@ -31,6 +31,7 @@ import TareasOrden from "./TareasOrden";
 import PresupuestoOrden from "./PresupuestoOrden";
 import SolicitudesRepuestos from "./SolicitudesRepuestos";
 import RepuestosUsados from "./RepuestosUsados";
+import CompletarOrden from "./CompletarOrden";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -43,6 +44,7 @@ import "./OrdenTrabajo.css";
    T46.2: presupuesto con mano de obra, repuestos y total (se envía al cliente para su aprobación).
    T50.2: solicitud de repuestos al almacén.
    T51.2: repuestos usados en la orden y su costo.
+   T52.2: completar el mantenimiento con validaciones previas (la orden queda cerrada).
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -316,6 +318,7 @@ function OrdenTrabajo() {
   const [resultado, setResultado] = useState({ clave: null, datosDe: null, error: "" });
   const [ahora, setAhora] = useState(marcaAhora);
   const [visor, setVisor] = useState(null); // { deficiencia, indice }
+  const [completada, setCompletada] = useState(null); // { fechaFin, costoRepuestos } al completar el mantenimiento
 
   const clave = `${idCita}|${recarga}`;
   const cargando = resultado.clave !== clave;
@@ -483,6 +486,19 @@ function OrdenTrabajo() {
           </button>
         </div>
       </div>
+
+      {completada && (
+        <div className="ot-completada" role="status">
+          <strong>✓ Mantenimiento completado {momento(completada.fechaFin)}</strong>
+          <span>
+            La orden quedó cerrada{completada.costoRepuestos > 0 ? ` · repuestos ${formatoSoles(completada.costoRepuestos)}` : ""}. El
+            cliente ya lo ve como finalizado en la app.
+          </span>
+          <Link to="/mecanico/citas-hoy" className="btn btn-sec">
+            Ir a citas de hoy
+          </Link>
+        </div>
+      )}
 
       {fallo && (
         <p className="aviso-fijo" role="alert">
@@ -725,6 +741,37 @@ function OrdenTrabajo() {
           </div>
         </div>
       </section>
+
+      {/* ---------- Completar el mantenimiento (T52.2) ---------- */}
+      {abierta && (
+        <section className="ot-panel ot-seccion ot-fin-panel" id="ot-completar" aria-labelledby="ot-fin-titulo-panel">
+          <header className="ot-panel-cab">
+            <h3 id="ot-fin-titulo-panel">Completar mantenimiento</h3>
+            <span className="ot-panel-extra">Cierra la orden y registra la hora de fin</span>
+          </header>
+          <CompletarOrden
+            idOrden={orden.idOrden}
+            estado={estado}
+            diagnostico={diagnostico}
+            tareas={tareas}
+            solicitudes={solicitudes}
+            presupuesto={presupuesto}
+            consumos={consumos}
+            minutos={enAtencion}
+            alCompletar={(r) => {
+              setCompletada(r);
+              setResultado((d) => ({
+                ...d,
+                orden: { ...d.orden, estado: r.estado, fechaFin: r.fechaFin },
+                cita: { ...d.cita, estado: r.estado },
+                consumos: { ...d.consumos, costoRepuestos: r.costoRepuestos || d.consumos.costoRepuestos },
+              }));
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            alConflicto={recargar}
+          />
+        </section>
+      )}
 
       {visor && (
         <Visor

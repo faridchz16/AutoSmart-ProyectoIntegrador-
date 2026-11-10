@@ -45,6 +45,12 @@ import * as prueba from "./datosPrueba";
        -> { idOrden, costoRepuestos, consumos: [{ idMovimiento, idMaterial, codigoMaterial, tipo SALIDA, cantidad,
             costoUnitario, stockResultante, referencia, idOrden, registradoPor, fecha }] }
        Las solicitudes aprobadas aparecen aquí con la referencia "Solicitud de repuesto #N".
+     Completar el mantenimiento (T52.1):
+       PUT /work-orders/{idOrden}/finish -> { idOrden, idCita, ticket, estado FINALIZADA, fechaInicio, fechaFin, costoRepuestos }
+         409 si falta el diagnóstico, si no hay tareas, si quedan tareas pendientes ("Faltan 1 de 3 tareas por completar")
+         o si hay solicitudes de repuestos pendientes. La orden queda cerrada.
+     GET /work-orders/{idOrden}/detail -> detalle completo (mecánico asignado o cliente), sirve también para
+       abrir una orden ya finalizada, que ya no sale en /mechanics/me/work-orders.
    Todo lo que cambia la orden responde 409 si no está EN_PROCESO
    ("La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)").
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -149,6 +155,29 @@ function normalizarDeficiencia(d = {}) {
 
 /* ---------- Llamadas ---------- */
 
+/* El backend no devuelve el número de orden en el detalle de la cita y /mechanics/me/work-orders solo trae
+   las órdenes activas. Para volver a abrir una orden finalizada, el navegador recuerda qué orden
+   corresponde a cada cita (cita -> orden) cada vez que la ve activa. */
+const CLAVE_ORDENES = "autosmart.ordenesPorCita";
+
+function ordenesRecordadas() {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_ORDENES)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export function recordarOrden(idCita, idOrden) {
+  try {
+    const mapa = ordenesRecordadas();
+    if (mapa[idCita] === idOrden) return;
+    localStorage.setItem(CLAVE_ORDENES, JSON.stringify({ ...mapa, [idCita]: idOrden }));
+  } catch {
+    // Sin almacenamiento (modo privado): solo no se podrá reabrir la orden finalizada
+  }
+}
+
 // Orden de la cita, o null si la atención aún no se inició (o no se encuentra)
 export async function obtenerOrdenDeCita(idCita) {
   try {
@@ -157,13 +186,35 @@ export async function obtenerOrdenDeCita(idCita) {
     // 1) Entre las órdenes activas del mecánico
     const activas = await apiFetch("/mechanics/me/work-orders");
     const activa = (Array.isArray(activas) ? activas : []).find((o) => String(o.idCita) === String(idCita));
-    if (activa) return normalizarOrden(activa);
+    if (activa) {
+      recordarOrden(String(idCita), activa.idOrden);
+      return normalizarOrden(activa);
+    }
 
-    // 2) Orden de una cita ya cerrada (cuando el backend tenga esta ruta)
-    return normalizarOrden(await apiFetch(`/appointments/${idCita}/work-order`));
+    // 2) Orden ya finalizada (o en otro estado): con el número recordado y su detalle
+    const idOrden = ordenesRecordadas()[idCita];
+    if (!idOrden) return null;
+    return normalizarOrden(await apiFetch(`/work-orders/${idOrden}/detail`));
   } catch (e) {
     if (esNoEncontrado(e)) return null;
     throw e;
+  }
+}
+
+/* ---------- Completar el mantenimiento (T52.2) ---------- */
+
+export async function completarMantenimiento(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.completarMantenimiento(idOrden)
+      : await apiFetch(`/work-orders/${idOrden}/finish`, { metodo: "PUT" });
+    return {
+      estado: codigo(datos?.estado || "FINALIZADA"),
+      fechaFin: datos?.fechaFin ?? "",
+      costoRepuestos: dinero(datos?.costoRepuestos),
+    };
+  } catch (e) {
+    throw mensajeConflicto(e);
   }
 }
 

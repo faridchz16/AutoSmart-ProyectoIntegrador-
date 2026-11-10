@@ -695,6 +695,26 @@ export async function registrarConsumo(idOrden, { idMaterial, cantidad, referenc
   return listarConsumos(idOrden);
 }
 
+/* ---------- Completar el mantenimiento (T52.2) ---------- */
+
+export async function completarMantenimiento(idOrden) {
+  await esperar(500);
+  const orden = ordenEnProceso(idOrden);
+  if (!diagnosticosPrueba[orden.idOrden]) throw conEstado("Registra el diagnostico antes de finalizar la orden", 409);
+  const tareas = tareasPrueba[orden.idOrden] ?? [];
+  if (!tareas.length) throw conEstado("Registra al menos una tarea antes de finalizar la orden", 409);
+  const pendientes = tareas.filter((t) => !t.completada).length;
+  if (pendientes) throw conEstado(`Faltan ${pendientes} de ${tareas.length} tareas por completar`, 409);
+  if (solicitudesPrueba.some((s) => s.idOrden === orden.idOrden && s.estado === "PENDIENTE")) {
+    throw conEstado("Hay solicitudes de repuestos pendientes de atencion", 409);
+  }
+  orden.fechaFin = ahoraEnLima();
+  const cita = citasPrueba.find((c) => c.idCita === orden.idCita);
+  cita.estado = "FINALIZADA";
+  const { costoRepuestos } = await listarConsumos(orden.idOrden);
+  return { ...datosOrden(orden), costoRepuestos };
+}
+
 /* ---------- Tareas de la orden (T49.2) ---------- */
 
 const tareasPrueba = {
