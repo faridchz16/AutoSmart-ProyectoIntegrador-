@@ -70,6 +70,13 @@
             <version>2.2.0</version>
         </dependency>
 
+        <!-- T54.1: notificaciones push -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.4.3</version>
+        </dependency>
+
         <!-- Envio de correos de confirmacion de cita (T29.1) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

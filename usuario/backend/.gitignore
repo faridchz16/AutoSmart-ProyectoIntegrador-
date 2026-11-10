@@ -33,3 +33,7 @@ build/
 .vscode/
 ### Fotos subidas al servidor (T44.1) ###
 uploads/
+
+### Credenciales de Firebase (T54.1): nunca se suben ###
+*firebase-adminsdk*.json
+firebase-credenciales.json
