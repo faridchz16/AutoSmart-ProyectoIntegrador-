@@ -549,6 +549,55 @@ let materiales = [
 }));
 let siguienteMaterial = materiales.length + 1;
 
+// Kardex: cada material empieza con una entrada de inventario inicial (T58.2)
+const ahoraLima = () =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima", dateStyle: "short", timeStyle: "medium" })
+    .format(new Date())
+    .replace(" ", "T");
+const movimientos = materiales.map((m, i) => ({
+  idMovimiento: i + 1,
+  idMaterial: m.idMaterial,
+  codigoMaterial: m.codigo,
+  tipo: "ENTRADA",
+  cantidad: m.stockActual,
+  costoUnitario: m.costoUnitario,
+  stockResultante: m.stockActual,
+  referencia: "Inventario inicial",
+  idOrden: null,
+  registradoPor: "admin@autosmart.com",
+  fecha: `${fechaRelativa(-7)}T08:00:00`,
+}));
+let siguienteMovimiento = movimientos.length + 1;
+
+export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, referencia }) {
+  await esperar(450);
+  const m = materiales.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw Object.assign(new Error("Material no encontrado"), { status: 404 });
+  if (!Number.isInteger(cantidad) || cantidad < 1) throw Object.assign(new Error("La cantidad debe ser al menos 1"), { status: 400 });
+  if (costoUnitario !== undefined) m.costoUnitario = Math.round(costoUnitario * 100) / 100;
+  m.stockActual += cantidad;
+  const mov = {
+    idMovimiento: siguienteMovimiento++,
+    idMaterial: m.idMaterial,
+    codigoMaterial: m.codigo,
+    tipo: "ENTRADA",
+    cantidad,
+    costoUnitario: m.costoUnitario,
+    stockResultante: m.stockActual,
+    referencia,
+    idOrden: null,
+    registradoPor: "admin@autosmart.com",
+    fecha: ahoraLima(),
+  };
+  movimientos.push(mov);
+  return { ...mov };
+}
+
+export async function obtenerKardex(idMaterial) {
+  await esperar(300);
+  return movimientos.filter((x) => x.idMaterial === Number(idMaterial)).map((x) => ({ ...x }));
+}
+
 export async function listarMateriales() {
   await esperar();
   return materiales.map(copiaMaterial).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));

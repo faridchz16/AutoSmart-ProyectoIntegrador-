@@ -12,6 +12,12 @@ import * as prueba from "./datosPrueba";
    Respuesta: { idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo, bajoStock }
    Reglas del backend: código único (lo guarda en mayúsculas, máx. 30), nombre máx. 100,
    unidad de texto libre (la guarda en minúsculas, máx. 20), costo ≥ 0 (2 decimales), stock mínimo entero ≥ 0.
+   Ingresos y kardex (T58.1):
+     POST /admin/materials/{id}/entries { cantidad (1 a 100000), costoUnitario (opcional, ≥ 0: actualiza el costo
+          del material), referencia (opcional, máx. 200) } -> el movimiento de ENTRADA; la fecha la pone el servidor
+     GET  /admin/materials/{id}/kardex -> movimientos del material, del más antiguo al más nuevo
+     Movimiento: { idMovimiento, idMaterial, codigoMaterial, tipo ENTRADA|SALIDA, cantidad, costoUnitario,
+                   stockResultante, referencia, idOrden, registradoPor, fecha }
    Un material nuevo empieza con stock 0: el stock solo cambia con el kardex
    (ingresos T58, salidas por solicitudes aprobadas T59 y consumo en la orden T51).
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -98,6 +104,54 @@ export async function editarMaterial(id, material) {
     : await apiFetch(`/admin/materials/${id}`, { metodo: "PUT", cuerpo: material });
   return normalizarMaterial({ idMaterial: id, ...material, ...datos });
 }
+
+/* ---------- Ingresos de mercadería y kardex (T58.2) ---------- */
+
+export const MAX_REFERENCIA = 200;
+export const MAX_CANTIDAD_INGRESO = 100000;
+
+function normalizarMovimiento(m = {}) {
+  return {
+    id: m.idMovimiento ?? m.id,
+    tipo: String(m.tipo ?? "").toUpperCase() === "SALIDA" ? "SALIDA" : "ENTRADA",
+    cantidad: numero(m.cantidad),
+    costoUnitario: numero(m.costoUnitario),
+    stockResultante: numero(m.stockResultante),
+    referencia: m.referencia ?? "",
+    idOrden: m.idOrden ?? null,
+    registradoPor: m.registradoPor ?? "",
+    fecha: m.fecha ?? "",
+  };
+}
+
+// Proveedor, documento y fecha de recepción van en la referencia (el backend no tiene campos propios)
+export function armarReferencia({ proveedor, documento, fechaRecepcion, hoy }) {
+  return [
+    proveedor.trim() && `Proveedor: ${proveedor.trim()}`,
+    documento.trim() && `Doc.: ${documento.trim()}`,
+    fechaRecepcion && fechaRecepcion !== hoy && `Recibido el ${fechaRecepcion.split("-").reverse().join("/")}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, referencia }) {
+  const cuerpo = { cantidad: Number(cantidad), referencia: referencia || null };
+  if (costoUnitario !== null && costoUnitario !== undefined) cuerpo.costoUnitario = Number(costoUnitario);
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.registrarIngreso(idMaterial, cuerpo)
+    : await apiFetch(`/admin/materials/${idMaterial}/entries`, { metodo: "POST", cuerpo });
+  return normalizarMovimiento(datos);
+}
+
+// Del más nuevo al más antiguo
+export async function obtenerKardex(idMaterial) {
+  const datos = prueba.DATOS_PRUEBA ? await prueba.obtenerKardex(idMaterial) : await apiFetch(`/admin/materials/${idMaterial}/kardex`);
+  return (Array.isArray(datos) ? datos : []).map(normalizarMovimiento).reverse();
+}
+
+// "2026-11-09T22:05:13" -> "09/11/2026 22:05"
+export const fechaHora = (f) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)} ${f.slice(11, 16)}` : "—");
 
 // Formatos
 const SOLES = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });

@@ -4,6 +4,7 @@ import Modal from "../../components/admin/Modal";
 import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
 import FormMaterial from "./FormMaterial";
+import FormIngreso from "./FormIngreso";
 import "../../components/admin/admin-ui.css";
 import "./Inventario.css";
 
@@ -11,11 +12,19 @@ import "./Inventario.css";
    - Tabla con código, nombre, unidad, stock (con su mínimo), costo unitario y valor en almacén
    - Búsqueda por código o nombre
    - Registrar y editar con formulario (código único, costo ≥ 0, stock mínimo)
-   El stock no se edita aquí: cambia con los ingresos (T58) y las salidas del almacén (T51 y T59). */
+   El stock no se edita aquí: cambia con los ingresos (T58) y las salidas del almacén (T51 y T59).
+   T58.2: botón «Ingreso» por material: formulario de ingreso de mercadería y su kardex. */
 
 const TAMANO = 10;
 
 const sinTildes = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const IconoIngreso = () => (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5" />
+    <path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15" />
+  </svg>
+);
 
 const IconoEditar = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -30,6 +39,7 @@ function Inventario() {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(0);
   const [formulario, setFormulario] = useState(null); // { material: null | {...} }
+  const [ingreso, setIngreso] = useState(null); // material al que se registra un ingreso
   const [aviso, setAviso] = useState(null);
 
   const cargando = resultado.clave !== recarga;
@@ -74,6 +84,15 @@ function Inventario() {
       setPagina(0);
       avisar("ok", `Se registró ${guardado.codigo} · "${guardado.nombre}" con stock 0.`);
     }
+  };
+
+  const alIngresar = (actualizado, mov) => {
+    setIngreso(null);
+    setResultado((r) => ({ ...r, materiales: r.materiales.map((m) => (m.id === actualizado.id ? { ...m, ...actualizado } : m)) }));
+    avisar(
+      "ok",
+      `Ingresaron ${formatoCantidad(mov.cantidad)} ${textoUnidad(actualizado.unidad, mov.cantidad)} de ${actualizado.nombre}. Stock: ${formatoCantidad(mov.stockResultante)}.`
+    );
   };
 
   return (
@@ -195,6 +214,15 @@ function Inventario() {
                       <td data-label="Acciones" className="col-acciones">
                         <button
                           type="button"
+                          className="btn-icono inv-btn-ingreso"
+                          onClick={() => setIngreso(m)}
+                          aria-label={`Registrar ingreso de ${m.codigo} ${m.nombre}`}
+                        >
+                          <IconoIngreso />
+                          <span>Ingreso</span>
+                        </button>
+                        <button
+                          type="button"
                           className="btn-icono"
                           onClick={() => setFormulario({ material: m })}
                           aria-label={`Editar ${m.codigo} ${m.nombre}`}
@@ -228,6 +256,11 @@ function Inventario() {
             alCerrar={() => setFormulario(null)}
           />
         )}
+      </Modal>
+
+      {/* ---------- Ingreso de mercadería (T58.2) ---------- */}
+      <Modal abierto={!!ingreso} alCerrar={() => setIngreso(null)} titulo="Registrar ingreso">
+        {ingreso && <FormIngreso material={ingreso} alGuardar={alIngresar} alCerrar={() => setIngreso(null)} />}
       </Modal>
 
       <Aviso aviso={aviso} alCerrar={cerrarAviso} />
