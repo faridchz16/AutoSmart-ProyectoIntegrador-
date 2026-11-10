@@ -199,6 +199,20 @@ export async function decidirSolicitud(id, decision, observacion = "") {
   return normalizarSolicitud(datos);
 }
 
+/* ---------- Alertas de stock mínimo (T60.1) ---------- */
+
+// Un material está en alerta cuando su stock llegó al mínimo (stock ≤ mínimo): el backend lo marca con bajoStock
+export const enAlerta = (m) => m.bajoStock;
+
+export async function contarAlertasStock() {
+  const materiales = await listarMateriales();
+  return materiales.filter(enAlerta).length;
+}
+
+// Avisa a otras partes del panel (menú, resumen) que el stock cambió
+export const EVENTO_STOCK = "autosmart:stock";
+export const avisarCambioStock = () => window.dispatchEvent(new Event(EVENTO_STOCK));
+
 // "2026-11-09T22:05:13" -> "09/11/2026 22:05"
 export const fechaHora = (f) => (f ? `${f.slice(8, 10)}/${f.slice(5, 7)}/${f.slice(0, 4)} ${f.slice(11, 16)}` : "—");
 

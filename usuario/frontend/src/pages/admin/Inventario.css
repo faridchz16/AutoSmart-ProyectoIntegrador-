@@ -170,3 +170,47 @@
   .sol-acciones { width: 100%; }
   .sol-acciones .btn { flex: 1; }
 }
+
+/* ---------- Alertas de stock mínimo (T60.1) ---------- */
+.inv-alerta-cab { color: #be123c; font-weight: 700; }
+
+.inv-filtro-bajo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid #fecdd3;
+  border-radius: 999px;
+  background: #fff;
+  color: #be123c;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.inv-filtro-bajo:hover { background: #fff1f2; }
+.inv-filtro-bajo.activo { border-color: #e11d48; background: #e11d48; color: #fff; }
+.inv-filtro-bajo:focus-visible { outline: 3px solid #fda4af; outline-offset: 2px; }
+.inv-punto { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+.inv-fila-alerta td { background: #fff5f6; }
+.inv-fila-alerta td:first-child { box-shadow: inset 4px 0 0 #f43f5e; }
+.inv-fila-alerta .inv-stock strong { color: #be123c; }
+.inv-fila-alerta .inv-stock small { color: #e11d48; font-weight: 700; }
+.inv-fila-alerta.agotado td { background: #ffe4e6; }
+.inv-etq-alerta {
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 720px) {
+  .inv-fila-alerta td:first-child { box-shadow: none; }
+  .inv-tabla tr.inv-fila-alerta { border-color: #fda4af; }
+}

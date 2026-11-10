@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listarMateriales, textoUnidad, formatoSoles, formatoCantidad } from "../../services/inventarioService";
+import { useSearchParams } from "react-router-dom";
+import {
+  listarMateriales,
+  textoUnidad,
+  formatoSoles,
+  formatoCantidad,
+  enAlerta,
+  avisarCambioStock,
+} from "../../services/inventarioService";
 import Modal from "../../components/admin/Modal";
 import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
@@ -13,7 +21,9 @@ import "./Inventario.css";
    - Búsqueda por código o nombre
    - Registrar y editar con formulario (código único, costo ≥ 0, stock mínimo)
    El stock no se edita aquí: cambia con los ingresos (T58) y las salidas del almacén (T51 y T59).
-   T58.2: botón «Ingreso» por material: formulario de ingreso de mercadería y su kardex. */
+   T58.2: botón «Ingreso» por material: formulario de ingreso de mercadería y su kardex.
+   T60.1: materiales con stock ≤ mínimo en rojo («Reponer» / «Agotado») y filtro «Solo bajo stock»
+          (también se abre filtrado con /admin/inventario?filtro=bajo-stock, desde el resumen). */
 
 const TAMANO = 10;
 
@@ -38,6 +48,8 @@ function Inventario() {
   const [resultado, setResultado] = useState({ clave: null, materiales: [], error: "" });
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(0);
+  const [parametros, setParametros] = useSearchParams();
+  const soloBajo = parametros.get("filtro") === "bajo-stock";
   const [formulario, setFormulario] = useState(null); // { material: null | {...} }
   const [ingreso, setIngreso] = useState(null); // material al que se registra un ingreso
   const [aviso, setAviso] = useState(null);
@@ -64,7 +76,9 @@ function Inventario() {
 
   const { materiales } = resultado;
   const texto = sinTildes(busqueda.trim());
+  const enAlertas = materiales.filter(enAlerta);
   const filtrados = materiales
+    .filter((m) => !soloBajo || enAlerta(m))
     .filter((m) => !texto || sinTildes(`${m.codigo} ${m.nombre}`).includes(texto))
     .sort((a, b) => a.codigo.localeCompare(b.codigo, "es", { numeric: true }));
   const paginas = Math.max(1, Math.ceil(filtrados.length / TAMANO));
@@ -73,8 +87,14 @@ function Inventario() {
   const valorStock = materiales.reduce((total, m) => total + m.stockActual * m.costoUnitario, 0);
   const codigosUsados = materiales.map((m) => m.codigo);
 
+  const cambiarSoloBajo = (activo) => {
+    setParametros(activo ? { filtro: "bajo-stock" } : {}, { replace: true });
+    setPagina(0);
+  };
+
   const alGuardar = (guardado, editando) => {
     setFormulario(null);
+    avisarCambioStock();
     if (editando) {
       setResultado((r) => ({ ...r, materiales: r.materiales.map((m) => (m.id === guardado.id ? guardado : m)) }));
       avisar("ok", `Se guardaron los cambios de ${guardado.codigo} · "${guardado.nombre}".`);
@@ -88,7 +108,12 @@ function Inventario() {
 
   const alIngresar = (actualizado, mov) => {
     setIngreso(null);
-    setResultado((r) => ({ ...r, materiales: r.materiales.map((m) => (m.id === actualizado.id ? { ...m, ...actualizado } : m)) }));
+    const bajoStock = actualizado.stockActual <= actualizado.stockMinimo;
+    setResultado((r) => ({
+      ...r,
+      materiales: r.materiales.map((m) => (m.id === actualizado.id ? { ...m, ...actualizado, bajoStock } : m)),
+    }));
+    avisarCambioStock();
     avisar(
       "ok",
       `Ingresaron ${formatoCantidad(mov.cantidad)} ${textoUnidad(actualizado.unidad, mov.cantidad)} de ${actualizado.nombre}. Stock: ${formatoCantidad(mov.stockResultante)}.`
@@ -107,6 +132,12 @@ function Inventario() {
                 {" "}
                 <strong>{materiales.length}</strong> {materiales.length === 1 ? "material" : "materiales"} · valor del stock{" "}
                 <strong>{formatoSoles(valorStock)}</strong>.
+                {enAlertas.length > 0 && (
+                  <span className="inv-alerta-cab">
+                    {" "}
+                    {enAlertas.length} {enAlertas.length === 1 ? "material está" : "materiales están"} en el stock mínimo.
+                  </span>
+                )}
               </>
             )}
           </p>
@@ -137,7 +168,18 @@ function Inventario() {
             }}
           />
         </label>
-        {texto && !primeraCarga && !resultado.error && (
+        {!primeraCarga && !resultado.error && (
+          <button
+            type="button"
+            className={soloBajo ? "inv-filtro-bajo activo" : "inv-filtro-bajo"}
+            aria-pressed={soloBajo}
+            onClick={() => cambiarSoloBajo(!soloBajo)}
+          >
+            <span className="inv-punto" aria-hidden="true" />
+            Solo bajo stock ({enAlertas.length})
+          </button>
+        )}
+        {(texto || soloBajo) && !primeraCarga && !resultado.error && (
           <span className="inv-encontrados" role="status">
             {filtrados.length} de {materiales.length}
           </span>
@@ -156,11 +198,15 @@ function Inventario() {
           </div>
         ) : !primeraCarga && filtrados.length === 0 ? (
           <div className="tabla-estado">
-            <p className="tabla-estado-titulo">{materiales.length ? "Sin resultados" : "El almacén está vacío"}</p>
+            <p className="tabla-estado-titulo">
+              {!materiales.length ? "El almacén está vacío" : soloBajo && !texto ? "No hay materiales por reponer" : "Sin resultados"}
+            </p>
             <p>
-              {materiales.length
-                ? `Ningún material coincide con «${busqueda.trim()}».`
-                : "Registra el primer material con el botón «Nuevo material»."}
+              {!materiales.length
+                ? "Registra el primer material con el botón «Nuevo material»."
+                : soloBajo && !texto
+                  ? "Todos los materiales están por encima de su stock mínimo."
+                  : `Ningún material coincide con «${busqueda.trim()}»${soloBajo ? " entre los de bajo stock" : ""}.`}
             </p>
           </div>
         ) : (
@@ -188,7 +234,7 @@ function Inventario() {
                     </tr>
                   ))
                 : visibles.map((m) => (
-                    <tr key={m.id}>
+                    <tr key={m.id} className={enAlerta(m) ? (m.stockActual === 0 ? "inv-fila-alerta agotado" : "inv-fila-alerta") : undefined}>
                       <td data-label="Código">
                         <span className="inv-codigo">{m.codigo}</span>
                       </td>
@@ -202,6 +248,7 @@ function Inventario() {
                         <span className="inv-stock">
                           <strong>{formatoCantidad(m.stockActual)}</strong> {textoUnidad(m.unidad, m.stockActual)}
                           <small>mín. {formatoCantidad(m.stockMinimo)}</small>
+                          {enAlerta(m) && <span className="inv-etq-alerta">{m.stockActual === 0 ? "Agotado" : "Reponer"}</span>}
                         </span>
                       </td>
                       <td data-label="Costo unit." className="col-num">

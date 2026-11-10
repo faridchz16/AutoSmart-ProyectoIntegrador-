@@ -1,7 +1,63 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { obtenerUsuario, expiracionSesion, normalizarRol } from "../../services/sesion";
+import { listarMateriales, enAlerta, textoUnidad } from "../../services/inventarioService";
 
 const Flecha = () => <span aria-hidden="true">→</span>;
+
+/* T60.1 – Contador de alertas de stock mínimo en el panel */
+function AlertasStock() {
+  const [estado, setEstado] = useState({ cargando: true, alertas: [], error: false });
+
+  useEffect(() => {
+    let vigente = true;
+    listarMateriales()
+      .then((m) => vigente && setEstado({ cargando: false, alertas: m.filter(enAlerta), error: false }))
+      .catch(() => vigente && setEstado({ cargando: false, alertas: [], error: true }));
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  if (estado.error) return null;
+  const n = estado.alertas.length;
+  const agotados = estado.alertas.filter((m) => m.stockActual === 0).length;
+  const primeros = [...estado.alertas].sort((a, b) => a.stockActual - b.stockActual).slice(0, 3);
+
+  return (
+    <Link
+      to={n ? "/admin/inventario?filtro=bajo-stock" : "/admin/inventario"}
+      className={n ? "adm-card adm-alertas con-alertas" : "adm-card adm-alertas"}
+    >
+      <div className="adm-alertas-cab">
+        <span className="adm-alertas-num">{estado.cargando ? "…" : n}</span>
+        <h3>{n === 1 ? "Material por reponer" : "Materiales por reponer"}</h3>
+      </div>
+      <p>
+        {estado.cargando
+          ? "Revisando el almacén..."
+          : n
+            ? `Llegaron a su stock mínimo${agotados ? ` · ${agotados} ${agotados === 1 ? "agotado" : "agotados"}` : ""}.`
+            : "Todo el almacén está por encima del stock mínimo."}
+      </p>
+      {primeros.length > 0 && (
+        <ul className="adm-alertas-lista">
+          {primeros.map((m) => (
+            <li key={m.id}>
+              <span>{m.nombre}</span>
+              <strong>
+                {m.stockActual} / mín. {m.stockMinimo} {textoUnidad(m.unidad, 2)}
+              </strong>
+            </li>
+          ))}
+        </ul>
+      )}
+      <span className="adm-mas">
+        {n ? "Ver materiales por reponer" : "Abrir inventario"} <Flecha />
+      </span>
+    </Link>
+  );
+}
 
 function Resumen() {
   const usuario = obtenerUsuario();
@@ -12,10 +68,12 @@ function Resumen() {
     <>
       <div className="adm-intro">
         <h2>Hola, {nombre}</h2>
-        <p>Desde aquí administras las reservas, las cuentas, los servicios y el horario de AutoSmart.</p>
+        <p>Desde aquí administras las reservas, las cuentas, los servicios, el inventario y el horario de AutoSmart.</p>
       </div>
 
       <div className="adm-cards">
+        <AlertasStock />
+
         <Link to="/admin/reservas" className="adm-card">
           <span className="adm-card-icono">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
