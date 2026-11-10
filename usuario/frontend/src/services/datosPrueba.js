@@ -259,6 +259,8 @@ const citasPrueba = [
   [7, "08:00", "09:00", "PENDIENTE", "Revisión de frenos", "Camila Flores", "HIJ-135"],
   [0, "14:00", "15:00", "CONFIRMADA", "Revisión de suspensión", "Daniela Vargas", "JKL-482"],
   [0, "16:30", "17:10", "CANCELADA", "Revisión de batería", "Fernando Ríos", "KLM-517"],
+  [0, "12:00", "13:00", "EN_PROCESO", "Cambio de amortiguadores", "Gabriela Núñez", "LMN-208"],
+  [-1, "10:00", "11:00", "FINALIZADA", "Cambio de aceite y filtro", "Ricardo Paredes", "MNP-934"],
 ].map(([dias, horaInicio, horaFin, estado, servicio, cliente, placa], i) => ({
   idCita: i + 1,
   ticket: `AS-2026-${String(i + 101).padStart(5, "0")}`,
@@ -345,6 +347,434 @@ export async function responderCita(id, estado, motivo) {
   cita.estado = estado;
   if (motivo) cita.motivoRechazo = motivo;
   return { ...cita };
+}
+
+/* ---------- Órdenes de trabajo (T41.1) e inspección registrada desde la app (TEC3.2) ---------- */
+
+const conEstado = (mensaje, status) => Object.assign(new Error(mensaje), { status });
+const enHora = (dias, hora) => `${fechaRelativa(dias)}T${hora}:00`;
+
+// Orden 1: cita en proceso de hoy (con checklist, deficiencias y fotos). Orden 2: cita finalizada de ayer.
+const ordenesPrueba = [
+  { idOrden: 1, idCita: 11, fechaInicio: enHora(0, "12:04"), fechaFin: null },
+  { idOrden: 2, idCita: 12, fechaInicio: enHora(-1, "10:02"), fechaFin: enHora(-1, "10:58") },
+];
+let siguienteOrden = 3;
+
+const datosOrden = (orden) => {
+  const cita = citasPrueba.find((c) => c.idCita === orden.idCita);
+  return { ...orden, ticket: cita.ticket, estado: cita.estado, servicio: cita.servicio, placa: cita.placa };
+};
+
+// Iniciar la atención (T41.1): solo citas confirmadas, una sola vez
+export async function iniciarAtencion(id) {
+  await esperar(450);
+  const cita = citasPrueba.find((c) => c.idCita === Number(id));
+  if (!cita) throw new Error("Cita no encontrada");
+  if (ordenesPrueba.some((o) => o.idCita === cita.idCita)) throw conEstado("La atencion de esta cita ya fue iniciada", 409);
+  if (cita.estado !== "CONFIRMADA") throw conEstado(`Solo se puede iniciar una cita CONFIRMADA (estado: ${cita.estado})`, 409);
+  cita.estado = "EN_PROCESO";
+  const d = new Date();
+  const orden = {
+    idOrden: siguienteOrden++,
+    idCita: cita.idCita,
+    fechaInicio: `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:00`,
+    fechaFin: null,
+  };
+  ordenesPrueba.push(orden);
+  return datosOrden(orden);
+}
+
+export async function obtenerOrdenDeCita(idCita) {
+  await esperar(300);
+  if (!citasPrueba.some((c) => c.idCita === Number(idCita))) throw conEstado("Cita no encontrada", 404);
+  const orden = ordenesPrueba.find((o) => o.idCita === Number(idCita));
+  if (!orden) throw conEstado("La cita aun no tiene orden de trabajo", 404);
+  return datosOrden(orden);
+}
+
+const checklistsPrueba = {
+  1: {
+    idChecklist: 1,
+    fechaRegistro: enHora(0, "12:10"),
+    observacionGeneral: "Ingresa con el tanque a 1/4. El cliente deja la llanta de repuesto y la gata en la maletera.",
+    items: [
+      { elemento: "LUCES", estado: "OK", observacion: null },
+      { elemento: "FRENOS", estado: "OBSERVADO", observacion: "Pastillas delanteras al 20 %; chirrido al frenar." },
+      { elemento: "NEUMATICOS", estado: "OK", observacion: null },
+      { elemento: "FLUIDOS", estado: "OK", observacion: null },
+      { elemento: "CARROCERIA", estado: "OBSERVADO", observacion: "Abolladura leve en la puerta trasera derecha." },
+    ],
+  },
+  2: {
+    idChecklist: 2,
+    fechaRegistro: enHora(-1, "10:06"),
+    observacionGeneral: null,
+    items: ["LUCES", "FRENOS", "NEUMATICOS", "FLUIDOS", "CARROCERIA"].map((elemento) => ({ elemento, estado: "OK", observacion: null })),
+  },
+};
+
+// Fotos de ejemplo (en el servidor real son JPG o PNG de la cámara del celular)
+function fotoEjemplo(titulo, [color1, color2]) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${color1}"/><stop offset="1" stop-color="${color2}"/></linearGradient></defs>
+<rect width="800" height="600" fill="url(#g)"/>
+<g fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="14" stroke-linejoin="round">
+<rect x="290" y="170" width="220" height="160" rx="26"/><path d="M350 170l18-30h64l18 30"/></g>
+<circle cx="400" cy="252" r="46" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="14"/>
+<text x="400" y="430" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#fff" text-anchor="middle">${titulo}</text>
+<text x="400" y="474" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.75)" text-anchor="middle">Foto de ejemplo</text>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+const deficienciasPrueba = {
+  1: [
+    {
+      idDeficiencia: 1,
+      categoria: "FRENOS",
+      severidad: "MODERADA",
+      descripcion: "Pastillas de freno delanteras con 20 % de vida útil. Se recomienda cambiarlas en este servicio.",
+      fechaRegistro: enHora(0, "12:20"),
+      fotos: [{ idFoto: 3, src: fotoEjemplo("Pastillas delanteras", ["#7c2d12", "#ea580c"]) }],
+    },
+    {
+      idDeficiencia: 2,
+      categoria: "SUSPENSION",
+      severidad: "CRITICA",
+      descripcion:
+        "Amortiguador delantero izquierdo con fuga de aceite y rebote excesivo; compromete la estabilidad al frenar.",
+      fechaRegistro: enHora(0, "12:16"),
+      fotos: [
+        { idFoto: 1, src: fotoEjemplo("Amortiguador delantero izq.", ["#7f1d1d", "#dc2626"]) },
+        { idFoto: 2, src: fotoEjemplo("Fuga de aceite", ["#1e293b", "#b91c1c"]) },
+      ],
+    },
+    {
+      idDeficiencia: 3,
+      categoria: "CARROCERIA",
+      severidad: "LEVE",
+      descripcion: "Abolladura leve en la puerta trasera derecha. El cliente indica que ya la tenía.",
+      fechaRegistro: enHora(0, "12:22"),
+      fotos: [],
+    },
+  ],
+  2: [
+    {
+      idDeficiencia: 4,
+      categoria: "NEUMATICOS",
+      severidad: "LEVE",
+      descripcion: "Neumático trasero derecho con desgaste irregular; revisar el alineamiento en el próximo servicio.",
+      fechaRegistro: enHora(-1, "10:12"),
+      fotos: [{ idFoto: 4, src: fotoEjemplo("Neumático trasero der.", ["#0f172a", "#475569"]) }],
+    },
+  ],
+};
+
+const copia = (x) => JSON.parse(JSON.stringify(x));
+
+// Diagnóstico técnico (T45.2): la orden 2 (finalizada) ya lo tiene; la 1 (en proceso) aún no
+const diagnosticosPrueba = {
+  2: {
+    diagnostico:
+      "Aceite degradado por kilometraje (9 800 km desde el último cambio). Se reemplazó el aceite y el filtro.\nNeumático trasero derecho con desgaste irregular: se recomienda alineamiento y balanceo en el próximo servicio.",
+    fechaDiagnostico: enHora(-1, "10:40"),
+  },
+};
+
+const ahoraEnLima = () => {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
+  return `${fechaRelativa(0)}T${dosCifras(d.getHours())}:${dosCifras(d.getMinutes())}:${dosCifras(d.getSeconds())}`;
+};
+
+export async function obtenerDiagnostico(idOrden) {
+  await esperar(250);
+  const diagnostico = diagnosticosPrueba[Number(idOrden)];
+  if (!diagnostico) throw conEstado("La orden aun no tiene diagnostico", 404);
+  return { idOrden: Number(idOrden), ...diagnostico };
+}
+
+export async function guardarDiagnostico(idOrden, diagnostico) {
+  await esperar(500);
+  ordenEnProceso(idOrden);
+  if (!diagnostico.trim()) throw conEstado("El diagnostico es obligatorio", 400);
+  diagnosticosPrueba[Number(idOrden)] = { diagnostico: diagnostico.trim(), fechaDiagnostico: ahoraEnLima() };
+  return { idOrden: Number(idOrden), ...diagnosticosPrueba[Number(idOrden)] };
+}
+
+// Como el backend: lo que cambia la orden solo se acepta con la cita EN_PROCESO
+function ordenEnProceso(idOrden) {
+  const orden = ordenesPrueba.find((o) => o.idOrden === Number(idOrden));
+  if (!orden) throw conEstado("Orden de trabajo no encontrada", 404);
+  const { estado } = datosOrden(orden);
+  if (estado !== "EN_PROCESO") throw conEstado(`La orden no esta EN_PROCESO (estado: ${estado})`, 409);
+  return orden;
+}
+
+/* ---------- Presupuesto (T46.2) ---------- */
+
+const presupuestosPrueba = [
+  {
+    idPresupuesto: 1,
+    idOrden: 2,
+    estado: "APROBADO",
+    descripcion: "Cambio de aceite y filtro según el kilometraje.",
+    fechaCreacion: enHora(-1, "10:20"),
+    fechaDecision: enHora(-1, "10:24"),
+    items: [
+      { tipo: "MANO_OBRA", descripcion: "Cambio de aceite y filtro", cantidad: 1, precioUnitario: 40, subtotal: 40 },
+      { tipo: "REPUESTO", descripcion: "LUB-001 · Aceite de motor 10W-30", cantidad: 1, precioUnitario: 96, subtotal: 96 },
+      { tipo: "REPUESTO", descripcion: "FIL-001 · Filtro de aceite", cantidad: 1, precioUnitario: 18.5, subtotal: 18.5 },
+    ],
+    total: 154.5,
+  },
+];
+let siguientePresupuesto = 2;
+
+export async function obtenerPresupuesto(idOrden) {
+  await esperar(250);
+  const p = [...presupuestosPrueba].reverse().find((x) => x.idOrden === Number(idOrden));
+  if (!p) throw conEstado("La orden aun no tiene presupuesto", 404);
+  return copia(p);
+}
+
+export async function enviarPresupuesto(idOrden, { descripcion, items }) {
+  await esperar(500);
+  const orden = ordenEnProceso(idOrden);
+  if (!diagnosticosPrueba[orden.idOrden]) throw conEstado("Registra el diagnostico antes de generar el presupuesto", 409);
+  const conSubtotal = items.map((i) => ({ ...i, subtotal: Math.round(i.precioUnitario * i.cantidad * 100) / 100 }));
+  const p = {
+    idPresupuesto: siguientePresupuesto++,
+    idOrden: orden.idOrden,
+    estado: "PENDIENTE",
+    descripcion,
+    fechaCreacion: ahoraEnLima(),
+    fechaDecision: null,
+    items: conSubtotal,
+    total: Math.round(conSubtotal.reduce((s, i) => s + i.subtotal, 0) * 100) / 100,
+  };
+  presupuestosPrueba.push(p);
+  citasPrueba.find((c) => c.idCita === orden.idCita).estado = "ESPERA_APROBACION";
+  // En modo de prueba, el "cliente" aprueba el presupuesto a los 20 segundos
+  setTimeout(() => {
+    p.estado = "APROBADO";
+    p.fechaDecision = ahoraEnLima();
+    citasPrueba.find((c) => c.idCita === orden.idCita).estado = "EN_PROCESO";
+  }, 20000);
+  return copia(p);
+}
+
+// Materiales del almacén que ve el mecánico (GET /materials)
+const materialesTaller = [
+  [1, "FIL-001", "Filtro de aceite", "unidad", 18.5, 24, 10],
+  [2, "LUB-001", "Aceite de motor 10W-30", "galón", 96, 15, 6],
+  [3, "FRE-001", "Pastillas de freno delanteras", "juego", 120, 5, 4],
+  [4, "FRE-003", "Disco de freno delantero", "unidad", 165, 4, 2],
+  [5, "REP-003", "Amortiguador delantero", "unidad", 210, 4, 2],
+  [6, "REP-004", "Rótula de suspensión", "unidad", 75, 1, 2],
+  [7, "INS-001", "Limpiador de frenos en aerosol", "unidad", 19, 14, 6],
+  [8, "FIL-004", "Filtro de cabina", "unidad", 35, 0, 4],
+].map(([idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo]) => ({
+  idMaterial,
+  codigo,
+  nombre,
+  unidad,
+  costoUnitario,
+  stockActual,
+  stockMinimo,
+}));
+
+export async function listarMaterialesTaller() {
+  await esperar(250);
+  return materialesTaller
+    .map((m) => ({ ...m, bajoStock: m.stockActual <= m.stockMinimo }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+/* ---------- Solicitudes de repuestos (T50.2) ---------- */
+
+const solicitudesPrueba = [
+  {
+    idSolicitud: 1,
+    idOrden: 2,
+    idMaterial: 2,
+    cantidad: 1,
+    motivo: "Cambio de aceite",
+    estado: "APROBADA",
+    solicitadoPor: "carlos@taller.com",
+    fechaSolicitud: enHora(-1, "10:26"),
+    atendidoPor: "admin@autosmart.com",
+    fechaAtencion: enHora(-1, "10:30"),
+    observacion: null,
+  },
+];
+let siguienteSolicitud = 2;
+
+const datosSolicitud = (s) => {
+  const m = materialesTaller.find((x) => x.idMaterial === s.idMaterial);
+  return { ...s, codigoMaterial: m.codigo, nombreMaterial: m.nombre, stockDisponible: m.stockActual };
+};
+
+export async function listarSolicitudes(idOrden) {
+  await esperar(250);
+  return solicitudesPrueba.filter((s) => s.idOrden === Number(idOrden)).map(datosSolicitud);
+}
+
+export async function solicitarRepuesto(idOrden, { idMaterial, cantidad, motivo }) {
+  await esperar(450);
+  const orden = ordenEnProceso(idOrden);
+  const m = materialesTaller.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw conEstado("Material no encontrado", 404);
+  if (m.stockActual < cantidad) {
+    throw conEstado(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, solicitado ${cantidad}`, 409);
+  }
+  const s = {
+    idSolicitud: siguienteSolicitud++,
+    idOrden: orden.idOrden,
+    idMaterial: m.idMaterial,
+    cantidad,
+    motivo,
+    estado: "PENDIENTE",
+    solicitadoPor: "carlos@taller.com",
+    fechaSolicitud: ahoraEnLima(),
+    atendidoPor: null,
+    fechaAtencion: null,
+    observacion: null,
+  };
+  solicitudesPrueba.push(s);
+  // En modo de prueba, el "administrador" la aprueba a los 20 segundos
+  setTimeout(() => {
+    if (s.estado !== "PENDIENTE" || m.stockActual < s.cantidad) return;
+    s.estado = "APROBADA";
+    s.atendidoPor = "admin@autosmart.com";
+    s.fechaAtencion = ahoraEnLima();
+    registrarSalidaPrueba(orden, m, s.cantidad, `Solicitud de repuesto #${s.idSolicitud}`);
+  }, 20000);
+  return datosSolicitud(s);
+}
+
+// Salida de stock hacia la orden (en T51.2 se listan como repuestos usados)
+const consumosPrueba = [
+  { idMovimiento: 1, idOrden: 2, idMaterial: 2, cantidad: 1, costoUnitario: 96, referencia: "Solicitud de repuesto #1", registradoPor: "admin@autosmart.com", fecha: enHora(-1, "10:30") },
+  { idMovimiento: 2, idOrden: 2, idMaterial: 1, cantidad: 1, costoUnitario: 18.5, referencia: null, registradoPor: "carlos@taller.com", fecha: enHora(-1, "10:32") },
+];
+let siguienteMovimiento = 3;
+
+function registrarSalidaPrueba(orden, m, cantidad, referencia) {
+  m.stockActual -= cantidad;
+  consumosPrueba.push({
+    idMovimiento: siguienteMovimiento++,
+    idOrden: orden.idOrden,
+    idMaterial: m.idMaterial,
+    cantidad,
+    costoUnitario: m.costoUnitario,
+    referencia,
+    registradoPor: "carlos@taller.com",
+    fecha: ahoraEnLima(),
+  });
+}
+
+export async function listarConsumos(idOrden) {
+  await esperar(250);
+  const consumos = consumosPrueba
+    .filter((c) => c.idOrden === Number(idOrden))
+    .map((c) => ({ ...c, tipo: "SALIDA", codigoMaterial: materialesTaller.find((m) => m.idMaterial === c.idMaterial).codigo }));
+  const costoRepuestos = Math.round(consumos.reduce((s, c) => s + c.costoUnitario * c.cantidad, 0) * 100) / 100;
+  return { idOrden: Number(idOrden), costoRepuestos, consumos };
+}
+
+export async function registrarConsumo(idOrden, { idMaterial, cantidad, referencia }) {
+  await esperar(450);
+  const orden = ordenEnProceso(idOrden);
+  const m = materialesTaller.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw conEstado("Material no encontrado", 404);
+  if (m.stockActual < cantidad) {
+    throw conEstado(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, requerido ${cantidad}`, 409);
+  }
+  registrarSalidaPrueba(orden, m, cantidad, referencia);
+  return listarConsumos(idOrden);
+}
+
+/* ---------- Completar el mantenimiento (T52.2) ---------- */
+
+export async function completarMantenimiento(idOrden) {
+  await esperar(500);
+  const orden = ordenEnProceso(idOrden);
+  if (!diagnosticosPrueba[orden.idOrden]) throw conEstado("Registra el diagnostico antes de finalizar la orden", 409);
+  const tareas = tareasPrueba[orden.idOrden] ?? [];
+  if (!tareas.length) throw conEstado("Registra al menos una tarea antes de finalizar la orden", 409);
+  const pendientes = tareas.filter((t) => !t.completada).length;
+  if (pendientes) throw conEstado(`Faltan ${pendientes} de ${tareas.length} tareas por completar`, 409);
+  if (solicitudesPrueba.some((s) => s.idOrden === orden.idOrden && s.estado === "PENDIENTE")) {
+    throw conEstado("Hay solicitudes de repuestos pendientes de atencion", 409);
+  }
+  orden.fechaFin = ahoraEnLima();
+  const cita = citasPrueba.find((c) => c.idCita === orden.idCita);
+  cita.estado = "FINALIZADA";
+  const { costoRepuestos } = await listarConsumos(orden.idOrden);
+  return { ...datosOrden(orden), costoRepuestos };
+}
+
+/* ---------- Tareas de la orden (T49.2) ---------- */
+
+const tareasPrueba = {
+  1: [
+    { idTarea: 1, descripcion: "Levantar el vehículo y revisar la suspensión delantera", completada: true, fechaCreacion: enHora(0, "12:25"), fechaCompletada: enHora(0, "12:38") },
+    { idTarea: 2, descripcion: "Cambiar amortiguadores delanteros", completada: false, fechaCreacion: enHora(0, "12:26"), fechaCompletada: null },
+    { idTarea: 3, descripcion: "Prueba de manejo", completada: false, fechaCreacion: enHora(0, "12:26"), fechaCompletada: null },
+  ],
+  2: [
+    { idTarea: 4, descripcion: "Drenar aceite usado", completada: true, fechaCreacion: enHora(-1, "10:15"), fechaCompletada: enHora(-1, "10:25") },
+    { idTarea: 5, descripcion: "Cambiar filtro y aceite 10W-30", completada: true, fechaCreacion: enHora(-1, "10:15"), fechaCompletada: enHora(-1, "10:45") },
+  ],
+};
+let siguienteTarea = 6;
+
+function resumenTareas(idOrden) {
+  const tareas = tareasPrueba[Number(idOrden)] ?? [];
+  const completadas = tareas.filter((t) => t.completada).length;
+  return {
+    idOrden: Number(idOrden),
+    totalTareas: tareas.length,
+    completadas,
+    porcentajeAvance: tareas.length ? Math.round((completadas * 100) / tareas.length) : 0,
+    tareas: copia(tareas),
+  };
+}
+
+export async function listarTareas(idOrden) {
+  await esperar(250);
+  return resumenTareas(idOrden);
+}
+
+export async function agregarTarea(idOrden, descripcion) {
+  await esperar(350);
+  ordenEnProceso(idOrden);
+  const lista = (tareasPrueba[Number(idOrden)] ??= []);
+  lista.push({ idTarea: siguienteTarea++, descripcion, completada: false, fechaCreacion: ahoraEnLima(), fechaCompletada: null });
+  return resumenTareas(idOrden);
+}
+
+export async function marcarTarea(idOrden, idTarea, completada) {
+  await esperar(300);
+  ordenEnProceso(idOrden);
+  const tarea = (tareasPrueba[Number(idOrden)] ?? []).find((t) => t.idTarea === Number(idTarea));
+  if (!tarea) throw conEstado("Tarea no encontrada en esta orden", 404);
+  tarea.completada = completada;
+  tarea.fechaCompletada = completada ? ahoraEnLima() : null;
+  return resumenTareas(idOrden);
+}
+
+export async function obtenerChecklist(idOrden) {
+  await esperar(250);
+  const checklist = checklistsPrueba[Number(idOrden)];
+  if (!checklist) throw conEstado("La orden aun no tiene checklist de recepcion", 404);
+  return { ...copia(checklist), idOrden: Number(idOrden) };
+}
+
+export async function listarDeficiencias(idOrden) {
+  await esperar(250);
+  return copia(deficienciasPrueba[Number(idOrden)] ?? []);
 }
 
 /* ---------- Reservas del taller para el administrador (T38.2) ---------- */
