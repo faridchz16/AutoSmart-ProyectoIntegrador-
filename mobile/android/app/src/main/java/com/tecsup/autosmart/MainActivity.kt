@@ -46,6 +46,8 @@ import com.tecsup.autosmart.viewmodel.DeficienciasViewModel
 import com.tecsup.autosmart.ui.mecanico.ChecklistScreen
 import com.tecsup.autosmart.viewmodel.ChecklistViewModel
 import com.tecsup.autosmart.ui.mecanico.OrdenesMecanicoScreen
+import com.tecsup.autosmart.ui.cliente.DetalleMantenimientoScreen
+import com.tecsup.autosmart.viewmodel.DetalleMantenimientoViewModel
 import com.tecsup.autosmart.viewmodel.OrdenesMecanicoViewModel
 import com.tecsup.autosmart.ui.mecanico.AgendaMecanicoScreen
 import com.tecsup.autosmart.ui.mecanico.CitaDetalleMecanicoScreen
@@ -169,8 +171,14 @@ class MainActivity : ComponentActivity() {
                     if (currentScreen != "checklist") checklistVm.limpiar()
                 }
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
+                var mantenimientoOrdenId by rememberSaveable { mutableStateOf(0L) }
+                var mantenimientoDesdeHistorial by rememberSaveable { mutableStateOf(false) }
+                val mantenimientoVm: DetalleMantenimientoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
-                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist", "deficiencias", "fotos_deficiencia")) {
+                    if (currentScreen != "detalle_mantenimiento") mantenimientoVm.limpiar()
+                }
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen !in setOf("ordenes_mecanico", "agenda_mecanico", "detalle_cita_mecanico", "checklist", "deficiencias", "fotos_deficiencia", "detalle_mantenimiento")) {
                         ordenesMecanicoVm.limpiar()
                     }
                 }
@@ -383,6 +391,11 @@ class MainActivity : ComponentActivity() {
                                     onBack = {
                                         historialVehiculoVm.limpiar()
                                         currentScreen = "vehiculos"
+                                    },
+                                    onVerDetalle = { idOrden ->
+                                        mantenimientoOrdenId = idOrden
+                                        mantenimientoDesdeHistorial = true
+                                        currentScreen = "detalle_mantenimiento"
                                     }
                                 )
                             }
@@ -477,6 +490,16 @@ class MainActivity : ComponentActivity() {
                                 ChecklistScreen(checklistOrdenId, checklistEditable, checklistVm,
                                     onBack = { currentScreen = "ordenes_mecanico" })
                             }
+                            "detalle_mantenimiento" -> {
+                                DetalleMantenimientoScreen(
+                                    idOrden = mantenimientoOrdenId,
+                                    viewModel = mantenimientoVm,
+                                    descripcionVolver = if (mantenimientoDesdeHistorial) "Volver al historial" else "Volver a la orden",
+                                    onBack = {
+                                        currentScreen = if (mantenimientoDesdeHistorial) "historial_vehiculo" else "ordenes_mecanico"
+                                    }
+                                )
+                            }
                             "ordenes_mecanico" -> {
                                 OrdenesMecanicoScreen(
                                     viewModel = ordenesMecanicoVm,
@@ -491,6 +514,11 @@ class MainActivity : ComponentActivity() {
                                         deficienciasOrdenId = id
                                         deficienciasEditable = editable
                                         currentScreen = "deficiencias"
+                                    },
+                                    onDetalleMantenimiento = { idOrden ->
+                                        mantenimientoOrdenId = idOrden
+                                        mantenimientoDesdeHistorial = false
+                                        currentScreen = "detalle_mantenimiento"
                                     }
                                 )
                             }

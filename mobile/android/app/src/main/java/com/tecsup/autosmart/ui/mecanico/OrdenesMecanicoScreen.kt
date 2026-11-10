@@ -20,7 +20,8 @@ fun OrdenesMecanicoScreen(
     onBack: () -> Unit,
     onAgenda: () -> Unit,
     onChecklist: (Long, Boolean) -> Unit,
-    onDeficiencias: (Long, Boolean) -> Unit
+    onDeficiencias: (Long, Boolean) -> Unit,
+    onDetalleMantenimiento: ((Long) -> Unit)? = null
 ) {
     val estado by viewModel.estado.collectAsState()
     val seleccionada = estado.ordenes.firstOrNull { it.idOrden == estado.seleccionada }
@@ -54,6 +55,12 @@ fun OrdenesMecanicoScreen(
                             modifier = Modifier.padding(horizontal = 16.dp)) { Text("Checklist de recepción") }
                         TextButton(onClick = { onDeficiencias(seleccionada.idOrden, seleccionada.estado == "EN_PROCESO") },
                             modifier = Modifier.padding(horizontal = 16.dp)) { Text("Deficiencias") }
+                        onDetalleMantenimiento?.let { abrir ->
+                            TextButton(onClick = { abrir(seleccionada.idOrden) },
+                                modifier = Modifier.padding(horizontal = 16.dp)) {
+                                Text("Ver mantenimiento")
+                            }
+                        }
                     }
                 }
                 estado.ordenes.isEmpty() -> item { Text("No tienes órdenes de trabajo activas.") }

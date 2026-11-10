@@ -3,6 +3,7 @@ package com.tecsup.autosmart
 import com.google.gson.Gson
 import com.tecsup.autosmart.model.OrdenTrabajoDto
 import com.tecsup.autosmart.data.remote.OrdenTrabajoApi
+import com.tecsup.autosmart.model.DetalleMantenimientoDto
 import com.tecsup.autosmart.data.repository.OrdenTrabajoRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -16,6 +17,8 @@ class OrdenTrabajoTest {
     private val orden = OrdenTrabajoDto(81, 12, "AS-2026-00012", "EN_PROCESO",
         "2026-11-02T09:00:00", "Revisión", "ABC-123")
     private fun api(call: suspend () -> Response<List<OrdenTrabajoDto>>) = object : OrdenTrabajoApi {
+        override suspend fun detalle(idOrden: Long): Response<DetalleMantenimientoDto> =
+            error("La prueba solo lista órdenes")
         override suspend fun listar() = call()
     }
 

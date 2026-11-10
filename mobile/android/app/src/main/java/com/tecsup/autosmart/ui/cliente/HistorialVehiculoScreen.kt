@@ -34,7 +34,8 @@ import com.tecsup.autosmart.viewmodel.HistorialVehiculoViewModel
 fun HistorialVehiculoScreen(
     idVehiculoInicial: Long,
     viewModel: HistorialVehiculoViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onVerDetalle: (Long) -> Unit
 ) {
     val estado by viewModel.estado.collectAsState()
     LaunchedEffect(idVehiculoInicial) {
@@ -89,6 +90,9 @@ fun HistorialVehiculoScreen(
                                 mantenimiento.fechaFin?.let { Text("Finalizado: ${it.replace('T', ' ')}") }
                                 mantenimiento.mecanico?.let { Text("Mecánico: $it") }
                                 mantenimiento.costoRepuestos?.let { Text("Costo de repuestos: S/ ${it.toPlainString()}") }
+                                TextButton(onClick = { onVerDetalle(mantenimiento.idOrden) }) {
+                                    Text("Ver detalle")
+                                }
                             }
                         }
                     }
