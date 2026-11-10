@@ -796,3 +796,72 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
   .ot-almacen-lista button { grid-template-columns: 70px minmax(0, 1fr) auto; }
   .ot-almacen-precio { display: none; }
 }
+
+/* ---------- Repuestos: solicitudes al almacén (T50.2) ---------- */
+.ot-rep-grid { display: grid; gap: 16px; }
+.ot-rep-col { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.ot-sub-titulo { margin: 0; color: #7a8aa6; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.ot-sol { display: grid; gap: 10px; }
+.ot-sol-inicio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 14px;
+  border: 1px dashed #c9d6ee;
+  border-radius: 12px;
+  background: #f8faff;
+  color: #3b4a66;
+  font-size: 0.88rem;
+}
+.ot-sol-inicio p { flex: 1 1 260px; margin: 0; line-height: 1.5; }
+
+.ot-sol-form { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid #d6e0f2; border-radius: 12px; background: #f8faff; }
+.ot-sol-elegido { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ot-sol-elegido strong { color: #0b1b3a; }
+.ot-sol-campos { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 10px; }
+.ot-sol-campos input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #d6e0f2;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.ot-sol-campos input:focus { outline: none; border-color: #1150e8; box-shadow: 0 0 0 3px #d6e4ff; }
+.ot-sol-form .campo-error, .ot-sol .campo-error { margin: 0; }
+.ot-ver-mas {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ot-ver-mas:hover { text-decoration: underline; }
+.ot-ver-mas:focus-visible { outline: 3px solid #93b4ff; border-radius: 6px; }
+.ot-sol-ok { margin: 0; padding: 8px 12px; border-radius: 10px; background: #ecfdf5; color: #047857; font-size: 0.86rem; font-weight: 700; }
+
+.ot-sol-lista { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ot-sol-item { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #e3e9f5; border-left: 4px solid #a855f7; border-radius: 12px; background: #fff; }
+.ot-sol-item.sol-APROBADA { border-left-color: #10b981; }
+.ot-sol-item.sol-RECHAZADA { border-left-color: #f43f5e; }
+.ot-sol-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.ot-sol-cab strong { color: #0b1b3a; font-size: 0.92rem; }
+.ot-sol-estado { margin-left: auto; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
+.ot-sol-estado.sol-PENDIENTE { background: #f3e8ff; color: #7e22ce; }
+.ot-sol-estado.sol-APROBADA { background: #d1fae5; color: #065f46; }
+.ot-sol-estado.sol-RECHAZADA { background: #ffe4e6; color: #9f1239; }
+.ot-sol-motivo { margin: 0; color: #3b4a66; font-size: 0.86rem; }
+.ot-sol-meta { margin: 0; color: #9aa7bf; font-size: 0.78rem; }
+.ot-sol-obs { margin: 0; color: #5b6b88; font-size: 0.82rem; font-style: italic; }
+
+@media (max-width: 480px) {
+  .ot-sol-campos { grid-template-columns: 1fr; }
+}

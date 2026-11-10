@@ -591,6 +591,89 @@ export async function listarMaterialesTaller() {
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
 
+/* ---------- Solicitudes de repuestos (T50.2) ---------- */
+
+const solicitudesPrueba = [
+  {
+    idSolicitud: 1,
+    idOrden: 2,
+    idMaterial: 2,
+    cantidad: 1,
+    motivo: "Cambio de aceite",
+    estado: "APROBADA",
+    solicitadoPor: "carlos@taller.com",
+    fechaSolicitud: enHora(-1, "10:26"),
+    atendidoPor: "admin@autosmart.com",
+    fechaAtencion: enHora(-1, "10:30"),
+    observacion: null,
+  },
+];
+let siguienteSolicitud = 2;
+
+const datosSolicitud = (s) => {
+  const m = materialesTaller.find((x) => x.idMaterial === s.idMaterial);
+  return { ...s, codigoMaterial: m.codigo, nombreMaterial: m.nombre, stockDisponible: m.stockActual };
+};
+
+export async function listarSolicitudes(idOrden) {
+  await esperar(250);
+  return solicitudesPrueba.filter((s) => s.idOrden === Number(idOrden)).map(datosSolicitud);
+}
+
+export async function solicitarRepuesto(idOrden, { idMaterial, cantidad, motivo }) {
+  await esperar(450);
+  const orden = ordenEnProceso(idOrden);
+  const m = materialesTaller.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw conEstado("Material no encontrado", 404);
+  if (m.stockActual < cantidad) {
+    throw conEstado(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, solicitado ${cantidad}`, 409);
+  }
+  const s = {
+    idSolicitud: siguienteSolicitud++,
+    idOrden: orden.idOrden,
+    idMaterial: m.idMaterial,
+    cantidad,
+    motivo,
+    estado: "PENDIENTE",
+    solicitadoPor: "carlos@taller.com",
+    fechaSolicitud: ahoraEnLima(),
+    atendidoPor: null,
+    fechaAtencion: null,
+    observacion: null,
+  };
+  solicitudesPrueba.push(s);
+  // En modo de prueba, el "administrador" la aprueba a los 20 segundos
+  setTimeout(() => {
+    if (s.estado !== "PENDIENTE" || m.stockActual < s.cantidad) return;
+    s.estado = "APROBADA";
+    s.atendidoPor = "admin@autosmart.com";
+    s.fechaAtencion = ahoraEnLima();
+    registrarSalidaPrueba(orden, m, s.cantidad, `Solicitud de repuesto #${s.idSolicitud}`);
+  }, 20000);
+  return datosSolicitud(s);
+}
+
+// Salida de stock hacia la orden (en T51.2 se listan como repuestos usados)
+const consumosPrueba = [
+  { idMovimiento: 1, idOrden: 2, idMaterial: 2, cantidad: 1, costoUnitario: 96, referencia: "Solicitud de repuesto #1", registradoPor: "admin@autosmart.com", fecha: enHora(-1, "10:30") },
+  { idMovimiento: 2, idOrden: 2, idMaterial: 1, cantidad: 1, costoUnitario: 18.5, referencia: null, registradoPor: "carlos@taller.com", fecha: enHora(-1, "10:32") },
+];
+let siguienteMovimiento = 3;
+
+function registrarSalidaPrueba(orden, m, cantidad, referencia) {
+  m.stockActual -= cantidad;
+  consumosPrueba.push({
+    idMovimiento: siguienteMovimiento++,
+    idOrden: orden.idOrden,
+    idMaterial: m.idMaterial,
+    cantidad,
+    costoUnitario: m.costoUnitario,
+    referencia,
+    registradoPor: "carlos@taller.com",
+    fecha: ahoraEnLima(),
+  });
+}
+
 /* ---------- Tareas de la orden (T49.2) ---------- */
 
 const tareasPrueba = {

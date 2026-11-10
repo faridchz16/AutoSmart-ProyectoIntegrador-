@@ -9,6 +9,8 @@ import {
   listarTareas,
   TAREAS_VACIAS,
   obtenerPresupuesto,
+  listarSolicitudes,
+  resumenSolicitudes,
   formatoSoles,
   ESTADOS_PRESUPUESTO,
   cargarFoto,
@@ -25,6 +27,7 @@ import { formatoHoras } from "../../services/horariosService";
 import DiagnosticoOrden from "./DiagnosticoOrden";
 import TareasOrden from "./TareasOrden";
 import PresupuestoOrden from "./PresupuestoOrden";
+import SolicitudesRepuestos from "./SolicitudesRepuestos";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -35,6 +38,7 @@ import "./OrdenTrabajo.css";
    T45.2: área de diagnóstico técnico (se registra y edita aquí mientras la orden está EN_PROCESO).
    T49.2: tareas con casilla y porcentaje de avance.
    T46.2: presupuesto con mano de obra, repuestos y total (se envía al cliente para su aprobación).
+   T50.2: solicitud de repuestos al almacén.
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -318,15 +322,16 @@ function OrdenTrabajo() {
     let vigente = true;
     Promise.all([obtenerCita(idCita), obtenerOrdenDeCita(idCita)])
       .then(async ([cita, orden]) => {
-        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS, presupuesto: null };
-        const [checklist, deficiencias, diagnostico, tareas, presupuesto] = await Promise.all([
+        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS, presupuesto: null, solicitudes: [] };
+        const [checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes] = await Promise.all([
           obtenerChecklist(orden.idOrden),
           listarDeficiencias(orden.idOrden),
           obtenerDiagnostico(orden.idOrden),
           listarTareas(orden.idOrden),
           obtenerPresupuesto(orden.idOrden),
+          listarSolicitudes(orden.idOrden),
         ]);
-        return { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto };
+        return { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes };
       })
       .then((d) => {
         if (vigente) setResultado({ clave, datosDe: idCita, ...d, error: "", fallo: "", actualizado: horaLima() });
@@ -412,7 +417,7 @@ function OrdenTrabajo() {
     );
   }
 
-  const { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, fallo, actualizado } = datos;
+  const { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes, fallo, actualizado } = datos;
   const recargar = () => setRecarga((n) => n + 1);
   const cambiar = (campo) => (valor) => setResultado((r) => ({ ...r, [campo]: valor }));
   const estado = orden?.estado ?? cita.estado;
@@ -668,6 +673,28 @@ function OrdenTrabajo() {
           }}
           alConflicto={recargar}
         />
+      </section>
+
+      {/* ---------- Repuestos (T50.2) ---------- */}
+      <section className="ot-panel ot-seccion" id="ot-repuestos" aria-labelledby="ot-rep-titulo">
+        <header className="ot-panel-cab">
+          <h3 id="ot-rep-titulo">Repuestos</h3>
+          {solicitudes.length > 0 && <span className="ot-panel-extra">{resumenSolicitudes(solicitudes)}</span>}
+        </header>
+        <div className="ot-rep-grid">
+          <div className="ot-rep-col">
+            <h4 className="ot-sub-titulo">Solicitudes al almacén</h4>
+            <SolicitudesRepuestos
+              idOrden={orden.idOrden}
+              solicitudes={solicitudes}
+              editable={estado === "EN_PROCESO"}
+              estado={estado}
+              momento={momento}
+              alCambiar={cambiar("solicitudes")}
+              alConflicto={recargar}
+            />
+          </div>
+        </div>
       </section>
 
       {visor && (

@@ -31,6 +31,13 @@ import * as prueba from "./datosPrueba";
          con la decisión (aprobado o rechazado) vuelve a EN_PROCESO.
      GET /materials?buscar= -> materiales del almacén (MECANICO y ADMIN), para elegir repuestos
        [{ idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo, bajoStock }]
+     Solicitudes de repuestos al almacén (T50.1):
+       GET  /work-orders/{idOrden}/material-requests
+       POST /work-orders/{idOrden}/material-requests { idMaterial, cantidad (≥ 1), motivo (opcional, máx. 200) }
+         409 si no hay stock suficiente ("Stock insuficiente de X: disponible 2, solicitado 3")
+       -> { idSolicitud, idMaterial, codigoMaterial, nombreMaterial, cantidad, stockDisponible, motivo,
+            estado PENDIENTE|APROBADA|RECHAZADA, solicitadoPor, fechaSolicitud, atendidoPor, fechaAtencion, observacion }
+       El administrador la atiende en su bandeja (T59); al aprobarla se descuenta el stock y se suma a la orden.
    Todo lo que cambia la orden responde 409 si no está EN_PROCESO
    ("La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)").
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -345,6 +352,64 @@ export async function listarMaterialesTaller() {
     stockMinimo: Number(m.stockMinimo ?? 0),
     bajoStock: m.bajoStock ?? Number(m.stockActual ?? 0) <= Number(m.stockMinimo ?? 0),
   }));
+}
+
+/* ---------- Solicitudes de repuestos (T50.2) ---------- */
+
+export const MAX_MOTIVO = 200;
+export const ESTADOS_SOLICITUD = { PENDIENTE: "Pendiente", APROBADA: "Aprobada", RECHAZADA: "Rechazada" };
+
+function normalizarSolicitud(s = {}) {
+  const estado = codigo(s.estado);
+  return {
+    id: s.idSolicitud ?? s.id,
+    idMaterial: s.idMaterial,
+    codigo: String(s.codigoMaterial ?? "").toUpperCase(),
+    nombre: s.nombreMaterial ?? "",
+    cantidad: Number(s.cantidad ?? 0),
+    stockDisponible: s.stockDisponible ?? null,
+    motivo: s.motivo ?? "",
+    estado: ESTADOS_SOLICITUD[estado] ? estado : "PENDIENTE",
+    fechaSolicitud: s.fechaSolicitud ?? "",
+    atendidoPor: s.atendidoPor ?? "",
+    fechaAtencion: s.fechaAtencion ?? "",
+    observacion: s.observacion ?? "",
+  };
+}
+
+export async function listarSolicitudes(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.listarSolicitudes(idOrden)
+      : await apiFetch(`/work-orders/${idOrden}/material-requests`);
+    return (Array.isArray(datos) ? datos : []).map(normalizarSolicitud);
+  } catch (e) {
+    if (esNoEncontrado(e)) return [];
+    throw e;
+  }
+}
+
+export async function solicitarRepuesto(idOrden, { idMaterial, cantidad, motivo }) {
+  const cuerpo = { idMaterial, cantidad: Number(cantidad), motivo: motivo.trim() || null };
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.solicitarRepuesto(idOrden, cuerpo)
+      : await apiFetch(`/work-orders/${idOrden}/material-requests`, { metodo: "POST", cuerpo });
+    return normalizarSolicitud(datos);
+  } catch (e) {
+    throw mensajeConflicto(e);
+  }
+}
+
+// Texto corto para el resumen: "1 pendiente · 2 aprobadas"
+export function resumenSolicitudes(solicitudes) {
+  const n = (e) => solicitudes.filter((s) => s.estado === e).length;
+  const partes = [
+    n("PENDIENTE") && `${n("PENDIENTE")} ${n("PENDIENTE") === 1 ? "pendiente" : "pendientes"}`,
+    n("APROBADA") && `${n("APROBADA")} ${n("APROBADA") === 1 ? "aprobada" : "aprobadas"}`,
+    n("RECHAZADA") && `${n("RECHAZADA")} ${n("RECHAZADA") === 1 ? "rechazada" : "rechazadas"}`,
+  ].filter(Boolean);
+  return partes.join(" · ");
 }
 
 const SOLES = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });

@@ -112,7 +112,7 @@ function VistaPresupuesto({ presupuesto, momento, cerrada }) {
 }
 
 /* ---------- Buscador de repuestos del almacén ---------- */
-function BuscadorAlmacen({ alElegir, alCerrar }) {
+export function BuscadorAlmacen({ alElegir, alCerrar }) {
   const [estado, setEstado] = useState({ cargando: true, materiales: [], error: "" });
   const [texto, setTexto] = useState("");
 
