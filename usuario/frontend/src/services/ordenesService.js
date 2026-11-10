@@ -21,6 +21,16 @@ import * as prueba from "./datosPrueba";
        PUT  /work-orders/{idOrden}/tasks/{idTarea}  { completada: true|false }
        -> { idOrden, totalTareas, completadas, porcentajeAvance, tareas: [{ idTarea, descripcion, completada,
             fechaCreacion, fechaCompletada }] }
+     Presupuesto (T46.1): requiere el diagnóstico registrado (409 si falta)
+       GET  /work-orders/{idOrden}/quote -> el último presupuesto de la orden; 404 si aún no hay
+       POST /work-orders/{idOrden}/quote { descripcion (máx. 500), items: [{ tipo MANO_OBRA|REPUESTO,
+            descripcion (máx. 200), cantidad (entero ≥ 1), precioUnitario (≥ 0) }] (1 a 30) }
+         -> { idPresupuesto, idOrden, idCita, estado PENDIENTE|APROBADO|RECHAZADO, descripcion, fechaCreacion,
+              fechaDecision, items: [{ tipo, descripcion, cantidad, precioUnitario, subtotal }], total, deficiencias }
+         Al enviarlo, la cita pasa a ESPERA_APROBACION hasta que el cliente decide en la app;
+         con la decisión (aprobado o rechazado) vuelve a EN_PROCESO.
+     GET /materials?buscar= -> materiales del almacén (MECANICO y ADMIN), para elegir repuestos
+       [{ idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo, bajoStock }]
    Todo lo que cambia la orden responde 409 si no está EN_PROCESO
    ("La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)").
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -255,6 +265,90 @@ export async function marcarTarea(idOrden, idTarea, completada) {
     : await apiFetch(`/work-orders/${idOrden}/tasks/${idTarea}`, { metodo: "PUT", cuerpo: { completada } });
   return normalizarTareas(datos);
 }
+
+/* ---------- Presupuesto (T46.2) ---------- */
+
+export const MAX_DESC_PRESUPUESTO = 500;
+export const MAX_DESC_ITEM = 200;
+export const MAX_ITEMS = 30;
+export const TIPOS_ITEM = { MANO_OBRA: "Mano de obra", REPUESTO: "Repuesto" };
+export const ESTADOS_PRESUPUESTO = {
+  PENDIENTE: "Esperando al cliente",
+  APROBADO: "Aprobado",
+  RECHAZADO: "Rechazado",
+};
+
+const dinero = (n) => Math.round(Number(n ?? 0) * 100) / 100;
+
+function normalizarPresupuesto(p) {
+  if (!p) return null;
+  const items = (p.items ?? []).map((i) => ({
+    tipo: codigo(i.tipo) === "REPUESTO" ? "REPUESTO" : "MANO_OBRA",
+    descripcion: i.descripcion ?? "",
+    cantidad: Number(i.cantidad ?? 1),
+    precioUnitario: dinero(i.precioUnitario),
+    subtotal: dinero(i.subtotal ?? Number(i.precioUnitario ?? 0) * Number(i.cantidad ?? 1)),
+  }));
+  const estado = codigo(p.estado);
+  return {
+    id: p.idPresupuesto ?? p.id,
+    estado: ESTADOS_PRESUPUESTO[estado] ? estado : "PENDIENTE",
+    descripcion: p.descripcion ?? "",
+    fechaCreacion: p.fechaCreacion ?? "",
+    fechaDecision: p.fechaDecision ?? "",
+    items,
+    total: dinero(p.total ?? items.reduce((s, i) => s + i.subtotal, 0)),
+  };
+}
+
+// Último presupuesto de la orden, o null si todavía no se arma
+export async function obtenerPresupuesto(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA ? await prueba.obtenerPresupuesto(idOrden) : await apiFetch(`/work-orders/${idOrden}/quote`);
+    return normalizarPresupuesto(datos);
+  } catch (e) {
+    if (esNoEncontrado(e)) return null;
+    throw e;
+  }
+}
+
+export async function enviarPresupuesto(idOrden, { descripcion, items }) {
+  const cuerpo = {
+    descripcion: descripcion.trim(),
+    items: items.map((i) => ({
+      tipo: i.tipo,
+      descripcion: i.descripcion.trim(),
+      cantidad: Number(i.cantidad),
+      precioUnitario: dinero(i.precioUnitario),
+    })),
+  };
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.enviarPresupuesto(idOrden, cuerpo)
+      : await apiFetch(`/work-orders/${idOrden}/quote`, { metodo: "POST", cuerpo });
+    return normalizarPresupuesto(datos);
+  } catch (e) {
+    throw mensajeConflicto(e);
+  }
+}
+
+// Materiales del almacén para elegir repuestos (se piden una vez por pantalla)
+export async function listarMaterialesTaller() {
+  const datos = prueba.DATOS_PRUEBA ? await prueba.listarMaterialesTaller() : await apiFetch("/materials");
+  return (Array.isArray(datos) ? datos : []).map((m) => ({
+    id: m.idMaterial ?? m.id,
+    codigo: String(m.codigo ?? "").toUpperCase(),
+    nombre: m.nombre ?? "",
+    unidad: String(m.unidad ?? "unidad").toLowerCase(),
+    costoUnitario: dinero(m.costoUnitario),
+    stockActual: Number(m.stockActual ?? 0),
+    stockMinimo: Number(m.stockMinimo ?? 0),
+    bajoStock: m.bajoStock ?? Number(m.stockActual ?? 0) <= Number(m.stockMinimo ?? 0),
+  }));
+}
+
+const SOLES = new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" });
+export const formatoSoles = (n) => SOLES.format(Number(n ?? 0));
 
 // Deficiencias de la orden, de la más grave a la más leve (y por hora de registro)
 // Si el backend aún no tiene la ruta (404), se muestra la lista vacía.

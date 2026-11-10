@@ -511,6 +511,86 @@ function ordenEnProceso(idOrden) {
   return orden;
 }
 
+/* ---------- Presupuesto (T46.2) ---------- */
+
+const presupuestosPrueba = [
+  {
+    idPresupuesto: 1,
+    idOrden: 2,
+    estado: "APROBADO",
+    descripcion: "Cambio de aceite y filtro según el kilometraje.",
+    fechaCreacion: enHora(-1, "10:20"),
+    fechaDecision: enHora(-1, "10:24"),
+    items: [
+      { tipo: "MANO_OBRA", descripcion: "Cambio de aceite y filtro", cantidad: 1, precioUnitario: 40, subtotal: 40 },
+      { tipo: "REPUESTO", descripcion: "LUB-001 · Aceite de motor 10W-30", cantidad: 1, precioUnitario: 96, subtotal: 96 },
+      { tipo: "REPUESTO", descripcion: "FIL-001 · Filtro de aceite", cantidad: 1, precioUnitario: 18.5, subtotal: 18.5 },
+    ],
+    total: 154.5,
+  },
+];
+let siguientePresupuesto = 2;
+
+export async function obtenerPresupuesto(idOrden) {
+  await esperar(250);
+  const p = [...presupuestosPrueba].reverse().find((x) => x.idOrden === Number(idOrden));
+  if (!p) throw conEstado("La orden aun no tiene presupuesto", 404);
+  return copia(p);
+}
+
+export async function enviarPresupuesto(idOrden, { descripcion, items }) {
+  await esperar(500);
+  const orden = ordenEnProceso(idOrden);
+  if (!diagnosticosPrueba[orden.idOrden]) throw conEstado("Registra el diagnostico antes de generar el presupuesto", 409);
+  const conSubtotal = items.map((i) => ({ ...i, subtotal: Math.round(i.precioUnitario * i.cantidad * 100) / 100 }));
+  const p = {
+    idPresupuesto: siguientePresupuesto++,
+    idOrden: orden.idOrden,
+    estado: "PENDIENTE",
+    descripcion,
+    fechaCreacion: ahoraEnLima(),
+    fechaDecision: null,
+    items: conSubtotal,
+    total: Math.round(conSubtotal.reduce((s, i) => s + i.subtotal, 0) * 100) / 100,
+  };
+  presupuestosPrueba.push(p);
+  citasPrueba.find((c) => c.idCita === orden.idCita).estado = "ESPERA_APROBACION";
+  // En modo de prueba, el "cliente" aprueba el presupuesto a los 20 segundos
+  setTimeout(() => {
+    p.estado = "APROBADO";
+    p.fechaDecision = ahoraEnLima();
+    citasPrueba.find((c) => c.idCita === orden.idCita).estado = "EN_PROCESO";
+  }, 20000);
+  return copia(p);
+}
+
+// Materiales del almacén que ve el mecánico (GET /materials)
+const materialesTaller = [
+  [1, "FIL-001", "Filtro de aceite", "unidad", 18.5, 24, 10],
+  [2, "LUB-001", "Aceite de motor 10W-30", "galón", 96, 15, 6],
+  [3, "FRE-001", "Pastillas de freno delanteras", "juego", 120, 5, 4],
+  [4, "FRE-003", "Disco de freno delantero", "unidad", 165, 4, 2],
+  [5, "REP-003", "Amortiguador delantero", "unidad", 210, 4, 2],
+  [6, "REP-004", "Rótula de suspensión", "unidad", 75, 1, 2],
+  [7, "INS-001", "Limpiador de frenos en aerosol", "unidad", 19, 14, 6],
+  [8, "FIL-004", "Filtro de cabina", "unidad", 35, 0, 4],
+].map(([idMaterial, codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo]) => ({
+  idMaterial,
+  codigo,
+  nombre,
+  unidad,
+  costoUnitario,
+  stockActual,
+  stockMinimo,
+}));
+
+export async function listarMaterialesTaller() {
+  await esperar(250);
+  return materialesTaller
+    .map((m) => ({ ...m, bajoStock: m.stockActual <= m.stockMinimo }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
 /* ---------- Tareas de la orden (T49.2) ---------- */
 
 const tareasPrueba = {

@@ -114,7 +114,7 @@
 /* ---------- Resumen de la inspección ---------- */
 .ot-resumen {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -615,4 +615,184 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 
 @media (prefers-reduced-motion: reduce) {
   .ot-avance-barra span, .ot-tarea, .ot-tarea-caja { transition: none; }
+}
+
+/* ---------- Presupuesto (T46.2) ---------- */
+.ot-seccion { margin-top: 16px; }
+.ot-res-num.ot-res-monto { min-width: 0; padding: 0 10px; font-size: 0.9rem; white-space: nowrap; }
+
+.ot-pres-inicio, .ot-pres-nuevo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border: 1px dashed #c9d6ee;
+  border-radius: 12px;
+  background: #f8faff;
+  color: #3b4a66;
+  font-size: 0.9rem;
+}
+.ot-pres-inicio p, .ot-pres-nuevo p { margin: 0; flex: 1 1 280px; line-height: 1.5; }
+.ot-pres-nuevo { margin-top: 12px; }
+
+.ot-pres-vista { display: grid; gap: 12px; }
+.ot-pres-estado {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.ot-pres-estado strong { font-size: 0.95rem; }
+.pres-PENDIENTE { background: #f3e8ff; color: #6b21a8; }
+.pres-APROBADO { background: #d1fae5; color: #065f46; }
+.pres-RECHAZADO { background: #ffe4e6; color: #9f1239; }
+.ot-pres-desc { margin: 0; color: #1c2a45; line-height: 1.55; white-space: pre-wrap; }
+
+.ot-pres-tabla-caja { overflow-x: auto; border: 1px solid #e3e9f5; border-radius: 12px; }
+.ot-pres-tabla { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.ot-pres-tabla th {
+  padding: 9px 12px;
+  background: #f7f9fd;
+  color: #7a8aa6;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.ot-pres-tabla td { padding: 9px 12px; border-top: 1px solid #eef2f9; color: #0b1b3a; }
+.ot-pres-tabla .num, .ot-pres-lineas .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ot-pres-tipo {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+.tipo-MANO_OBRA { background: #e6f0ff; color: #1150e8; }
+.tipo-REPUESTO { background: #ffedd5; color: #c2410c; }
+
+.ot-pres-totales { display: grid; justify-content: end; gap: 4px; margin: 0; font-variant-numeric: tabular-nums; }
+.ot-pres-totales div { display: flex; justify-content: space-between; gap: 32px; min-width: 240px; color: #5b6b88; font-size: 0.88rem; }
+.ot-pres-totales dd { margin: 0; color: #0b1b3a; font-weight: 700; }
+.ot-pres-totales .total { margin-top: 4px; padding-top: 6px; border-top: 1px solid #e3e9f5; color: #0b1b3a; font-weight: 800; }
+.ot-pres-totales .total dd { font-family: "Sora", "Manrope", sans-serif; font-size: 1.2rem; font-weight: 800; }
+
+/* Editor */
+.ot-pres-form { display: grid; gap: 14px; }
+.ot-pres-lineas { display: grid; gap: 8px; }
+.ot-pres-linea {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) 76px 110px 100px 32px;
+  align-items: start;
+  gap: 8px;
+}
+.ot-pres-linea.cab { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.ot-pres-linea select, .ot-pres-linea input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #d6e0f2;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+}
+.ot-pres-linea select:focus, .ot-pres-linea input:focus { outline: none; border-color: #1150e8; box-shadow: 0 0 0 3px #d6e4ff; }
+.ot-pres-linea [aria-invalid="true"] { border-color: #e11d48; }
+.ot-pres-celda { display: grid; gap: 3px; min-width: 0; }
+.ot-pres-celda .campo-error { margin: 0; font-size: 0.74rem; }
+.ot-pres-sub { padding-top: 9px; color: #0b1b3a; font-weight: 700; }
+.ot-pres-quitar {
+  width: 32px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.ot-pres-quitar:hover { background: #fff1f2; color: #be123c; }
+.ot-pres-quitar:focus-visible { outline: 3px solid #93b4ff; }
+
+.ot-pres-agregar { display: flex; flex-wrap: wrap; gap: 8px; }
+.ot-pres-agregar .ot-diag-base:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.ot-almacen { display: grid; gap: 8px; padding: 12px; border: 1px solid #d6e0f2; border-radius: 12px; background: #f8faff; }
+.ot-almacen-cab { display: flex; gap: 8px; }
+.ot-almacen-cab input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.ot-almacen-cab input:focus { outline: none; border-color: #1150e8; box-shadow: 0 0 0 3px #d6e4ff; }
+.ot-almacen-msg { margin: 0; padding: 6px 2px; color: #5b6b88; font-size: 0.86rem; }
+.ot-almacen-msg.error { color: #be123c; }
+.ot-almacen-lista { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ot-almacen-lista button {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto 90px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ot-almacen-lista button:hover { border-color: #b9cdf5; }
+.ot-almacen-lista button:focus-visible { outline: 3px solid #93b4ff; }
+.ot-almacen-cod { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.78rem; font-weight: 700; color: #3b4a66; }
+.ot-almacen-nom { color: #0b1b3a; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ot-almacen-stock { color: #047857; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.ot-almacen-stock.bajo { color: #b45309; }
+.ot-almacen-stock.agotado { color: #be123c; }
+.ot-almacen-precio { text-align: right; font-variant-numeric: tabular-nums; color: #0b1b3a; }
+
+.ot-pres-confirmar {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid #bfd3fb;
+  border-radius: 12px;
+  background: #f4f8ff;
+  color: #3b4a66;
+  font-size: 0.9rem;
+}
+.ot-pres-confirmar p { margin: 0; }
+.ot-pres-confirmar strong { color: #0b1b3a; }
+
+@media (max-width: 760px) {
+  .ot-pres-linea.cab { display: none; }
+  .ot-pres-celda[data-etq]::before { content: attr(data-etq); color: #7a8aa6; font-size: 0.72rem; font-weight: 700; }
+  .ot-pres-linea {
+    grid-template-columns: 1fr 1fr 32px;
+    padding: 10px;
+    border: 1px solid #e3e9f5;
+    border-radius: 12px;
+  }
+  .ot-pres-linea > select { grid-column: 1 / 3; }
+  .ot-pres-linea > .ot-pres-celda:nth-of-type(1) { grid-column: 1 / -1; grid-row: 2; }
+  .ot-pres-quitar { grid-column: 3; grid-row: 1; }
+  .ot-pres-sub { grid-column: 1 / -1; padding-top: 0; text-align: right; }
+  .ot-pres-totales { justify-content: stretch; }
+  .ot-pres-totales div { min-width: 0; }
+  .ot-almacen-lista button { grid-template-columns: 70px minmax(0, 1fr) auto; }
+  .ot-almacen-precio { display: none; }
 }

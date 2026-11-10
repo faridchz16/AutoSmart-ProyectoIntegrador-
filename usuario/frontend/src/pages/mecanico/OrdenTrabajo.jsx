@@ -8,6 +8,9 @@ import {
   obtenerDiagnostico,
   listarTareas,
   TAREAS_VACIAS,
+  obtenerPresupuesto,
+  formatoSoles,
+  ESTADOS_PRESUPUESTO,
   cargarFoto,
   textoCategoria,
   minutosEntre,
@@ -21,6 +24,7 @@ import { hoyLima, horaLima, fechaCorta, fechaLarga, aFecha, isoDe } from "../../
 import { formatoHoras } from "../../services/horariosService";
 import DiagnosticoOrden from "./DiagnosticoOrden";
 import TareasOrden from "./TareasOrden";
+import PresupuestoOrden from "./PresupuestoOrden";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -30,6 +34,7 @@ import "./OrdenTrabajo.css";
    Se abre desde el detalle de una cita en proceso, en espera de aprobación o finalizada.
    T45.2: área de diagnóstico técnico (se registra y edita aquí mientras la orden está EN_PROCESO).
    T49.2: tareas con casilla y porcentaje de avance.
+   T46.2: presupuesto con mano de obra, repuestos y total (se envía al cliente para su aprobación).
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -313,14 +318,15 @@ function OrdenTrabajo() {
     let vigente = true;
     Promise.all([obtenerCita(idCita), obtenerOrdenDeCita(idCita)])
       .then(async ([cita, orden]) => {
-        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS };
-        const [checklist, deficiencias, diagnostico, tareas] = await Promise.all([
+        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS, presupuesto: null };
+        const [checklist, deficiencias, diagnostico, tareas, presupuesto] = await Promise.all([
           obtenerChecklist(orden.idOrden),
           listarDeficiencias(orden.idOrden),
           obtenerDiagnostico(orden.idOrden),
           listarTareas(orden.idOrden),
+          obtenerPresupuesto(orden.idOrden),
         ]);
-        return { cita, orden, checklist, deficiencias, diagnostico, tareas };
+        return { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto };
       })
       .then((d) => {
         if (vigente) setResultado({ clave, datosDe: idCita, ...d, error: "", fallo: "", actualizado: horaLima() });
@@ -406,7 +412,7 @@ function OrdenTrabajo() {
     );
   }
 
-  const { cita, orden, checklist, deficiencias, diagnostico, tareas, fallo, actualizado } = datos;
+  const { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, fallo, actualizado } = datos;
   const recargar = () => setRecarga((n) => n + 1);
   const cambiar = (campo) => (valor) => setResultado((r) => ({ ...r, [campo]: valor }));
   const estado = orden?.estado ?? cita.estado;
@@ -561,6 +567,18 @@ function OrdenTrabajo() {
             {tareas.total ? `${tareas.completadas} de ${plural(tareas.total, "tarea", "tareas")}` : "Sin tareas"}
           </span>
         </a>
+        <a
+          href="#ot-presupuesto"
+          className={
+            presupuesto?.estado === "APROBADO" ? "ot-res hecho" : presupuesto?.estado === "RECHAZADO" ? "ot-res alerta" : "ot-res"
+          }
+        >
+          <span className="ot-res-num ot-res-monto">{presupuesto ? formatoSoles(presupuesto.total) : "—"}</span>
+          <span>
+            <strong>Presupuesto</strong>
+            {presupuesto ? ESTADOS_PRESUPUESTO[presupuesto.estado] : "Sin armar"}
+          </span>
+        </a>
       </nav>
 
       {/* ---------- Inspección registrada desde la app ---------- */}
@@ -629,6 +647,28 @@ function OrdenTrabajo() {
           />
         </section>
       </div>
+
+      {/* ---------- Presupuesto (T46.2) ---------- */}
+      <section className="ot-panel ot-seccion" id="ot-presupuesto" aria-labelledby="ot-pres-titulo">
+        <header className="ot-panel-cab">
+          <h3 id="ot-pres-titulo">Presupuesto</h3>
+          <span className="ot-panel-extra">El cliente lo aprueba desde la app</span>
+        </header>
+        <PresupuestoOrden
+          idOrden={orden.idOrden}
+          presupuesto={presupuesto}
+          diagnostico={diagnostico}
+          cita={cita}
+          editable={estado === "EN_PROCESO"}
+          estado={estado}
+          momento={momento}
+          alEnviado={(p) => {
+            cambiar("presupuesto")(p);
+            recargar();
+          }}
+          alConflicto={recargar}
+        />
+      </section>
 
       {visor && (
         <Visor
