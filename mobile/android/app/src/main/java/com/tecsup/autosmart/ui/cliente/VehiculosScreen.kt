@@ -28,7 +28,8 @@ fun VehiculosScreen(
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {},
     onNavigateToAgregarVehiculo: () -> Unit = {},
-    viewModel: VehiculosViewModel = viewModel()
+    viewModel: VehiculosViewModel = viewModel(),
+    onHistorialVehiculo: (Long) -> Unit = {}
 ) {
     val estado by viewModel.estado.collectAsState()
     val vehiculos = estado.vehiculos
@@ -180,6 +181,9 @@ fun VehiculosScreen(
                                     Text("Placa: ${vehiculo.placa}")
                                     Text("Año: ${vehiculo.anio}")
                                     Text("Kilometraje: ${vehiculo.kilometraje} km")
+                                    TextButton(onClick = { onHistorialVehiculo(vehiculo.idVehiculo) }) {
+                                        Text("Ver historial")
+                                    }
                                     Row {
                                         TextButton(onClick = { onEditarVehiculo(vehiculo) },
                                             enabled = !estado.ocupado && estado.pendienteVerificacion == null) {

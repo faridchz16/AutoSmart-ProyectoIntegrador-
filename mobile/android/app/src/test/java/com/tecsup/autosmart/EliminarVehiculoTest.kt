@@ -23,6 +23,7 @@ class EliminarVehiculoTest {
         borrar: suspend (Long) -> Response<Unit> = { Response.success<Unit>(204, null) },
         listar: suspend () -> Response<List<VehiculoResponse>> = { Response.success(listOf(vehiculo)) }
     ) = object : VehiculoApi {
+        override suspend fun historial(id: Long) = error("Esta prueba no consulta el historial")
         override suspend fun eliminarVehiculo(id: Long) = borrar(id)
         override suspend fun listarVehiculos() = listar()
         override suspend fun registrarVehiculo(request: VehiculoRequest): Response<VehiculoResponse> = error("No registrar")

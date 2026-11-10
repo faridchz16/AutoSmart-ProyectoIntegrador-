@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.data.remote
 
+import com.tecsup.autosmart.model.HistorialVehiculoDto
 import com.tecsup.autosmart.model.VehiculoRequest
 import com.tecsup.autosmart.model.VehiculoResponse
 import retrofit2.Response
@@ -11,6 +12,9 @@ import retrofit2.http.Path
 import retrofit2.http.POST
 
 interface VehiculoApi {
+
+    @GET("vehicles/{id}/history")
+    suspend fun historial(@Path("id") id: Long): Response<HistorialVehiculoDto>
 
     @DELETE("vehicles/{id}")
     suspend fun eliminarVehiculo(@Path("id") id: Long): Response<Unit>

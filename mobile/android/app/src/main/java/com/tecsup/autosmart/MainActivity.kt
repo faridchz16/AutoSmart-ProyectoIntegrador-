@@ -36,6 +36,8 @@ import com.tecsup.autosmart.data.remote.RetrofitClient
 import com.tecsup.autosmart.ui.cliente.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.cliente.EditarVehiculoScreen
 import com.tecsup.autosmart.viewmodel.EditarVehiculoViewModel
+import com.tecsup.autosmart.ui.cliente.HistorialVehiculoScreen
+import com.tecsup.autosmart.viewmodel.HistorialVehiculoViewModel
 import com.tecsup.autosmart.ui.auth.LoginScreen
 import com.tecsup.autosmart.ui.mecanico.FotosDeficienciaScreen
 import com.tecsup.autosmart.viewmodel.FotosDeficienciaViewModel
@@ -135,6 +137,8 @@ class MainActivity : ComponentActivity() {
                 }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
+                val historialVehiculoVm: HistorialVehiculoViewModel = viewModel()
+                var historialVehiculoId by rememberSaveable { mutableStateOf(0L) }
 
                 var presupuestoCitaId by rememberSaveable { mutableStateOf(0L) }
                 val presupuestoVm: PresupuestoViewModel = viewModel()
@@ -347,6 +351,11 @@ class MainActivity : ComponentActivity() {
                             }
                             "vehiculos" -> {
                                 VehiculosScreen(
+                                    onHistorialVehiculo = { id ->
+                                        historialVehiculoVm.limpiar()
+                                        historialVehiculoId = id
+                                        currentScreen = "historial_vehiculo"
+                                    },
                                     onEditarVehiculo = { vehiculo ->
                                         editarVehiculoVm.iniciar(vehiculo)
                                         currentScreen = "editar_vehiculo"
@@ -363,6 +372,17 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToAgregarVehiculo = {
                                         currentScreen = "agregar_vehiculo"
+                                    }
+                                )
+                            }
+
+                            "historial_vehiculo" -> {
+                                HistorialVehiculoScreen(
+                                    idVehiculoInicial = historialVehiculoId,
+                                    viewModel = historialVehiculoVm,
+                                    onBack = {
+                                        historialVehiculoVm.limpiar()
+                                        currentScreen = "vehiculos"
                                     }
                                 )
                             }

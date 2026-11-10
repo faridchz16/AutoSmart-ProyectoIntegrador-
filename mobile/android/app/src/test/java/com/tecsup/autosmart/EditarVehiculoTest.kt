@@ -17,6 +17,7 @@ class EditarVehiculoTest {
     private val datos = VehiculoRequest("ABC-123", "Toyota", "Yaris", 2021, 21000)
     private val estado = EditarVehiculoEstado(original, "Toyota", "Yaris", "2021", "21000")
     private fun api(responder: suspend (Long, VehiculoRequest) -> Response<VehiculoResponse>) = object : VehiculoApi {
+        override suspend fun historial(id: Long) = error("Esta prueba no consulta el historial")
         override suspend fun eliminarVehiculo(id: Long): Response<Unit> = error("No debe eliminar")
         override suspend fun listarVehiculos(): Response<List<VehiculoResponse>> = error("No debe listar")
         override suspend fun registrarVehiculo(request: VehiculoRequest): Response<VehiculoResponse> = error("No debe registrar")
