@@ -25,12 +25,14 @@ import com.tecsup.autosmart.model.ChecklistResponse
 import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.DecisionPresupuesto
 import com.tecsup.autosmart.model.DeficienciaResponse
+import com.tecsup.autosmart.model.DetalleMantenimientoDto
 import com.tecsup.autosmart.model.FotoReferenciaDto
 import com.tecsup.autosmart.model.HitoSeguimiento
 import com.tecsup.autosmart.model.SeguimientoDto
 import com.tecsup.autosmart.model.OrdenTrabajoDto
 import com.tecsup.autosmart.model.PresupuestoItemDto
 import com.tecsup.autosmart.model.PresupuestoResponse
+import com.tecsup.autosmart.ui.cliente.DetalleMantenimientoScreen
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.PresupuestoScreen
 import com.tecsup.autosmart.ui.cliente.SeguimientoScreen
@@ -41,6 +43,7 @@ import com.tecsup.autosmart.ui.mecanico.OrdenesMecanicoScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
 import com.tecsup.autosmart.viewmodel.ChecklistViewModel
 import com.tecsup.autosmart.viewmodel.DeficienciasViewModel
+import com.tecsup.autosmart.viewmodel.DetalleMantenimientoViewModel
 import com.tecsup.autosmart.viewmodel.FotosDeficienciaViewModel
 import com.tecsup.autosmart.viewmodel.MisCitasViewModel
 import com.tecsup.autosmart.viewmodel.OrdenesMecanicoViewModel
@@ -251,6 +254,45 @@ class FlujosSprint03Test {
         compose.onNodeWithText("Avance: 67 %").assertIsDisplayed()
         compose.onNodeWithContentDescription("Volver a Mis citas").performClick()
         compose.onNodeWithText("Mis Citas").assertIsDisplayed()
+    }
+
+    @Test
+    fun desdeLaOrdenConsultaElMantenimientoYVuelveAlDetalle() {
+        val ordenes = OrdenesMecanicoViewModel(consultar = { Result.success(listOf(orden)) })
+        val detalle = DetalleMantenimientoViewModel(consultar = { id ->
+            assertEquals(81L, id)
+            Result.success(DetalleMantenimientoDto(
+                idOrden = id, idCita = 12, ticket = "AS-12", estado = "EN_PROCESO",
+                servicio = "Mantenimiento", precioServicio = BigDecimal("100.00"),
+                placa = "ABC-123", vehiculo = "Toyota Yaris", mecanico = "Mecánico",
+                fechaInicio = "2026-11-06T09:00:00", fechaFin = null,
+                diagnostico = "Desgaste de frenos", checklist = null, deficiencias = emptyList(),
+                tareas = null, presupuesto = null, repuestosConsumidos = emptyList(),
+                costoRepuestos = BigDecimal.ZERO, totalEstimado = BigDecimal("100.00")
+            ))
+        })
+        compose.setContent {
+            AutoSmartAppTheme {
+                var idOrden by remember { mutableStateOf<Long?>(null) }
+                val id = idOrden
+                if (id == null) {
+                    OrdenesMecanicoScreen(ordenes, onBack = {}, onAgenda = {},
+                        onChecklist = { _, _ -> }, onDeficiencias = { _, _ -> },
+                        onDetalleMantenimiento = { idOrden = it })
+                } else {
+                    DetalleMantenimientoScreen(id, detalle) { idOrden = null }
+                }
+            }
+        }
+        compose.onNodeWithText("Ver detalle").performClick()
+        scrollHasta("Ver mantenimiento")
+        compose.onNodeWithText("Ver mantenimiento").performClick()
+        scrollHasta("Desgaste de frenos")
+        compose.onNodeWithText("Desgaste de frenos").assertIsDisplayed()
+        scrollHasta("Total estimado: S/ 100.00")
+        compose.onNodeWithText("Total estimado: S/ 100.00").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Volver a la orden").performClick()
+        compose.onNodeWithText("Detalle de la orden").assertIsDisplayed()
     }
 
     private fun mostrarMisCitas(
