@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     activo TINYINT(1) NOT NULL DEFAULT 1,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado_cambiado_en DATETIME NULL,   -- ultimo cambio de estado activo/inactivo (TEC2.4)
+    fcm_token VARCHAR(255) NULL,        -- token del celular para notificaciones push (T54.1)
     FOREIGN KEY (id_rol) REFERENCES roles(id_rol)
 );
 
