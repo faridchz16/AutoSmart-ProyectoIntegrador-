@@ -11,6 +11,8 @@ import {
   obtenerPresupuesto,
   listarSolicitudes,
   resumenSolicitudes,
+  listarConsumos,
+  CONSUMOS_VACIOS,
   formatoSoles,
   ESTADOS_PRESUPUESTO,
   cargarFoto,
@@ -28,6 +30,7 @@ import DiagnosticoOrden from "./DiagnosticoOrden";
 import TareasOrden from "./TareasOrden";
 import PresupuestoOrden from "./PresupuestoOrden";
 import SolicitudesRepuestos from "./SolicitudesRepuestos";
+import RepuestosUsados from "./RepuestosUsados";
 import "../../components/admin/admin-ui.css";
 import "./Agenda.css";
 import "./OrdenTrabajo.css";
@@ -39,6 +42,7 @@ import "./OrdenTrabajo.css";
    T49.2: tareas con casilla y porcentaje de avance.
    T46.2: presupuesto con mano de obra, repuestos y total (se envía al cliente para su aprobación).
    T50.2: solicitud de repuestos al almacén.
+   T51.2: repuestos usados en la orden y su costo.
    Se actualiza sola cada minuto mientras la orden está abierta y al volver a la pestaña. */
 
 const CADA_RELOJ = 30 * 1000;
@@ -322,16 +326,17 @@ function OrdenTrabajo() {
     let vigente = true;
     Promise.all([obtenerCita(idCita), obtenerOrdenDeCita(idCita)])
       .then(async ([cita, orden]) => {
-        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS, presupuesto: null, solicitudes: [] };
-        const [checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes] = await Promise.all([
+        if (!orden) return { cita, orden: null, checklist: null, deficiencias: [], diagnostico: null, tareas: TAREAS_VACIAS, presupuesto: null, solicitudes: [], consumos: CONSUMOS_VACIOS };
+        const [checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes, consumos] = await Promise.all([
           obtenerChecklist(orden.idOrden),
           listarDeficiencias(orden.idOrden),
           obtenerDiagnostico(orden.idOrden),
           listarTareas(orden.idOrden),
           obtenerPresupuesto(orden.idOrden),
           listarSolicitudes(orden.idOrden),
+          listarConsumos(orden.idOrden),
         ]);
-        return { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes };
+        return { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes, consumos };
       })
       .then((d) => {
         if (vigente) setResultado({ clave, datosDe: idCita, ...d, error: "", fallo: "", actualizado: horaLima() });
@@ -417,7 +422,7 @@ function OrdenTrabajo() {
     );
   }
 
-  const { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes, fallo, actualizado } = datos;
+  const { cita, orden, checklist, deficiencias, diagnostico, tareas, presupuesto, solicitudes, consumos, fallo, actualizado } = datos;
   const recargar = () => setRecarga((n) => n + 1);
   const cambiar = (campo) => (valor) => setResultado((r) => ({ ...r, [campo]: valor }));
   const estado = orden?.estado ?? cita.estado;
@@ -584,6 +589,18 @@ function OrdenTrabajo() {
             {presupuesto ? ESTADOS_PRESUPUESTO[presupuesto.estado] : "Sin armar"}
           </span>
         </a>
+        <a href="#ot-repuestos" className={solicitudes.some((s) => s.estado === "PENDIENTE") ? "ot-res pendiente" : "ot-res"}>
+          <span className="ot-res-num ot-res-monto">{formatoSoles(consumos.costoRepuestos)}</span>
+          <span>
+            <strong>Repuestos</strong>
+            {consumos.consumos.length
+              ? plural(consumos.consumos.length, "usado", "usados")
+              : solicitudes.length
+                ? resumenSolicitudes(solicitudes)
+                : "Ninguno usado"}
+            {consumos.consumos.length > 0 && solicitudes.some((s) => s.estado === "PENDIENTE") ? " · hay solicitudes pendientes" : ""}
+          </span>
+        </a>
       </nav>
 
       {/* ---------- Inspección registrada desde la app ---------- */}
@@ -675,7 +692,7 @@ function OrdenTrabajo() {
         />
       </section>
 
-      {/* ---------- Repuestos (T50.2) ---------- */}
+      {/* ---------- Repuestos: solicitudes (T50.2) y usados (T51.2) ---------- */}
       <section className="ot-panel ot-seccion" id="ot-repuestos" aria-labelledby="ot-rep-titulo">
         <header className="ot-panel-cab">
           <h3 id="ot-rep-titulo">Repuestos</h3>
@@ -691,6 +708,18 @@ function OrdenTrabajo() {
               estado={estado}
               momento={momento}
               alCambiar={cambiar("solicitudes")}
+              alConflicto={recargar}
+            />
+          </div>
+          <div className="ot-rep-col">
+            <h4 className="ot-sub-titulo">Repuestos usados en la orden</h4>
+            <RepuestosUsados
+              idOrden={orden.idOrden}
+              resumen={consumos}
+              editable={estado === "EN_PROCESO"}
+              estado={estado}
+              momento={momento}
+              alCambiar={cambiar("consumos")}
               alConflicto={recargar}
             />
           </div>

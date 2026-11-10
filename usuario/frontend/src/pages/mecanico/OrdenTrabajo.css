@@ -865,3 +865,41 @@ span.ot-visor-img { width: min(640px, 80vw); aspect-ratio: 4 / 3; }
 @media (max-width: 480px) {
   .ot-sol-campos { grid-template-columns: 1fr; }
 }
+
+/* ---------- Repuestos usados (T51.2) ---------- */
+.ot-rep-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.ot-res.pendiente .ot-res-num { background: #f3e8ff; color: #7e22ce; }
+
+.ot-usados { display: grid; gap: 10px; }
+.ot-usados-lista { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.ot-usado { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid #e3e9f5; border-radius: 12px; background: #fff; }
+.ot-usado-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.ot-usado-cab strong { color: #0b1b3a; font-size: 0.92rem; }
+.ot-usado-sub { margin-left: auto; color: #0b1b3a; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ot-usado-origen {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #eef2f9;
+  color: #3b4a66;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.ot-usado-origen.sol { background: #d1fae5; color: #065f46; }
+.ot-usados-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f4f8ff;
+  color: #3b4a66;
+  font-size: 0.9rem;
+}
+.ot-usados-total strong { color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.ot-usados-btn { justify-self: start; }
+
+@media (max-width: 1180px) {
+  .ot-rep-grid { grid-template-columns: 1fr; }
+}

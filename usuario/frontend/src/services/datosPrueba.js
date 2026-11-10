@@ -674,6 +674,27 @@ function registrarSalidaPrueba(orden, m, cantidad, referencia) {
   });
 }
 
+export async function listarConsumos(idOrden) {
+  await esperar(250);
+  const consumos = consumosPrueba
+    .filter((c) => c.idOrden === Number(idOrden))
+    .map((c) => ({ ...c, tipo: "SALIDA", codigoMaterial: materialesTaller.find((m) => m.idMaterial === c.idMaterial).codigo }));
+  const costoRepuestos = Math.round(consumos.reduce((s, c) => s + c.costoUnitario * c.cantidad, 0) * 100) / 100;
+  return { idOrden: Number(idOrden), costoRepuestos, consumos };
+}
+
+export async function registrarConsumo(idOrden, { idMaterial, cantidad, referencia }) {
+  await esperar(450);
+  const orden = ordenEnProceso(idOrden);
+  const m = materialesTaller.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw conEstado("Material no encontrado", 404);
+  if (m.stockActual < cantidad) {
+    throw conEstado(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, requerido ${cantidad}`, 409);
+  }
+  registrarSalidaPrueba(orden, m, cantidad, referencia);
+  return listarConsumos(idOrden);
+}
+
 /* ---------- Tareas de la orden (T49.2) ---------- */
 
 const tareasPrueba = {

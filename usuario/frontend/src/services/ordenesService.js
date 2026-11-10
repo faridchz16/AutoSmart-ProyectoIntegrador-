@@ -38,6 +38,13 @@ import * as prueba from "./datosPrueba";
        -> { idSolicitud, idMaterial, codigoMaterial, nombreMaterial, cantidad, stockDisponible, motivo,
             estado PENDIENTE|APROBADA|RECHAZADA, solicitadoPor, fechaSolicitud, atendidoPor, fechaAtencion, observacion }
        El administrador la atiende en su bandeja (T59); al aprobarla se descuenta el stock y se suma a la orden.
+     Repuestos usados en la orden (T51.1): salidas de stock del kardex
+       GET  /work-orders/{idOrden}/consumptions
+       POST /work-orders/{idOrden}/consumptions { idMaterial, cantidad (≥ 1), referencia (opcional, máx. 200) }
+         descuenta el stock y suma al costo de la orden; 409 si no hay stock suficiente
+       -> { idOrden, costoRepuestos, consumos: [{ idMovimiento, idMaterial, codigoMaterial, tipo SALIDA, cantidad,
+            costoUnitario, stockResultante, referencia, idOrden, registradoPor, fecha }] }
+       Las solicitudes aprobadas aparecen aquí con la referencia "Solicitud de repuesto #N".
    Todo lo que cambia la orden responde 409 si no está EN_PROCESO
    ("La orden no esta EN_PROCESO (estado: ESPERA_APROBACION)").
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -396,6 +403,59 @@ export async function solicitarRepuesto(idOrden, { idMaterial, cantidad, motivo 
       ? await prueba.solicitarRepuesto(idOrden, cuerpo)
       : await apiFetch(`/work-orders/${idOrden}/material-requests`, { metodo: "POST", cuerpo });
     return normalizarSolicitud(datos);
+  } catch (e) {
+    throw mensajeConflicto(e);
+  }
+}
+
+/* ---------- Repuestos usados (T51.2) ---------- */
+
+export const MAX_REFERENCIA = 200;
+export const CONSUMOS_VACIOS = { costoRepuestos: 0, consumos: [] };
+
+function normalizarConsumos(r = {}) {
+  const consumos = (r.consumos ?? []).map((m) => {
+    const cantidad = Number(m.cantidad ?? 0);
+    const costoUnitario = dinero(m.costoUnitario);
+    const solicitud = /solicitud de repuesto #(\d+)/i.exec(m.referencia ?? "")?.[1] ?? null;
+    return {
+      id: m.idMovimiento ?? m.id,
+      idMaterial: m.idMaterial,
+      codigo: String(m.codigoMaterial ?? "").toUpperCase(),
+      cantidad,
+      costoUnitario,
+      subtotal: dinero(costoUnitario * cantidad),
+      referencia: m.referencia ?? "",
+      idSolicitud: solicitud ? Number(solicitud) : null,
+      registradoPor: m.registradoPor ?? "",
+      fecha: m.fecha ?? "",
+    };
+  });
+  return {
+    consumos,
+    costoRepuestos: dinero(r.costoRepuestos ?? consumos.reduce((s, c) => s + c.subtotal, 0)),
+  };
+}
+
+export async function listarConsumos(idOrden) {
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.listarConsumos(idOrden)
+      : await apiFetch(`/work-orders/${idOrden}/consumptions`);
+    return normalizarConsumos(datos);
+  } catch (e) {
+    if (esNoEncontrado(e)) return CONSUMOS_VACIOS;
+    throw e;
+  }
+}
+
+export async function registrarConsumo(idOrden, { idMaterial, cantidad, referencia }) {
+  const cuerpo = { idMaterial, cantidad: Number(cantidad), referencia: referencia.trim() || null };
+  try {
+    const datos = prueba.DATOS_PRUEBA
+      ? await prueba.registrarConsumo(idOrden, cuerpo)
+      : await apiFetch(`/work-orders/${idOrden}/consumptions`, { metodo: "POST", cuerpo });
+    return normalizarConsumos(datos);
   } catch (e) {
     throw mensajeConflicto(e);
   }
