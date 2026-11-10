@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.config;
 
+import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -34,6 +35,8 @@ public class FirebaseConfig {
         try (InputStream entrada = new FileInputStream(ruta.toFile())) {
             FirebaseOptions opciones = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(entrada))
+                    // Cliente HTTP de Java: evita el conflicto con Apache HttpClient 5.6 que trae Spring Boot
+                    .setHttpTransport(new NetHttpTransport())
                     .build();
             FirebaseApp.initializeApp(opciones);
             log.info("Firebase inicializado: notificaciones push activas");
