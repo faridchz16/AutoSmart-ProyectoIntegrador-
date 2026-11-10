@@ -567,7 +567,7 @@ const movimientos = materiales.map((m, i) => ({
   registradoPor: "admin@autosmart.com",
   fecha: `${fechaRelativa(-7)}T08:00:00`,
 }));
-let siguienteMovimiento = movimientos.length + 1;
+let siguienteMovimientoAlmacen = movimientos.length + 1;
 
 export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, referencia }) {
   await esperar(450);
@@ -577,7 +577,7 @@ export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, re
   if (costoUnitario !== undefined) m.costoUnitario = Math.round(costoUnitario * 100) / 100;
   m.stockActual += cantidad;
   const mov = {
-    idMovimiento: siguienteMovimiento++,
+    idMovimiento: siguienteMovimientoAlmacen++,
     idMaterial: m.idMaterial,
     codigoMaterial: m.codigo,
     tipo: "ENTRADA",
@@ -641,7 +641,7 @@ export async function decidirSolicitud(id, { decision, observacion }) {
     }
     m.stockActual -= s.cantidad;
     movimientos.push({
-      idMovimiento: siguienteMovimiento++,
+      idMovimiento: siguienteMovimientoAlmacen++,
       idMaterial: m.idMaterial,
       codigoMaterial: m.codigo,
       tipo: "SALIDA",
