@@ -25,13 +25,13 @@ object RetrofitClient {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            // Usa el token en memoria o lo busca en DataStore
-            val activeToken = token ?: runBlocking {
-                tokenManager?.getToken?.firstOrNull()
-            }
-
-            if (!activeToken.isNullOrEmpty()) {
-                requestBuilder.header("Authorization", "Bearer $activeToken")
+            if (original.header("Authorization") == null) {
+                val activeToken = token ?: runBlocking {
+                    tokenManager?.getToken?.firstOrNull()
+                }
+                if (!activeToken.isNullOrEmpty()) {
+                    requestBuilder.header("Authorization", "Bearer $activeToken")
+                }
             }
 
             chain.proceed(requestBuilder.build())

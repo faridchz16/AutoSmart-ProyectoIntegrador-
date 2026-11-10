@@ -1,5 +1,8 @@
 package com.tecsup.autosmart
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -8,6 +11,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.tecsup.autosmart.data.auth.GoogleAuthManager
 import com.tecsup.autosmart.data.auth.GoogleResultado
 import com.tecsup.autosmart.data.local.TokenManager
+import com.tecsup.autosmart.data.notifications.NotificacionesFcm
+import com.tecsup.autosmart.data.notifications.citaDeAviso
 import com.tecsup.autosmart.model.GoogleLoginRequest
 import com.tecsup.autosmart.model.LoginRequest
 import com.tecsup.autosmart.model.RegisterRequest
@@ -54,6 +61,7 @@ import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
 import com.tecsup.autosmart.ui.auth.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,9 +73,41 @@ import com.tecsup.autosmart.ui.auth.NuevaContrasenaScreen
 import com.tecsup.autosmart.viewmodel.RecuperacionViewModel
 
 class MainActivity : ComponentActivity() {
+    private val citaNotificada = MutableStateFlow<Long?>(null)
+    private val permisoNotificaciones = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        recibirAviso(intent)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        citaNotificada.value?.let { outState.putLong("cita_notificada", it) }
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun recibirAviso(intent: Intent?) {
+        val cita = citaDeAviso(intent?.getStringExtra("tipo"), intent?.getStringExtra("idCita"))
+        if (cita != null) citaNotificada.value = cita
+    }
+
+    private fun prepararNotificacionesCliente() {
+        if (!NotificacionesFcm.disponible(this)) return
+        NotificacionesFcm.programarRegistro(applicationContext)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED) return
+        val preferencias = getSharedPreferences("notificaciones", MODE_PRIVATE)
+        if (preferencias.getBoolean("permiso_solicitado", false)) return
+        preferencias.edit().putBoolean("permiso_solicitado", true).apply()
+        permisoNotificaciones.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) recibirAviso(intent)
+        else citaNotificada.value = savedInstanceState.getLong("cita_notificada").takeIf { it > 0 }
+        NotificacionesFcm.crearCanal(this)
         enableEdgeToEdge()
         setContent {
             AutoSmartAppTheme {
@@ -76,6 +116,23 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
 
                 var currentScreen by rememberSaveable { mutableStateOf("loading") }
+                var sesionCliente by remember { mutableStateOf(false) }
+                var cerrandoSesion by remember { mutableStateOf(false) }
+                val avisoCita by citaNotificada.collectAsState()
+                val cerrarSesion: () -> Unit = {
+                    if (!cerrandoSesion) scope.launch {
+                        cerrandoSesion = true
+                        try {
+                            NotificacionesFcm.cerrarSesion(applicationContext, tokenManager)
+                            sesionCliente = false
+                            citaNotificada.value = null
+                            RetrofitClient.token = null
+                            currentScreen = "welcome"
+                        } finally {
+                            cerrandoSesion = false
+                        }
+                    }
+                }
                 var selectedServiceId by rememberSaveable { mutableStateOf(1L) }
                 val editarVehiculoVm: EditarVehiculoViewModel = viewModel()
 
@@ -132,6 +189,8 @@ class MainActivity : ComponentActivity() {
 
                     if (!savedToken.isNullOrEmpty()) {
                         RetrofitClient.token = savedToken
+                        sesionCliente = tokenManager.tokenCliente() != null
+                        if (sesionCliente) prepararNotificacionesCliente()
                     }
 
                     if (currentScreen == "loading") {
@@ -139,6 +198,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+
+                LaunchedEffect(avisoCita, sesionCliente, cerrandoSesion) {
+                    val id = avisoCita ?: return@LaunchedEffect
+                    if (sesionCliente && !cerrandoSesion) {
+                        seguimientoCitaId = id
+                        currentScreen = "seguimiento"
+                        citaNotificada.value = null
+                    }
+                }
 
                 BackHandler(enabled = currentScreen == "login" || currentScreen == "register") {
                     currentScreen = "welcome"
@@ -199,6 +267,8 @@ class MainActivity : ComponentActivity() {
 
                                                     Toast.makeText(this@MainActivity, "¡Login Exitoso!", Toast.LENGTH_LONG).show()
                                                     currentScreen = if (userRole == "MECANICO") "mecanico" else "vehiculos"
+                                                    sesionCliente = userRole.equals("CLIENTE", ignoreCase = true)
+                                                    if (sesionCliente) prepararNotificacionesCliente() else citaNotificada.value = null
                                                 } else {
                                                     Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
                                                 }
@@ -229,6 +299,8 @@ class MainActivity : ComponentActivity() {
 
                                                             Toast.makeText(this@MainActivity, "¡Inicio de sesión con Google exitoso!", Toast.LENGTH_LONG).show()
                                                             currentScreen = if (userRole == "MECANICO") "mecanico" else "vehiculos"
+                                                            sesionCliente = userRole.equals("CLIENTE", ignoreCase = true)
+                                                            if (sesionCliente) prepararNotificacionesCliente() else citaNotificada.value = null
                                                         } else {
                                                             Toast.makeText(this@MainActivity, "Error al autenticar con Google (${response.code()})", Toast.LENGTH_SHORT).show()
                                                         }
@@ -279,13 +351,7 @@ class MainActivity : ComponentActivity() {
                                         editarVehiculoVm.iniciar(vehiculo)
                                         currentScreen = "editar_vehiculo"
                                     },
-                                    onLogout = {
-                                        scope.launch {
-                                            tokenManager.clearSession()
-                                            RetrofitClient.token = null
-                                            currentScreen = "welcome"
-                                        }
-                                    },
+                                    onLogout = cerrarSesion,
                                     onNavigateToPerfil = {
                                         currentScreen = "perfil"
                                     },
@@ -429,13 +495,7 @@ class MainActivity : ComponentActivity() {
                             "mecanico" -> {
                                 MecanicoScreen(
                                     onOrdenesClick = { currentScreen = "ordenes_mecanico" },
-                                    onLogout = {
-                                        scope.launch {
-                                            tokenManager.clearSession()
-                                            RetrofitClient.token = null
-                                            currentScreen = "welcome"
-                                        }
-                                    }
+                                    onLogout = cerrarSesion
                                 )
                             }
 

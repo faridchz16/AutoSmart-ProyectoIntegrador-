@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "user_session")
@@ -24,6 +25,13 @@ class TokenManager(private val context: Context) {
     // Obtener el Rol guardado ("CLIENTE", "MECANICO", etc.)
     val getRole: Flow<String?> = context.dataStore.data.map { preferences ->
         preferences[ROLE_KEY]
+    }
+
+    suspend fun tokenCliente(): String? {
+        val sesion = context.dataStore.data.first()
+        return sesion[TOKEN_KEY]?.takeIf {
+            it.isNotBlank() && sesion[ROLE_KEY].equals("CLIENTE", ignoreCase = true)
+        }
     }
 
     // Guardar sesión tras Login exitoso
