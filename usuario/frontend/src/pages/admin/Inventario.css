@@ -133,3 +133,40 @@
   .inv-mov { grid-template-columns: 52px minmax(0, 1fr); }
   .inv-mov-stock { grid-column: 2; }
 }
+
+/* ---------- Bandeja de solicitudes de repuestos (T59.2) ---------- */
+.sol-lista { display: grid; gap: 10px; margin: 0; padding: 12px; list-style: none; }
+.sol-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e3e9f5;
+  border-left: 4px solid #a855f7;
+  border-radius: 12px;
+  background: #fff;
+}
+.sol-item.sol-APROBADA { border-left-color: #10b981; }
+.sol-item.sol-RECHAZADA { border-left-color: #f43f5e; }
+.sol-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.sol-cab strong { color: #0b1b3a; font-size: 0.98rem; }
+.sol-estado { margin-left: auto; padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
+.sol-estado.sol-PENDIENTE { background: #f3e8ff; color: #7e22ce; }
+.sol-estado.sol-APROBADA { background: #d1fae5; color: #065f46; }
+.sol-estado.sol-RECHAZADA { background: #ffe4e6; color: #9f1239; }
+.sol-meta { margin: 0; color: #7a8aa6; font-size: 0.82rem; }
+.sol-motivo { margin: 0; color: #3b4a66; font-size: 0.88rem; font-style: italic; }
+.sol-pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding-top: 6px; border-top: 1px solid #f1f4fa; }
+.sol-stock { color: #047857; font-size: 0.84rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sol-stock.falta { color: #be123c; }
+.sol-acciones { display: flex; gap: 8px; }
+.sol-rechazar { color: #be123c; border-color: #fecdd3; }
+.sol-rechazar:hover:not(:disabled) { background: #fff1f2; border-color: #fda4af; }
+.sol-atendida { margin: 0; padding-top: 6px; border-top: 1px solid #f1f4fa; color: #5b6b88; font-size: 0.84rem; }
+.sol .confirmar .campo { margin-top: 4px; }
+.sol .confirmar textarea { width: 100%; }
+
+@media (max-width: 520px) {
+  .sol-lista { padding: 8px; }
+  .sol-acciones { width: 100%; }
+  .sol-acciones .btn { flex: 1; }
+}

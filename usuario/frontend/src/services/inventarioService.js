@@ -18,6 +18,14 @@ import * as prueba from "./datosPrueba";
      GET  /admin/materials/{id}/kardex -> movimientos del material, del más antiguo al más nuevo
      Movimiento: { idMovimiento, idMaterial, codigoMaterial, tipo ENTRADA|SALIDA, cantidad, costoUnitario,
                    stockResultante, referencia, idOrden, registradoPor, fecha }
+   Bandeja de solicitudes de repuestos (T59.1):
+     GET /admin/material-requests[?estado=PENDIENTE|APROBADA|RECHAZADA] -> sin filtro: de la más nueva a la más
+          antigua; con estado: de la más antigua a la más nueva (orden de atención)
+     PUT /admin/material-requests/{id}/decision { decision APROBADA|RECHAZADA, observacion (opcional, máx. 200) }
+          Al aprobar se registra la SALIDA en el kardex y se suma al costo de la orden.
+          409 si ya fue atendida, si la orden ya no está activa o si no hay stock suficiente.
+     Solicitud: { idSolicitud, idOrden, idMaterial, codigoMaterial, nombreMaterial, cantidad, stockDisponible, motivo,
+                  estado, solicitadoPor, fechaSolicitud, atendidoPor, fechaAtencion, observacion }
    Un material nuevo empieza con stock 0: el stock solo cambia con el kardex
    (ingresos T58, salidas por solicitudes aprobadas T59 y consumo en la orden T51).
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
@@ -148,6 +156,47 @@ export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, re
 export async function obtenerKardex(idMaterial) {
   const datos = prueba.DATOS_PRUEBA ? await prueba.obtenerKardex(idMaterial) : await apiFetch(`/admin/materials/${idMaterial}/kardex`);
   return (Array.isArray(datos) ? datos : []).map(normalizarMovimiento).reverse();
+}
+
+/* ---------- Bandeja de solicitudes de repuestos (T59.2) ---------- */
+
+export const MAX_OBSERVACION = 200;
+export const ESTADOS_SOLICITUD = { PENDIENTE: "Pendiente", APROBADA: "Aprobada", RECHAZADA: "Rechazada" };
+
+function normalizarSolicitud(s = {}) {
+  const estado = String(s.estado ?? "").toUpperCase();
+  return {
+    id: s.idSolicitud ?? s.id,
+    idOrden: s.idOrden ?? null,
+    idMaterial: s.idMaterial,
+    codigo: normalizarCodigo(s.codigoMaterial),
+    nombre: s.nombreMaterial ?? "",
+    cantidad: numero(s.cantidad),
+    stockDisponible: numero(s.stockDisponible),
+    motivo: s.motivo ?? "",
+    estado: ESTADOS_SOLICITUD[estado] ? estado : "PENDIENTE",
+    solicitadoPor: s.solicitadoPor ?? "",
+    fechaSolicitud: s.fechaSolicitud ?? "",
+    atendidoPor: s.atendidoPor ?? "",
+    fechaAtencion: s.fechaAtencion ?? "",
+    observacion: s.observacion ?? "",
+  };
+}
+
+// estado = "" para todas
+export async function listarSolicitudesAlmacen(estado = "") {
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.listarSolicitudesAlmacen(estado)
+    : await apiFetch(`/admin/material-requests${estado ? `?estado=${estado}` : ""}`);
+  return (Array.isArray(datos) ? datos : []).map(normalizarSolicitud);
+}
+
+export async function decidirSolicitud(id, decision, observacion = "") {
+  const cuerpo = { decision, observacion: observacion.trim() || null };
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.decidirSolicitud(id, cuerpo)
+    : await apiFetch(`/admin/material-requests/${id}/decision`, { metodo: "PUT", cuerpo });
+  return normalizarSolicitud(datos);
 }
 
 // "2026-11-09T22:05:13" -> "09/11/2026 22:05"

@@ -59,6 +59,16 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/solicitudes",
+    texto: "Solicitudes",
+    icono: (
+      <Icono>
+        <path d="M5 4.5h14v15l-3-2-2 2-2-2-2 2-2-2-3 2Z" />
+        <path d="M9 9h6M9 12.5h4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/taller",
     texto: "Horario del taller",
     icono: (

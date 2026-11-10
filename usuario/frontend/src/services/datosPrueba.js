@@ -593,6 +593,71 @@ export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, re
   return { ...mov };
 }
 
+// Solicitudes de repuestos de los mecánicos (T59.2). Las órdenes 7 y 8 están activas; la 3 ya se finalizó.
+const ordenesActivas = [7, 8];
+const solicitudesAlmacen = [
+  [1, 7, 14, 2, "Cambio de amortiguadores aprobado por el cliente", "carlos@taller.com", "09:12"],
+  [2, 7, 9, 1, "Pastillas al 20 %", "carlos@taller.com", "09:15"],
+  [3, 8, 5, 2, null, "ana@taller.com", "10:40"],
+  [4, 3, 1, 1, "Cambio de aceite", "ana@taller.com", "08:05"],
+].map(([idSolicitud, idOrden, idMaterial, cantidad, motivo, solicitadoPor, hora]) => ({
+  idSolicitud,
+  idOrden,
+  idMaterial,
+  cantidad,
+  motivo,
+  estado: idSolicitud === 4 ? "APROBADA" : "PENDIENTE",
+  solicitadoPor,
+  fechaSolicitud: `${fechaRelativa(idSolicitud === 4 ? -1 : 0)}T${hora}:00`,
+  atendidoPor: idSolicitud === 4 ? "admin@autosmart.com" : null,
+  fechaAtencion: idSolicitud === 4 ? `${fechaRelativa(-1)}T08:20:00` : null,
+  observacion: null,
+}));
+
+const datosSolicitudAlmacen = (s) => {
+  const m = materiales.find((x) => x.idMaterial === s.idMaterial);
+  return { ...s, codigoMaterial: m.codigo, nombreMaterial: m.nombre, stockDisponible: m.stockActual };
+};
+
+export async function listarSolicitudesAlmacen(estado) {
+  await esperar();
+  const lista = estado ? solicitudesAlmacen.filter((s) => s.estado === estado) : [...solicitudesAlmacen];
+  lista.sort((a, b) => (estado ? 1 : -1) * a.fechaSolicitud.localeCompare(b.fechaSolicitud));
+  return lista.map(datosSolicitudAlmacen);
+}
+
+export async function decidirSolicitud(id, { decision, observacion }) {
+  await esperar(450);
+  const s = solicitudesAlmacen.find((x) => x.idSolicitud === Number(id));
+  if (!s) throw Object.assign(new Error("Solicitud no encontrada"), { status: 404 });
+  if (s.estado !== "PENDIENTE") throw Object.assign(new Error(`La solicitud ya fue ${s.estado}`), { status: 409 });
+  if (decision === "APROBADA") {
+    if (!ordenesActivas.includes(s.idOrden)) {
+      throw Object.assign(new Error("La orden de la solicitud ya no esta activa (estado: FINALIZADA)"), { status: 409 });
+    }
+    const m = materiales.find((x) => x.idMaterial === s.idMaterial);
+    if (m.stockActual < s.cantidad) {
+      throw Object.assign(new Error(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, requerido ${s.cantidad}`), { status: 409 });
+    }
+    m.stockActual -= s.cantidad;
+    movimientos.push({
+      idMovimiento: siguienteMovimiento++,
+      idMaterial: m.idMaterial,
+      codigoMaterial: m.codigo,
+      tipo: "SALIDA",
+      cantidad: s.cantidad,
+      costoUnitario: m.costoUnitario,
+      stockResultante: m.stockActual,
+      referencia: `Solicitud de repuesto #${s.idSolicitud}`,
+      idOrden: s.idOrden,
+      registradoPor: "admin@autosmart.com",
+      fecha: ahoraLima(),
+    });
+  }
+  Object.assign(s, { estado: decision, atendidoPor: "admin@autosmart.com", fechaAtencion: ahoraLima(), observacion });
+  return datosSolicitudAlmacen(s);
+}
+
 export async function obtenerKardex(idMaterial) {
   await esperar(300);
   return movimientos.filter((x) => x.idMaterial === Number(idMaterial)).map((x) => ({ ...x }));
