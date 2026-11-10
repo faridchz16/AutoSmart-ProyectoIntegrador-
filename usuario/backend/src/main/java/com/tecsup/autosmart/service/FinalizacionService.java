@@ -1,6 +1,7 @@
 package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.FinalizacionResponse;
+import com.tecsup.autosmart.event.OrdenFinalizadaEvent;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.model.Cita;
 import com.tecsup.autosmart.model.EstadoCita;
@@ -11,6 +12,7 @@ import com.tecsup.autosmart.repository.CitaRepository;
 import com.tecsup.autosmart.repository.OrdenTrabajoRepository;
 import com.tecsup.autosmart.repository.SolicitudMaterialRepository;
 import com.tecsup.autosmart.repository.TareaOrdenRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,19 +30,22 @@ public class FinalizacionService {
     private final CitaRepository citaRepository;
     private final TareaOrdenRepository tareaRepository;
     private final SolicitudMaterialRepository solicitudRepository;
+    private final ApplicationEventPublisher eventos;
 
     public FinalizacionService(OrdenTrabajoService ordenService,
                                OrdenTrabajoRepository ordenRepository,
                                CitaRepository citaRepository,
                                TareaOrdenRepository tareaRepository,
-                               SolicitudMaterialRepository solicitudRepository) {
+                               SolicitudMaterialRepository solicitudRepository,
+                               ApplicationEventPublisher eventos) {
         this.ordenService = ordenService;
         this.ordenRepository = ordenRepository;
         this.citaRepository = citaRepository;
         this.tareaRepository = tareaRepository;
         this.solicitudRepository = solicitudRepository;
+        this.eventos = eventos;
     }
-    
+
     @Transactional
     public FinalizacionResponse finalizar(String correoMecanico, Long idOrden) {
         OrdenTrabajo orden = ordenService.ordenDelMecanico(correoMecanico, idOrden);
@@ -67,6 +72,9 @@ public class FinalizacionService {
         Cita cita = orden.getCita();
         cita.setEstado(EstadoCita.FINALIZADA);
         citaRepository.save(cita);
+
+        eventos.publishEvent(new OrdenFinalizadaEvent(orden.getIdOrden(), cita.getIdCita(), cita.getTicket(),
+                cita.getVehiculo().getPlaca(), cita.getServicio().getNombre(), cita.getCliente().getFcmToken()));
 
         return new FinalizacionResponse(
                 orden.getIdOrden(),
