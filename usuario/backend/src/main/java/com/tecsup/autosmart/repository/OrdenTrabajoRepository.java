@@ -19,4 +19,8 @@ public interface OrdenTrabajoRepository extends JpaRepository<OrdenTrabajo, Long
             "WHERE c.mecanico.correo = :correo AND c.estado IN :estados ORDER BY o.fechaInicio DESC")
     List<OrdenTrabajo> buscarDelMecanico(@Param("correo") String correo,
                                          @Param("estados") List<EstadoCita> estados);
+
+    @Query("SELECT o FROM OrdenTrabajo o JOIN FETCH o.cita c JOIN FETCH c.servicio JOIN FETCH c.mecanico " +
+            "WHERE c.vehiculo.idVehiculo = :idVehiculo ORDER BY o.fechaInicio DESC")
+    List<OrdenTrabajo> historialDelVehiculo(@Param("idVehiculo") Long idVehiculo);
 }
