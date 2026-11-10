@@ -9,7 +9,8 @@ import "./Admin.css";
    Cada panel solo define sus enlaces; las pantallas se dibujan en <Outlet />.
 
    Props:
-     enlaces   [{ to, texto, icono, fin? }]  (fin = true solo marca activo en la ruta exacta)
+     enlaces   [{ to, texto, icono, fin?, contador?, etiquetaContador? }]
+               (fin = true solo marca activo en la ruta exacta; contador > 0 muestra un número rojo, T60.1)
      seccion   título pequeño sobre el menú ("Administración", "Mi taller")
      inicio    ruta del logo (inicio del panel)
      avisoPrueba  muestra la etiqueta "Datos de prueba" si están activos
@@ -75,6 +76,11 @@ function PanelLayout({ enlaces, seccion, inicio, avisoPrueba = false, titulos = 
             >
               {e.icono}
               {e.texto}
+              {e.contador > 0 && (
+                <span className="adm-contador" aria-label={e.etiquetaContador ?? `${e.contador} avisos`}>
+                  {e.contador}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

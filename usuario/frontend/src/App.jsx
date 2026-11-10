@@ -14,6 +14,8 @@ import Usuarios from "./pages/admin/Usuarios";
 import Servicios from "./pages/admin/Servicios";
 import Reservas from "./pages/admin/Reservas";
 import Taller from "./pages/admin/Taller";
+import Inventario from "./pages/admin/Inventario";
+import Solicitudes from "./pages/admin/Solicitudes";
 import InicioMecanico from "./pages/mecanico/Inicio";
 import Agenda from "./pages/mecanico/Agenda";
 import CitasHoy from "./pages/mecanico/CitasHoy";
@@ -41,6 +43,8 @@ function App() {
             <Route path="reservas" element={<Reservas />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="servicios" element={<Servicios />} />
+            <Route path="inventario" element={<Inventario />} />
+            <Route path="solicitudes" element={<Solicitudes />} />
             <Route path="taller" element={<Taller />} />
           </Route>
         </Route>

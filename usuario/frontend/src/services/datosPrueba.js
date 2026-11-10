@@ -937,3 +937,186 @@ export async function eliminarFeriado(id) {
   await esperar(250);
   feriados = feriados.filter((f) => f.idFeriado !== id);
 }
+
+/* ---------- Inventario del almacén (T57.2, contrato de T57.1) ---------- */
+
+const mismoCodigo = (a, b) => a.trim().toUpperCase() === b.trim().toUpperCase();
+const copiaMaterial = (m) => ({ ...m, bajoStock: m.stockActual <= m.stockMinimo });
+const conflicto = (codigo) =>
+  Object.assign(new Error(`Ya existe un material con el codigo ${codigo.trim().toUpperCase()}`), { status: 409 });
+
+// [código, nombre, unidad, costo, stock, mínimo]
+let materiales = [
+  ["FIL-001", "Filtro de aceite", "unidad", 18.5, 24, 10],
+  ["FIL-002", "Filtro de aire", "unidad", 32, 6, 8],
+  ["FIL-003", "Filtro de combustible", "unidad", 28.9, 12, 5],
+  ["FIL-004", "Filtro de cabina", "unidad", 35, 0, 4],
+  ["LUB-001", "Aceite de motor 10W-30 sintético", "galón", 96, 15, 6],
+  ["LUB-002", "Aceite de motor 20W-50 mineral", "galón", 72, 4, 6],
+  ["LUB-003", "Líquido de frenos DOT 4", "litro", 24, 9, 4],
+  ["LUB-004", "Refrigerante verde", "galón", 38, 7, 3],
+  ["FRE-001", "Pastillas de freno delanteras", "juego", 120, 5, 4],
+  ["FRE-002", "Pastillas de freno traseras", "juego", 98, 2, 3],
+  ["FRE-003", "Disco de freno delantero", "unidad", 165, 4, 2],
+  ["REP-001", "Bujía de iridio", "unidad", 42, 32, 16],
+  ["REP-002", "Kit de distribución", "kit", 285, 3, 2],
+  ["REP-003", "Amortiguador delantero", "unidad", 210, 4, 2],
+  ["REP-004", "Rótula de suspensión", "unidad", 75, 1, 2],
+  ["ELE-001", "Batería 12 V 65 Ah", "unidad", 420, 3, 2],
+  ["ELE-002", "Foco H4 halógeno", "unidad", 16, 20, 10],
+  ["ELE-003", "Cable automotriz 12 AWG", "metro", 3.5, 40, 15],
+  ["NEU-001", "Neumático 185/65 R15", "unidad", 260, 8, 4],
+  ["INS-001", "Limpiador de frenos en aerosol", "unidad", 19, 14, 6],
+  ["INS-002", "Trapo industrial (bolsa de 1 kg)", "unidad", 9.5, 30, 10],
+].map(([codigo, nombre, unidad, costoUnitario, stockActual, stockMinimo], i) => ({
+  idMaterial: i + 1,
+  codigo,
+  nombre,
+  unidad,
+  costoUnitario,
+  stockActual,
+  stockMinimo,
+}));
+let siguienteMaterial = materiales.length + 1;
+
+// Kardex: cada material empieza con una entrada de inventario inicial (T58.2)
+const ahoraLima = () =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima", dateStyle: "short", timeStyle: "medium" })
+    .format(new Date())
+    .replace(" ", "T");
+const movimientos = materiales.map((m, i) => ({
+  idMovimiento: i + 1,
+  idMaterial: m.idMaterial,
+  codigoMaterial: m.codigo,
+  tipo: "ENTRADA",
+  cantidad: m.stockActual,
+  costoUnitario: m.costoUnitario,
+  stockResultante: m.stockActual,
+  referencia: "Inventario inicial",
+  idOrden: null,
+  registradoPor: "admin@autosmart.com",
+  fecha: `${fechaRelativa(-7)}T08:00:00`,
+}));
+let siguienteMovimientoAlmacen = movimientos.length + 1;
+
+export async function registrarIngreso(idMaterial, { cantidad, costoUnitario, referencia }) {
+  await esperar(450);
+  const m = materiales.find((x) => x.idMaterial === Number(idMaterial));
+  if (!m) throw Object.assign(new Error("Material no encontrado"), { status: 404 });
+  if (!Number.isInteger(cantidad) || cantidad < 1) throw Object.assign(new Error("La cantidad debe ser al menos 1"), { status: 400 });
+  if (costoUnitario !== undefined) m.costoUnitario = Math.round(costoUnitario * 100) / 100;
+  m.stockActual += cantidad;
+  const mov = {
+    idMovimiento: siguienteMovimientoAlmacen++,
+    idMaterial: m.idMaterial,
+    codigoMaterial: m.codigo,
+    tipo: "ENTRADA",
+    cantidad,
+    costoUnitario: m.costoUnitario,
+    stockResultante: m.stockActual,
+    referencia,
+    idOrden: null,
+    registradoPor: "admin@autosmart.com",
+    fecha: ahoraLima(),
+  };
+  movimientos.push(mov);
+  return { ...mov };
+}
+
+// Solicitudes de repuestos de los mecánicos (T59.2). Las órdenes 7 y 8 están activas; la 3 ya se finalizó.
+const ordenesActivas = [7, 8];
+const solicitudesAlmacen = [
+  [1, 7, 14, 2, "Cambio de amortiguadores aprobado por el cliente", "carlos@taller.com", "09:12"],
+  [2, 7, 9, 1, "Pastillas al 20 %", "carlos@taller.com", "09:15"],
+  [3, 8, 5, 2, null, "ana@taller.com", "10:40"],
+  [4, 3, 1, 1, "Cambio de aceite", "ana@taller.com", "08:05"],
+].map(([idSolicitud, idOrden, idMaterial, cantidad, motivo, solicitadoPor, hora]) => ({
+  idSolicitud,
+  idOrden,
+  idMaterial,
+  cantidad,
+  motivo,
+  estado: idSolicitud === 4 ? "APROBADA" : "PENDIENTE",
+  solicitadoPor,
+  fechaSolicitud: `${fechaRelativa(idSolicitud === 4 ? -1 : 0)}T${hora}:00`,
+  atendidoPor: idSolicitud === 4 ? "admin@autosmart.com" : null,
+  fechaAtencion: idSolicitud === 4 ? `${fechaRelativa(-1)}T08:20:00` : null,
+  observacion: null,
+}));
+
+const datosSolicitudAlmacen = (s) => {
+  const m = materiales.find((x) => x.idMaterial === s.idMaterial);
+  return { ...s, codigoMaterial: m.codigo, nombreMaterial: m.nombre, stockDisponible: m.stockActual };
+};
+
+export async function listarSolicitudesAlmacen(estado) {
+  await esperar();
+  const lista = estado ? solicitudesAlmacen.filter((s) => s.estado === estado) : [...solicitudesAlmacen];
+  lista.sort((a, b) => (estado ? 1 : -1) * a.fechaSolicitud.localeCompare(b.fechaSolicitud));
+  return lista.map(datosSolicitudAlmacen);
+}
+
+export async function decidirSolicitud(id, { decision, observacion }) {
+  await esperar(450);
+  const s = solicitudesAlmacen.find((x) => x.idSolicitud === Number(id));
+  if (!s) throw Object.assign(new Error("Solicitud no encontrada"), { status: 404 });
+  if (s.estado !== "PENDIENTE") throw Object.assign(new Error(`La solicitud ya fue ${s.estado}`), { status: 409 });
+  if (decision === "APROBADA") {
+    if (!ordenesActivas.includes(s.idOrden)) {
+      throw Object.assign(new Error("La orden de la solicitud ya no esta activa (estado: FINALIZADA)"), { status: 409 });
+    }
+    const m = materiales.find((x) => x.idMaterial === s.idMaterial);
+    if (m.stockActual < s.cantidad) {
+      throw Object.assign(new Error(`Stock insuficiente de ${m.nombre}: disponible ${m.stockActual}, requerido ${s.cantidad}`), { status: 409 });
+    }
+    m.stockActual -= s.cantidad;
+    movimientos.push({
+      idMovimiento: siguienteMovimientoAlmacen++,
+      idMaterial: m.idMaterial,
+      codigoMaterial: m.codigo,
+      tipo: "SALIDA",
+      cantidad: s.cantidad,
+      costoUnitario: m.costoUnitario,
+      stockResultante: m.stockActual,
+      referencia: `Solicitud de repuesto #${s.idSolicitud}`,
+      idOrden: s.idOrden,
+      registradoPor: "admin@autosmart.com",
+      fecha: ahoraLima(),
+    });
+  }
+  Object.assign(s, { estado: decision, atendidoPor: "admin@autosmart.com", fechaAtencion: ahoraLima(), observacion });
+  return datosSolicitudAlmacen(s);
+}
+
+export async function obtenerKardex(idMaterial) {
+  await esperar(300);
+  return movimientos.filter((x) => x.idMaterial === Number(idMaterial)).map((x) => ({ ...x }));
+}
+
+export async function listarMateriales() {
+  await esperar();
+  return materiales.map(copiaMaterial).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}
+
+export async function crearMaterial(datos) {
+  await esperar(450);
+  if (materiales.some((m) => mismoCodigo(m.codigo, datos.codigo))) throw conflicto(datos.codigo);
+  const nuevo = {
+    idMaterial: siguienteMaterial++,
+    ...datos,
+    codigo: datos.codigo.trim().toUpperCase(),
+    unidad: datos.unidad.trim().toLowerCase(),
+    stockActual: 0,
+  };
+  materiales = [...materiales, nuevo];
+  return copiaMaterial(nuevo);
+}
+
+export async function editarMaterial(id, datos) {
+  await esperar(450);
+  const material = materiales.find((m) => m.idMaterial === id);
+  if (!material) throw Object.assign(new Error("Material no encontrado"), { status: 404 });
+  if (materiales.some((m) => m.idMaterial !== id && mismoCodigo(m.codigo, datos.codigo))) throw conflicto(datos.codigo);
+  Object.assign(material, datos, { codigo: datos.codigo.trim().toUpperCase(), unidad: datos.unidad.trim().toLowerCase() });
+  return copiaMaterial(material);
+}

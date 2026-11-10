@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import PanelLayout, { Icono } from "./PanelLayout";
+import { contarAlertasStock, EVENTO_STOCK } from "../services/inventarioService";
 
 /* Panel del administrador: usa la estructura común de PanelLayout. */
 
@@ -49,6 +52,26 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/inventario",
+    texto: "Inventario",
+    icono: (
+      <Icono>
+        <path d="M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16Z" />
+        <path d="M3.5 8 12 12.5 20.5 8M12 12.5v8" />
+      </Icono>
+    ),
+  },
+  {
+    to: "/admin/solicitudes",
+    texto: "Solicitudes",
+    icono: (
+      <Icono>
+        <path d="M5 4.5h14v15l-3-2-2 2-2-2-2 2-2-2-3 2Z" />
+        <path d="M9 9h6M9 12.5h4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/taller",
     texto: "Horario del taller",
     icono: (
@@ -61,7 +84,34 @@ const ENLACES = [
 ];
 
 function AdminLayout() {
-  return <PanelLayout enlaces={ENLACES} seccion="Administración" inicio="/admin" avisoPrueba />;
+  const { pathname } = useLocation();
+  const [alertas, setAlertas] = useState(0);
+  const [cambios, setCambios] = useState(0);
+
+  // T60.1: materiales en stock mínimo; se recuentan al cambiar de pantalla y cuando cambia el stock
+  useEffect(() => {
+    const alCambiar = () => setCambios((n) => n + 1);
+    window.addEventListener(EVENTO_STOCK, alCambiar);
+    return () => window.removeEventListener(EVENTO_STOCK, alCambiar);
+  }, []);
+
+  useEffect(() => {
+    let vigente = true;
+    contarAlertasStock()
+      .then((n) => vigente && setAlertas(n))
+      .catch(() => vigente && setAlertas(0));
+    return () => {
+      vigente = false;
+    };
+  }, [pathname, cambios]);
+
+  const enlaces = ENLACES.map((e) =>
+    e.to === "/admin/inventario"
+      ? { ...e, contador: alertas, etiquetaContador: `${alertas} ${alertas === 1 ? "material" : "materiales"} en stock mínimo` }
+      : e
+  );
+
+  return <PanelLayout enlaces={enlaces} seccion="Administración" inicio="/admin" avisoPrueba />;
 }
 
 export default AdminLayout;
