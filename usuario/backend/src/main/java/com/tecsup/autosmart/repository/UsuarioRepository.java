@@ -14,6 +14,7 @@ import java.util.Optional;
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     Optional<Usuario> findByCorreo(String correo);
+    Optional<Usuario> findByFcmToken(String fcmToken);
     boolean existsByCorreo(String correo);
 
     @Query("SELECT u FROM Usuario u WHERE (:rol = '' OR u.rol.nombre = :rol) " +

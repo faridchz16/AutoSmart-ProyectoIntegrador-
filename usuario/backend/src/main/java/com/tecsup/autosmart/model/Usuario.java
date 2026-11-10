@@ -34,6 +34,9 @@ public class Usuario {
     @Column(name = "telefono", length = 15)
     private String telefono;
 
+    @Column(name = "fcm_token", length = 255)
+    private String fcmToken;
+
     @Column(name = "estado_cambiado_en")
     private LocalDateTime estadoCambiadoEn;
 
@@ -62,6 +65,8 @@ public class Usuario {
     public void setActivo(Boolean activo) { this.activo = activo; }
     public String getTelefono() { return telefono; }
     public void setTelefono(String telefono) { this.telefono = telefono; }
+    public String getFcmToken() { return fcmToken; }
+    public void setFcmToken(String fcmToken) { this.fcmToken = fcmToken; }
     public LocalDateTime getEstadoCambiadoEn() { return estadoCambiadoEn; }
     public void setEstadoCambiadoEn(LocalDateTime estadoCambiadoEn) { this.estadoCambiadoEn = estadoCambiadoEn; }
 }
