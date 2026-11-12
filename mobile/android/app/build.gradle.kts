@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -12,7 +14,7 @@ if (file("google-services.json").isFile) {
 // Cada integrante pone su IP en local.properties (no se sube al repositorio):
 //   autosmart.baseUrl=http://192.168.1.63:8081/
 // En el emulador se puede usar http://10.0.2.2:8081/
-val localProps = java.util.Properties().apply {
+val localProps = Properties().apply {
     val archivo = rootProject.file("local.properties")
     if (archivo.isFile) archivo.inputStream().use { load(it) }
 }
