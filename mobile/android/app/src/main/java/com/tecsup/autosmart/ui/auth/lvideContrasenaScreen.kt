@@ -45,12 +45,16 @@ internal fun PantallaRecuperacion(
     titulo: String,
     subtitulo: String,
     onBack: () -> Unit,
+    fondoAzul: Boolean = false, // true = fondo azul de la variante 4B (como Login y Registro)
     contenido: @Composable ColumnScope.() -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF070C14), Color(0xFF0F172A), Color(0xFF030712)))),
+            .then(
+                if (fondoAzul) Modifier.fondoAuth()
+                else Modifier.background(Brush.verticalGradient(listOf(Color(0xFF070C14), Color(0xFF0F172A), Color(0xFF030712))))
+            ),
         contentAlignment = Alignment.TopCenter
     ) {
         Column(
@@ -65,15 +69,18 @@ internal fun PantallaRecuperacion(
                 onClick = onBack,
                 modifier = Modifier.height(38.dp),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color(0xFF334155)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                border = BorderStroke(1.dp, if (fondoAzul) Color.White.copy(alpha = 0.55f) else Color(0xFF334155)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = if (fondoAzul) Color.White.copy(alpha = 0.06f) else Color.Transparent,
+                    contentColor = Color.White
+                ),
                 contentPadding = PaddingValues(horizontal = 14.dp)
             ) { Text("Atrás", fontSize = 13.sp, fontWeight = FontWeight.Bold) }
 
             Spacer(Modifier.height(24.dp))
             Text(titulo, fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color.White)
             Spacer(Modifier.height(6.dp))
-            Text(subtitulo, fontSize = 14.sp, lineHeight = 20.sp, color = Color(0xFF94A3B8))
+            Text(subtitulo, fontSize = 14.sp, lineHeight = 20.sp, color = if (fondoAzul) AuthEstilo.TextoSuave else Color(0xFF94A3B8))
             Spacer(Modifier.height(24.dp))
             contenido()
             Spacer(Modifier.height(24.dp))
@@ -116,7 +123,8 @@ fun OlvideContrasenaScreen(
     PantallaRecuperacion(
         titulo = "Olvidé mi contraseña",
         subtitulo = "Escribe el correo de tu cuenta y te enviaremos un código para crear una contraseña nueva. El código vence en 15 minutos.",
-        onBack = onBack
+        onBack = onBack,
+        fondoAzul = true
     ) {
         OutlinedTextField(
             value = correo,
@@ -129,12 +137,12 @@ fun OlvideContrasenaScreen(
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { enviar() }),
-            colors = recuperacionFieldColors()
+            colors = authFieldColors() // campos translúcidos sobre el fondo azul
         )
 
         mensajeError?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = Color(0xFFF87171), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(it, color = AuthEstilo.Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
 
         Spacer(Modifier.height(20.dp))
@@ -145,13 +153,13 @@ fun OlvideContrasenaScreen(
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1D4ED8),
-                contentColor = Color.White,
-                disabledContainerColor = Color(0xFF1D4ED8).copy(alpha = 0.45f)
+                containerColor = Color.White,
+                contentColor = AuthEstilo.AzulWeb,
+                disabledContainerColor = Color.White.copy(alpha = 0.45f)
             )
         ) {
             if (estado.enviando) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(color = AuthEstilo.AzulWeb, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
             } else {
                 Text("Enviar código", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
