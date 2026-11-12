@@ -121,17 +121,9 @@ private val VectorEyeOff: ImageVector by lazy {
     ).build()
 }
 
+// Campos translúcidos de la variante 4B (ver AuthEstilo.kt)
 @Composable
-private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color.Transparent,
-    unfocusedContainerColor = Color.Transparent,
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedBorderColor = Color(0xFF3B82F6),
-    unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-    focusedLabelColor = Color(0xFF60A5FA),
-    unfocusedLabelColor = Color.White.copy(alpha = 0.75f)
-)
+private fun loginFieldColors() = authFieldColors()
 
 @Composable
 fun LoginScreen(
@@ -166,7 +158,7 @@ fun LoginScreen(
         Text(
             text = "Inicia sesión para gestionar tus vehículos",
             fontSize = 14.sp,
-            color = Color(0xFFCBD5E1),
+            color = AuthEstilo.TextoSuave,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
@@ -202,7 +194,7 @@ fun LoginScreen(
                 errorMessage = null
             },
             label = { Text("Correo electrónico") },
-            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFF94A3B8)) },
+            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFFE2E8F0)) },
             singleLine = true,
             enabled = !isLoading,
             modifier = Modifier.fillMaxWidth(),
@@ -227,7 +219,7 @@ fun LoginScreen(
                 errorMessage = null
             },
             label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFF94A3B8)) },
+            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE2E8F0)) },
             trailingIcon = {
                 IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                     Icon(
@@ -264,7 +256,7 @@ fun LoginScreen(
         ) {
             Text(
                 text = errorMessage ?: "",
-                color = Color(0xFFF87171),
+                color = AuthEstilo.Error,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -287,22 +279,23 @@ fun LoginScreen(
                 .height(52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1D4ED8),
-                disabledContainerColor = Color(0xFF596579)
+                containerColor = Color.White,
+                disabledContainerColor = Color.White.copy(alpha = 0.22f)
             )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = AuthEstilo.AzulWeb,
                     modifier = Modifier.size(22.dp),
                     strokeWidth = 2.dp
                 )
             } else {
+                val ingresarActivo = correo.isNotBlank() && password.isNotBlank()
                 Text(
                     text = "INGRESAR",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = if (ingresarActivo) AuthEstilo.AzulWeb else Color.White.copy(alpha = 0.85f)
                 )
             }
         }
@@ -310,7 +303,7 @@ fun LoginScreen(
     }
 
 
-    val colorAzul = Color(0xFF93B4F4)
+    val colorAzul = Color.White // enlaces en blanco sobre el fondo azul
     val avisoOlvido = onForgotPasswordClick
 
     val olvidoPassword: @Composable () -> Unit = {
@@ -342,15 +335,7 @@ fun LoginScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF070C14),
-                        Color(0xFF0F172A),
-                        Color(0xFF030712)
-                    )
-                )
-            )
+            .fondoAuth() // Fondo azul de la variante 4B
             .imePadding(),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -375,9 +360,9 @@ fun LoginScreen(
                 Spacer(Modifier.height(24.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
-                    Text("ó", color = Color(0xFFCBD5E1), fontSize = 16.sp)
-                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
+                    HorizontalDivider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.35f))
+                    Text("ó", color = AuthEstilo.TextoSuave, fontSize = 16.sp)
+                    HorizontalDivider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.35f))
                 }
                 Spacer(Modifier.height(24.dp))
                 botonGoogle()
