@@ -8,6 +8,18 @@ if (file("google-services.json").isFile) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+// TEC2.3: URL del backend por entorno.
+// Cada integrante pone su IP en local.properties (no se sube al repositorio):
+//   autosmart.baseUrl=http://192.168.1.63:8081/
+// En el emulador se puede usar http://10.0.2.2:8081/
+val localProps = java.util.Properties().apply {
+    val archivo = rootProject.file("local.properties")
+    if (archivo.isFile) archivo.inputStream().use { load(it) }
+}
+val backendUrl: String = (localProps.getProperty("autosmart.baseUrl")
+    ?: providers.gradleProperty("autosmart.baseUrl").orNull
+    ?: "http://192.168.1.63:8081/").let { if (it.endsWith("/")) it else "$it/" }
+
 android {
     namespace = "com.tecsup.autosmart"
     compileSdk = 37
@@ -21,8 +33,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // TAREA TEC.2: URL Base del Backend para BuildConfig
-        buildConfigField("String", "BASE_URL", "\"http://10.200.173.47:8081/\"")
+        // TEC2.3: URL Base del Backend para BuildConfig (se toma de local.properties)
+        buildConfigField("String", "BASE_URL", "\"$backendUrl\"")
 
         // Client ID Web de Google Auth Platform
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"613347565665-08u7d81kvsuoa1c4qm6qurvarj562uof.apps.googleusercontent.com\"")

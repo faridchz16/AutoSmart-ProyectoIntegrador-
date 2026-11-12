@@ -1,6 +1,7 @@
 package com.tecsup.autosmart.data.remote
 
 import android.content.Context
+import com.tecsup.autosmart.BuildConfig
 import com.tecsup.autosmart.data.local.TokenManager
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
@@ -9,7 +10,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    private const val BASE_URL = "http://192.168.1.63:8081/"
+    // TEC2.3: la URL ya no está fija; viene de BuildConfig (local.properties -> autosmart.baseUrl)
+    private val BASE_URL: String = BuildConfig.BASE_URL
 
 
     var token: String? = null
