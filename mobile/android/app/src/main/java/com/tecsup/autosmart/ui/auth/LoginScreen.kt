@@ -1,6 +1,8 @@
 package com.tecsup.autosmart.ui.auth
 
 import android.content.res.Configuration
+import android.util.Patterns
+import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -127,7 +129,8 @@ private fun loginFieldColors() = authFieldColors()
 
 @Composable
 fun LoginScreen(
-    onLoginClick: (String, String) -> Unit,
+    // Devuelve null si el inicio de sesión fue correcto, o el mensaje de error para mostrar
+    onLoginClick: suspend (String, String) -> String?,
     onNavigateToRegister: () -> Unit,
     onGoogleClick: () -> Unit = {},
     onForgotPasswordClick: () -> Unit = {}
@@ -141,6 +144,31 @@ fun LoginScreen(
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
+    val scope = rememberCoroutineScope()
+
+    // Valida los campos y, si están bien, inicia sesión mostrando el resultado debajo de los campos
+    val intentarLogin: () -> Unit = {
+        focusManager.clearFocus()
+        val correoLimpio = correo.trim()
+        val error = when {
+            correoLimpio.isEmpty() && password.isEmpty() -> "Ingresa tu correo y tu contraseña"
+            correoLimpio.isEmpty() -> "Ingresa tu correo electrónico"
+            !Patterns.EMAIL_ADDRESS.matcher(correoLimpio).matches() -> "Ingresa un correo electrónico válido"
+            password.isEmpty() -> "Ingresa tu contraseña"
+            else -> null
+        }
+        errorMessage = error
+        if (error == null && !isLoading) {
+            isLoading = true
+            scope.launch {
+                try {
+                    errorMessage = onLoginClick(correoLimpio, password)
+                } finally {
+                    isLoading = false
+                }
+            }
+        }
+    }
 
     val isLandscape =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -211,11 +239,12 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 14.dp))
 
-        // Campo Contraseña
+        // Campo Contraseña (sin copiar ni pegar)
+        SinCopiarPegar {
         OutlinedTextField(
             value = password,
             onValueChange = {
-                password = it
+                password = sinPegar(password, it)
                 errorMessage = null
             },
             label = { Text("Contraseña") },
@@ -239,15 +268,11 @@ fun LoginScreen(
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
-                onDone = {
-                    focusManager.clearFocus()
-                    if (correo.isNotBlank() && password.isNotBlank()) {
-                        onLoginClick(correo, password)
-                    }
-                }
+                onDone = { intentarLogin() }
             ),
             colors = loginFieldColors()
         )
+        }
 
         AnimatedVisibility(
             visible = !errorMessage.isNullOrEmpty(),
@@ -257,11 +282,11 @@ fun LoginScreen(
             Text(
                 text = errorMessage ?: "",
                 color = AuthEstilo.Error,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
+                    .padding(top = 8.dp)
             )
         }
 
@@ -269,11 +294,8 @@ fun LoginScreen(
 
         // Botón Ingresar
         Button(
-            onClick = {
-                focusManager.clearFocus()
-                onLoginClick(correo, password)
-            },
-            enabled = !isLoading && correo.isNotBlank() && password.isNotBlank(),
+            onClick = { intentarLogin() },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -290,12 +312,11 @@ fun LoginScreen(
                     strokeWidth = 2.dp
                 )
             } else {
-                val ingresarActivo = correo.isNotBlank() && password.isNotBlank()
                 Text(
                     text = "INGRESAR",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (ingresarActivo) AuthEstilo.AzulWeb else Color.White.copy(alpha = 0.85f)
+                    color = AuthEstilo.AzulWeb
                 )
             }
         }

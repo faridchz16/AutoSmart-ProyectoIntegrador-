@@ -2,9 +2,14 @@ package com.tecsup.autosmart.ui.auth
 
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.TextToolbar
+import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
@@ -40,6 +45,36 @@ fun Modifier.fondoAuth(): Modifier = this.drawBehind {
             radius = size.width * 0.9f
         )
     )
+}
+
+/** Menú de texto vacío: no aparecen Copiar, Cortar, Pegar ni Seleccionar todo. */
+private object BarraTextoVacia : TextToolbar {
+    override val status: TextToolbarStatus = TextToolbarStatus.Hidden
+    override fun hide() {}
+    override fun showMenu(
+        rect: Rect,
+        onCopyRequested: (() -> Unit)?,
+        onPasteRequested: (() -> Unit)?,
+        onCutRequested: (() -> Unit)?,
+        onSelectAllRequested: (() -> Unit)?
+    ) {}
+}
+
+/** Envuelve un campo de contraseña para que no se pueda copiar ni pegar desde el menú. */
+@Composable
+fun SinCopiarPegar(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalTextToolbar provides BarraTextoVacia, content = content)
+}
+
+/**
+ * Acepta escribir un carácter a la vez o borrar, pero rechaza texto pegado
+ * (por ejemplo, desde el portapapeles del teclado).
+ */
+fun sinPegar(anterior: String, nuevo: String): String {
+    val prefijo = anterior.commonPrefixWith(nuevo).length
+    val sufijo = anterior.substring(prefijo).commonSuffixWith(nuevo.substring(prefijo)).length
+    val insertados = nuevo.length - prefijo - sufijo
+    return if (insertados <= 1) nuevo else anterior
 }
 
 /** Campos de texto translúcidos sobre el fondo azul. */

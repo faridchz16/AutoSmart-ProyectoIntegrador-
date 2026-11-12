@@ -127,9 +127,11 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 14.dp))
 
+        // Contraseña sin copiar ni pegar
+        SinCopiarPegar {
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it; errorMessage = null },
+            onValueChange = { password = sinPegar(password, it); errorMessage = null },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             // La ayuda solo se muestra en vertical para ahorrar altura en horizontal
@@ -147,6 +149,7 @@ fun RegisterScreen(
             keyboardActions = KeyboardActions(onDone = { intentarRegistro() }),
             colors = registerFieldColors()
         )
+        }
 
         if (!errorMessage.isNullOrEmpty()) {
             Text(

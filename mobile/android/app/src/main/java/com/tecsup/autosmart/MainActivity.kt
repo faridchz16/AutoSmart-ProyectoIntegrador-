@@ -261,33 +261,40 @@ class MainActivity : ComponentActivity() {
                             }
                             "login" -> {
                                 LoginScreen(
+                                    // Devuelve null si entra, o el mensaje que se muestra en rojo debajo de los campos
                                     onLoginClick = { correo, password ->
-                                        scope.launch {
-                                            try {
-                                                val response = RetrofitClient.authApi.login(
-                                                    LoginRequest(correo, password)
+                                        try {
+                                            val response = RetrofitClient.authApi.login(
+                                                LoginRequest(correo, password)
+                                            )
+                                            val loginResponseBody = response.body()
+                                            if (response.isSuccessful && loginResponseBody != null) {
+                                                val userRole = loginResponseBody.rol
+
+                                                RetrofitClient.token = loginResponseBody.token
+                                                tokenManager.saveSession(
+                                                    token = loginResponseBody.token,
+                                                    role = userRole
                                                 )
-                                                if (response.isSuccessful && response.body() != null) {
-                                                    val loginResponseBody = response.body()!!
-                                                    val userRole = loginResponseBody.rol
 
-                                                    RetrofitClient.token = loginResponseBody.token
-                                                    tokenManager.saveSession(
-                                                        token = loginResponseBody.token,
-                                                        role = userRole
-                                                    )
-
-                                                    Toast.makeText(this@MainActivity, "¡Login Exitoso!", Toast.LENGTH_LONG).show()
-                                                    currentScreen = if (userRole == "MECANICO") "mecanico" else "vehiculos"
-                                                    sesionCliente = userRole.equals("CLIENTE", ignoreCase = true)
-                                                    if (sesionCliente) prepararNotificacionesCliente() else citaNotificada.value = null
-                                                } else {
-                                                    Toast.makeText(this@MainActivity, "Credenciales incorrectas (${response.code()})", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(this@MainActivity, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
+                                                currentScreen = if (userRole == "MECANICO") "mecanico" else "vehiculos"
+                                                sesionCliente = userRole.equals("CLIENTE", ignoreCase = true)
+                                                if (sesionCliente) prepararNotificacionesCliente() else citaNotificada.value = null
+                                                null
+                                            } else {
+                                                when (response.code()) {
+                                                    401 -> "Correo o contraseña incorrectos"
+                                                    403 -> com.tecsup.autosmart.data.remote.mensajeDeError(response.errorBody()?.string(), 403)
+                                                    400 -> "Revisa el correo y la contraseña"
+                                                    in 500..599 -> "El servidor tuvo un problema. Intenta de nuevo en unos minutos"
+                                                    else -> com.tecsup.autosmart.data.remote.mensajeDeError(response.errorBody()?.string(), response.code())
                                                 }
-                                            } catch (e: Exception) {
-                                                Log.e("LOGIN_ERROR", "Error en login", e)
-                                                Toast.makeText(this@MainActivity, "Error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                                             }
+                                        } catch (e: Exception) {
+                                            if (e is kotlinx.coroutines.CancellationException) throw e
+                                            Log.e("LOGIN_ERROR", "Error en login", e)
+                                            "No se pudo conectar con el servidor. Revisa tu conexión a internet"
                                         }
                                     },
                                     onNavigateToRegister = { currentScreen = "register" },
