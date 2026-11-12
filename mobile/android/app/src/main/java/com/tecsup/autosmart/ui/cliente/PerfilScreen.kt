@@ -1,5 +1,9 @@
 package com.tecsup.autosmart.ui.cliente
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import android.app.Activity
 import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +47,9 @@ fun PerfilScreen(
     viewModel: PerfilViewModel = viewModel()
 ) {
     val estado by viewModel.estado.collectAsState()
+    BackHandler(enabled = estado.guardando || estado.editando) {
+        if (!estado.guardando) viewModel.cancelarEdicion()
+    }
     val contexto = LocalContext.current
     val actividad = remember(contexto) {
         generateSequence(contexto) { (it as? ContextWrapper)?.baseContext }
@@ -60,13 +67,15 @@ fun PerfilScreen(
             TopAppBar(
                 title = { Text("Mi perfil") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(enabled = !estado.guardando, onClick = {
+                        if (estado.editando) viewModel.cancelarEdicion() else onNavigateBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
                     TextButton(
-                        enabled = !estado.cargando,
+                        enabled = !estado.cargando && !estado.editando && !estado.guardando,
                         onClick = { viewModel.cargarPerfil() }
                     ) { Text("Actualizar") }
                 }
@@ -96,13 +105,35 @@ fun PerfilScreen(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            CampoPerfil("Nombre", perfil.nombre)
+                            if (estado.editando) {
+                                OutlinedTextField(value = estado.nombre,
+                                    onValueChange = { viewModel.editar(nombre = it) },
+                                    label = { Text("Nombre") }, singleLine = true,
+                                    enabled = !estado.guardando, modifier = Modifier.fillMaxWidth())
+                            } else CampoPerfil("Nombre", perfil.nombre)
                             HorizontalDivider()
                             CampoPerfil("Correo", perfil.correo)
                             HorizontalDivider()
-                            CampoPerfil("Teléfono", perfil.telefono, "No registrado")
+                            if (estado.editando) {
+                                OutlinedTextField(value = estado.telefono,
+                                    onValueChange = { viewModel.editar(telefono = it) },
+                                    label = { Text("Teléfono") }, singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                    enabled = !estado.guardando, modifier = Modifier.fillMaxWidth())
+                                Text("Opcional. Déjalo vacío para quitar el teléfono.")
+                            } else CampoPerfil("Teléfono", perfil.telefono, "No registrado")
                             HorizontalDivider()
                             CampoPerfil("Rol", perfil.rol)
+                            estado.errorEdicion?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                            estado.mensaje?.let { Text(it) }
+                            if (estado.editando) {
+                                Button(onClick = viewModel::guardar, enabled = !estado.guardando) {
+                                    Text(if (estado.guardando) "Guardando..." else "Guardar cambios")
+                                }
+                                TextButton(onClick = viewModel::cancelarEdicion, enabled = !estado.guardando) {
+                                    Text("Cancelar edición")
+                                }
+                            } else Button(onClick = viewModel::iniciarEdicion) { Text("Editar perfil") }
                         }
                     }
                 }
