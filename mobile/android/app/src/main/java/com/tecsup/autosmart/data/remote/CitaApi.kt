@@ -4,6 +4,7 @@ package com.tecsup.autosmart.data.remote
 import com.tecsup.autosmart.model.CitaRequest
 import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.SeguimientoDto
+import com.tecsup.autosmart.model.ReprogramarRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -13,6 +14,11 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface CitaApi {
+    // T31.2: reprogramar cita (PUT /appointments/{id}/reschedule)
+    @PUT("appointments/{id}/reschedule")
+    suspend fun reprogramarCita(@Path("id") idCita: Long,
+                              @Body datos: ReprogramarRequest): Response<CitaCreadaResponse>
+
 
     @POST("appointments")
     suspend fun crearCita(
