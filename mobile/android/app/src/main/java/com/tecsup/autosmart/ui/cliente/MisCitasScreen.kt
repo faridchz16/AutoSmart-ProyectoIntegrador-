@@ -1,5 +1,9 @@
 package com.tecsup.autosmart.ui.cliente
 
+import androidx.compose.runtime.saveable.rememberSaveable
+import java.time.LocalTime
+import java.time.Instant
+import java.time.ZoneOffset
 import android.app.Activity
 import android.content.ContextWrapper
 import android.os.Build
@@ -61,8 +65,14 @@ fun MisCitasScreen(
     val estado by viewModel.estado.collectAsState()
     val cancelacion by viewModel.cancelacion.collectAsState()
     val cancelando = cancelacion.enviando || cancelacion.verificando
+    val reprogramacion by viewModel.reprogramacion.collectAsState()
+    val reprogramando = reprogramacion.enviando || reprogramacion.verificando
+    val procesando = cancelando || reprogramando
+    BackHandler(enabled = reprogramacion.cita != null) {
+        if (!procesando) viewModel.cerrarReprogramacion()
+    }
     BackHandler(enabled = cancelacion.cita != null) {
-        if (!cancelando) viewModel.cerrarCancelacion()
+        if (!procesando) viewModel.cerrarCancelacion()
     }
     val contexto = LocalContext.current
     val actividad = remember(contexto) {
@@ -93,24 +103,18 @@ fun MisCitasScreen(
     }
 
     val citaACancelar = cancelacion.cita
-    var citaAReprogramar by remember { mutableStateOf<CitaUI?>(null) }
-
-    // Estados para reprogramación (T31.2)
-    var nuevaFecha by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
-    var nuevoTurno by remember { mutableStateOf("09:00 AM") }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Mis Citas") },
                 actions = {
                     TextButton(
-                        enabled = !estado.cargando && !cancelando,
+                        enabled = !estado.cargando && !procesando && reprogramacion.cita == null,
                         onClick = { viewModel.cargarCitas() }
                     ) { Text("Actualizar") }
                 },
                 navigationIcon = {
-                    IconButton(enabled = !cancelando, onClick = onNavigateBack) {
+                    IconButton(enabled = !procesando, onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
@@ -146,12 +150,12 @@ fun MisCitasScreen(
                     CitaCard(
                         cita = cita,
                         onCancelar = { viewModel.abrirCancelacion(cita.id) },
-                        onReprogramar = { citaAReprogramar = cita },
-                        accionesHabilitadas = false,
-                        cancelarHabilitado = !cancelando && !estado.cargando && viewModel.puedeCancelar(cita.id),
+                        onReprogramar = { viewModel.abrirReprogramacion(cita.id) },
+                        accionesHabilitadas = !procesando && viewModel.puedeReprogramar(cita.id),
+                        cancelarHabilitado = !procesando && !estado.cargando && viewModel.puedeCancelar(cita.id),
                         onPresupuesto = { onPresupuesto(cita.id) },
                         onSeguimiento = onSeguimiento?.let { abrir -> { abrir(cita.id) } },
-                        presupuestoHabilitado = !cancelando && cancelacion.cita == null
+                        presupuestoHabilitado = !procesando && cancelacion.cita == null && reprogramacion.cita == null
                     )
                 }
             }
@@ -184,7 +188,7 @@ fun MisCitasScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = !cancelando &&
+                    enabled = !procesando &&
                             (cancelacion.requiereVerificacion || viewModel.puedeCancelar(cita.idCita)),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     onClick = { viewModel.confirmarCancelacion() }
@@ -193,100 +197,84 @@ fun MisCitasScreen(
                 }
             },
             dismissButton = {
-                TextButton(enabled = !cancelando, onClick = { viewModel.cerrarCancelacion() }) {
+                TextButton(enabled = !procesando, onClick = { viewModel.cerrarCancelacion() }) {
                     Text("Volver")
                 }
             }
         )
     }
 
-    // T31.2: Diálogo de Reprogramación de Cita
-    citaAReprogramar?.let { cita ->
-        AlertDialog(
-            onDismissRequest = { citaAReprogramar = null },
-            title = { Text("Reprogramar Cita") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Selecciona una nueva fecha y turno para tu cita de ${cita.servicio}:")
+    reprogramacion.cita?.let { ReprogramacionDialog(viewModel) }
+}
 
-                    Text("Nueva Fecha:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val hoy = LocalDate.now()
-                        (1..3).forEach { i ->
-                            val dia = hoy.plusDays(i.toLong())
-                            val esSel = dia == nuevaFecha
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (esSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable { nuevaFecha = dia }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${dia.dayOfMonth} ${dia.format(DateTimeFormatter.ofPattern("MMM", Locale("es")))}",
-                                    color = if (esSel) Color.White else Color.Black,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Text("Nuevo Turno:", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        listOf("08:00 AM", "11:00 AM", "03:00 PM").forEach { turno ->
-                            val esSel = turno == nuevoTurno
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (esSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable { nuevoTurno = turno }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = turno,
-                                    color = if (esSel) Color.White else Color.Black,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-                    }
+@RequiresApi(Build.VERSION_CODES.O)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReprogramacionDialog(viewModel: MisCitasViewModel) {
+    val estado by viewModel.reprogramacion.collectAsState()
+    val cita = estado.cita ?: return
+    val ocupado = estado.enviando || estado.verificando
+    var elegirFecha by rememberSaveable(cita.idCita) { mutableStateOf(false) }
+    var elegirHora by rememberSaveable(cita.idCita) { mutableStateOf(false) }
+    if (elegirFecha) {
+        val selector = rememberDatePickerState(initialSelectedDateMillis =
+            LocalDate.parse(estado.fecha).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+        DatePickerDialog(onDismissRequest = { elegirFecha = false }, confirmButton = {
+            TextButton(onClick = {
+                selector.selectedDateMillis?.let {
+                    viewModel.editarReprogramacion(fecha = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString())
                 }
-            },
-            confirmButton = {
-                Button(
-                    enabled = false,
-                    onClick = {
-                        val index = listaCitas.indexOfFirst { it.id == cita.id }
-                        if (index != -1) {
-                            listaCitas[index] = cita.copy(
-                                fecha = nuevaFecha.toString(),
-                                hora = nuevoTurno
-                            )
-                        }
-                        citaAReprogramar = null
-                    }
-                ) {
-                    Text("Confirmar Cambio")
+                elegirFecha = false
+            }, enabled = selector.selectedDateMillis != null) { Text("Elegir fecha") }
+        }, dismissButton = { TextButton(onClick = { elegirFecha = false }) { Text("Volver") } }) {
+            DatePicker(state = selector)
+        }
+    }
+    if (elegirHora) {
+        val actual = LocalTime.parse(estado.hora)
+        val selector = rememberTimePickerState(initialHour = actual.hour, initialMinute = actual.minute, is24Hour = true)
+        AlertDialog(onDismissRequest = { elegirHora = false }, title = { Text("Nueva hora") },
+            text = { TimeInput(state = selector) }, confirmButton = {
+                TextButton(onClick = {
+                    viewModel.editarReprogramacion(hora = LocalTime.of(selector.hour, selector.minute).toString())
+                    elegirHora = false
+                }) { Text("Elegir hora") }
+            }, dismissButton = { TextButton(onClick = { elegirHora = false }) { Text("Volver") } })
+    }
+    AlertDialog(onDismissRequest = viewModel::cerrarReprogramacion,
+        title = { Text(if (estado.confirmando) "Confirmar reprogramación" else "Reprogramar cita") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Ticket: ${cita.ticket}")
+                Text("Horario actual: ${cita.fecha} ${cita.horaInicio.take(5)}")
+                if (estado.confirmando || estado.requiereVerificacion) {
+                    Text("Nuevo horario: ${estado.fecha} ${estado.hora}")
+                    Text("El cambio quedará pendiente de aceptación por el mecánico.")
+                } else {
+                    TextButton(onClick = { elegirFecha = true }, enabled = !ocupado) { Text("Nueva fecha: ${estado.fecha}") }
+                    TextButton(onClick = { elegirHora = true }, enabled = !ocupado) { Text("Nueva hora: ${estado.hora}") }
+                    Text("Selecciona fecha y hora. La disponibilidad se comprobará al confirmar.")
+                    Text("Solo se puede reprogramar con al menos 24 horas de anticipación a la cita actual.")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { citaAReprogramar = null }) {
-                    Text("Cancelar")
+                if (ocupado) { CircularProgressIndicator(); Text(if (estado.verificando) "Comprobando estado..." else "Reprogramando...") }
+                estado.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (estado.confirmando && !estado.requiereVerificacion) {
+                    TextButton(onClick = { viewModel.editarReprogramacion() }, enabled = !ocupado) { Text("Volver a editar") }
                 }
             }
-        )
-    }
+        }, confirmButton = {
+            Button(enabled = !ocupado, onClick = {
+                when {
+                    estado.requiereVerificacion -> viewModel.comprobarReprogramacion()
+                    estado.confirmando -> viewModel.confirmarReprogramacion()
+                    else -> viewModel.solicitarConfirmacionReprogramacion()
+                }
+            }) { Text(when { estado.requiereVerificacion -> "Comprobar estado"; estado.confirmando -> "Sí, reprogramar"; else -> "Continuar" }) }
+        }, dismissButton = {
+            TextButton(onClick = viewModel::cerrarReprogramacion, enabled = !ocupado) { Text("Volver a mis citas") }
+        })
 }
+
 
 @Composable
 fun CitaCard(

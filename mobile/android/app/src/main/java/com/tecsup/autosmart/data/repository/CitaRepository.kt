@@ -7,6 +7,8 @@ import com.tecsup.autosmart.data.remote.CitaApi
 import com.tecsup.autosmart.data.remote.RetrofitClient
 import com.tecsup.autosmart.data.remote.mensajeDeError
 import com.tecsup.autosmart.model.SeguimientoDto
+import com.tecsup.autosmart.model.ReprogramarRequest
+import com.tecsup.autosmart.model.coincideHorario
 import kotlinx.coroutines.CancellationException
 
 class CitaRepository(
@@ -87,6 +89,22 @@ class CitaRepository(
         Result.failure(Exception("No se pudo conectar con el servidor. Revisa tu conexión", e))
     }
 
+    suspend fun reprogramarCita(idCita: Long, datos: ReprogramarRequest): Result<CitaCreadaResponse> = try {
+        val respuesta = api.reprogramarCita(idCita, datos)
+        val cita = respuesta.body()
+        when {
+            !respuesta.isSuccessful -> {
+                val mensaje = mensajeDeError(respuesta.errorBody()?.string(), respuesta.code())
+                Result.failure(if (respuesta.code() == 408 || respuesta.code() >= 500)
+                    ReprogramacionInciertaException(mensaje) else Exception(mensaje))
+            }
+            cita == null || cita.idCita != idCita || cita.estado != "PENDIENTE" || !coincideHorario(cita, datos) ->
+                Result.failure(ReprogramacionInciertaException("El servidor no confirmó el nuevo horario."))
+            else -> Result.success(cita)
+        }
+    } catch (e: CancellationException) { throw e }
+    catch (e: Exception) { Result.failure(ReprogramacionInciertaException("No se pudo confirmar la reprogramación por un error de conexión.", e)) }
+
     suspend fun cancelarCita(idCita: Long): Result<CitaCreadaResponse> = try {
         val response = api.cancelarCita(idCita)
         val cita = response.body()
@@ -125,3 +143,5 @@ internal fun seguimientoValido(datos: SeguimientoDto, idCita: Long): Boolean {
             it != null && !it.clave.isNullOrBlank() && !it.titulo.isNullOrBlank() && it.completado != null
         } && hitos.distinctBy { it?.clave }.size == hitos.size
 }
+
+class ReprogramacionInciertaException(mensaje: String, causa: Throwable? = null) : Exception(mensaje, causa)
