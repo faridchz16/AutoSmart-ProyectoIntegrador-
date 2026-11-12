@@ -52,6 +52,7 @@ fun ReservaScreen(
     val mecanicosState by viewModel.mecanicos.collectAsState()
     val turnosState by viewModel.turnos.collectAsState()
     val confirmacionState by viewModel.confirmacion.collectAsState()
+    val bloqueoState by viewModel.bloqueo.collectAsState()
 
     var vehiculos by remember {
         mutableStateOf<List<VehiculoResponse>>(emptyList())
@@ -73,6 +74,22 @@ fun ReservaScreen(
     }
 
     var mostrarResumen by rememberSaveable { mutableStateOf(false) }
+
+    // T33.2: si el servidor rechaza el bloqueo (turno tomado), se quita la selección
+    // y se recargan los turnos para mostrar la disponibilidad real.
+    LaunchedEffect(bloqueoState.error) {
+        if (bloqueoState.error != null) {
+            turnoSeleccionado = null
+            mostrarResumen = false
+            mecanicoSeleccionado?.let { mecanico ->
+                viewModel.cargarTurnos(
+                    idServicio = idServicio,
+                    fecha = fechaSeleccionada.toString(),
+                    idMecanico = mecanico.idMecanico
+                )
+            }
+        }
+    }
 
 
     LaunchedEffect(idServicio) {
@@ -232,6 +249,9 @@ fun ReservaScreen(
                             mecanicoSeleccionado?.idMecanico ==
                                     mecanico.idMecanico,
                         onSelect = {
+                            if (mecanicoSeleccionado?.idMecanico != mecanico.idMecanico) {
+                                viewModel.liberarBloqueo() // T33.2
+                            }
                             mecanicoSeleccionado = mecanico
                             turnoSeleccionado = null
                         }
@@ -280,6 +300,9 @@ fun ReservaScreen(
                                             MaterialTheme.colorScheme.surfaceVariant
                                     )
                                     .clickable {
+                                        if (dia != fechaSeleccionada) {
+                                            viewModel.liberarBloqueo() // T33.2
+                                        }
                                         fechaSeleccionada = dia
                                         turnoSeleccionado = null
                                     }
@@ -362,8 +385,20 @@ fun ReservaScreen(
                                         turnoSeleccionado?.hora ==
                                                 turno.hora,
                                     onSelect = {
-                                        if (turno.disponible) {
+                                        val mecanico = mecanicoSeleccionado
+                                        if (turno.disponible && mecanico != null &&
+                                            !bloqueoState.cargando &&
+                                            !confirmacionState.cargando &&
+                                            turnoSeleccionado?.hora != turno.hora
+                                        ) {
                                             turnoSeleccionado = turno
+                                            // T33.2: bloquear el turno en el servidor
+                                            viewModel.bloquearTurno(
+                                                idServicio = idServicio,
+                                                idMecanico = mecanico.idMecanico,
+                                                fecha = fechaSeleccionada.toString(),
+                                                hora = turno.hora
+                                            )
                                         }
                                     }
                                 )
@@ -372,29 +407,50 @@ fun ReservaScreen(
                     }
                 }
 
+                bloqueoState.error?.let { error ->
+                    item {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
                 if (turnoSeleccionado != null) {
 
                     item {
-                        key(
-                            mecanicoSeleccionado?.idMecanico,
-                            fechaSeleccionada,
-                            turnoSeleccionado?.hora
-                        ) {
-                            if (!confirmacionState.cargando &&
-                                confirmacionState.cita == null
+                        val bloqueoActual = bloqueoState.bloqueo
+                        if (bloqueoState.cargando) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.padding(vertical = 8.dp)
                             ) {
-                                TemporizadorBloqueoTurno(
-                                    tiempoInicialSegundos = 600,
-                                    onTiempoAgotado = {
-                                        val confirmacionActual = viewModel.confirmacion.value
-                                        if (!confirmacionActual.cargando &&
-                                            confirmacionActual.cita == null
-                                        ) {
-                                            turnoSeleccionado = null
-                                            mostrarResumen = false
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Text("Reservando el turno...", fontSize = 12.sp)
+                            }
+                        } else if (bloqueoActual != null) {
+                            // T33.2: el contador usa el tiempo real que devuelve el servidor
+                            key(bloqueoActual.idBloqueo) {
+                                if (!confirmacionState.cargando &&
+                                    confirmacionState.cita == null
+                                ) {
+                                    TemporizadorBloqueoTurno(
+                                        tiempoInicialSegundos = bloqueoActual.segundosRestantes
+                                            .coerceIn(0L, 3600L).toInt(),
+                                        onTiempoAgotado = {
+                                            val confirmacionActual = viewModel.confirmacion.value
+                                            if (!confirmacionActual.cargando &&
+                                                confirmacionActual.cita == null
+                                            ) {
+                                                viewModel.liberarBloqueo()
+                                                turnoSeleccionado = null
+                                                mostrarResumen = false
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
@@ -407,6 +463,7 @@ fun ReservaScreen(
                             },
                             enabled =
                                 vehiculoSeleccionado != null &&
+                                        bloqueoState.bloqueo != null && // T33.2
                                         !turnosState.cargando &&
                                         !confirmacionState.cargando,
                             modifier = Modifier
@@ -478,14 +535,15 @@ fun ReservaScreen(
             },
             confirmButton = {
                 Button(
-                    enabled = !confirmacionState.cargando,
+                    enabled = !confirmacionState.cargando && bloqueoState.bloqueo != null,
                     onClick = {
                         val vehiculo = vehiculoSeleccionado
                         val mecanico = mecanicoSeleccionado
                         val turno = turnoSeleccionado
 
                         if (vehiculo != null && mecanico != null &&
-                            turno != null && turno.disponible
+                            turno != null && turno.disponible &&
+                            bloqueoState.bloqueo != null // T33.2: solo con el turno bloqueado
                         ) {
                             val request = CitaRequest(
                                 idServicio = idServicio,
