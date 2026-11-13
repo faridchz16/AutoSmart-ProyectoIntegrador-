@@ -34,15 +34,7 @@ fun WelcomeScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF070C14),
-                        Color(0xFF0F172A),
-                        Color(0xFF030712)
-                    )
-                )
-            )
+            .fondoAuth() // Fondo azul de la variante 4B
     ) {
         val horizontal = maxWidth > maxHeight && maxWidth >= 600.dp
         val botones: @Composable () -> Unit = {
@@ -121,7 +113,7 @@ private fun MarcaBienvenida(compacto: Boolean) {
     }
 }
 
-/** Botón azul relleno con animación al presionar. */
+/** Botón blanco con texto azul y animación al presionar. */
 @Composable
 private fun BotonPrincipalBienvenida(texto: String, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -139,8 +131,8 @@ private fun BotonPrincipalBienvenida(texto: String, onClick: () -> Unit) {
             .height(50.dp)
             .scale(escala),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (isPressed) Color(0xFF3B82F6) else Color(0xFF1D4ED8),
-            contentColor = Color.White
+            containerColor = if (isPressed) Color(0xFFE9F0FF) else Color.White,
+            contentColor = AuthEstilo.AzulWeb
         ),
         shape = RoundedCornerShape(14.dp)
     ) {
@@ -170,12 +162,12 @@ private fun BotonSecundarioBienvenida(texto: String, onClick: () -> Unit) {
             .height(50.dp)
             .scale(escala),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = if (isPressed) Color(0xFF1E293B) else Color.Transparent,
+            containerColor = Color.White.copy(alpha = if (isPressed) 0.16f else 0.06f),
             contentColor = Color.White
         ),
         border = BorderStroke(
             1.dp,
-            if (isPressed) Color(0xFF38BDF8) else Color(0xFF334155)
+            if (isPressed) Color.White else Color.White.copy(alpha = 0.55f)
         ),
         shape = RoundedCornerShape(14.dp)
     ) {

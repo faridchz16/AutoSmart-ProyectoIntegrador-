@@ -28,25 +28,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 
+// Campos translúcidos de la variante 4B (ver AuthEstilo.kt)
 @Composable
-private fun registerFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color(0xFF0F172A),
-    unfocusedContainerColor = Color(0xFF0B1220),
-    errorContainerColor = Color(0xFF0B1220),
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    errorTextColor = Color.White,
-    focusedBorderColor = Color(0xFF3B82F6),
-    unfocusedBorderColor = Color(0xFF334155),
-    errorBorderColor = Color(0xFFF87171),
-    focusedLabelColor = Color(0xFF60A5FA),
-    unfocusedLabelColor = Color(0xFF94A3B8),
-    errorLabelColor = Color(0xFFF87171),
-    focusedSupportingTextColor = Color(0xFF94A3B8),
-    unfocusedSupportingTextColor = Color(0xFF94A3B8),
-    errorSupportingTextColor = Color(0xFFF87171)
-)
+private fun registerFieldColors() = authFieldColors()
 
 @Composable
 fun RegisterScreen(
@@ -99,7 +87,7 @@ fun RegisterScreen(
             text = "Crear cuenta",
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF94A3B8),
+            color = AuthEstilo.TextoSuave,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
@@ -128,7 +116,7 @@ fun RegisterScreen(
             label = { Text("Correo electrónico") },
             singleLine = true,
             isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -142,6 +130,8 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 14.dp))
 
+        // Contraseña: se puede pegar o usar una sugerida, pero no copiar ni cortar
+        SinCopiar {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; errorMessage = null },
@@ -153,7 +143,7 @@ fun RegisterScreen(
             },
             singleLine = true,
             isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.NewPassword },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
@@ -162,11 +152,12 @@ fun RegisterScreen(
             keyboardActions = KeyboardActions(onDone = { intentarRegistro() }),
             colors = registerFieldColors()
         )
+        }
 
         if (!errorMessage.isNullOrEmpty()) {
             Text(
                 text = errorMessage ?: "",
-                color = Color(0xFFF87171),
+                color = AuthEstilo.Error,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
@@ -184,8 +175,8 @@ fun RegisterScreen(
                 .height(if (isLandscape) 44.dp else 50.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1D4ED8),
-                contentColor = Color.White
+                containerColor = Color.White,
+                contentColor = AuthEstilo.AzulWeb
             )
         ) {
             Text(
@@ -199,7 +190,7 @@ fun RegisterScreen(
     val yaTienesCuenta: @Composable () -> Unit = {
         Text(
             text = "¿Ya tienes cuenta?",
-            color = Color(0xFF94A3B8),
+            color = AuthEstilo.TextoSuave,
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
@@ -210,8 +201,11 @@ fun RegisterScreen(
                 .fillMaxWidth()
                 .height(if (isLandscape) 44.dp else 50.dp),
             shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, Color(0xFF334155)),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color.White.copy(alpha = 0.06f),
+                contentColor = Color.White
+            )
         ) {
             Text(
                 text = "Iniciar sesión",
@@ -226,15 +220,7 @@ fun RegisterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF070C14),
-                        Color(0xFF0F172A),
-                        Color(0xFF030712)
-                    )
-                )
-            )
+            .fondoAuth() // Fondo azul de la variante 4B
     ) {
         Box(
             modifier = Modifier

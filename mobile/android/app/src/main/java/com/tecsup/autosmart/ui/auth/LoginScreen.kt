@@ -1,6 +1,11 @@
 package com.tecsup.autosmart.ui.auth
 
 import android.content.res.Configuration
+import android.util.Patterns
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
+import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -121,21 +126,14 @@ private val VectorEyeOff: ImageVector by lazy {
     ).build()
 }
 
+// Campos translúcidos de la variante 4B (ver AuthEstilo.kt)
 @Composable
-private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = Color.Transparent,
-    unfocusedContainerColor = Color.Transparent,
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedBorderColor = Color(0xFF3B82F6),
-    unfocusedBorderColor = Color.White.copy(alpha = 0.35f),
-    focusedLabelColor = Color(0xFF60A5FA),
-    unfocusedLabelColor = Color.White.copy(alpha = 0.75f)
-)
+private fun loginFieldColors() = authFieldColors()
 
 @Composable
 fun LoginScreen(
-    onLoginClick: (String, String) -> Unit,
+    // Devuelve null si el inicio de sesión fue correcto, o el mensaje de error para mostrar
+    onLoginClick: suspend (String, String) -> String?,
     onNavigateToRegister: () -> Unit,
     onGoogleClick: () -> Unit = {},
     onForgotPasswordClick: () -> Unit = {}
@@ -143,12 +141,39 @@ fun LoginScreen(
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+    // true si la contraseña llegó autocompletada o pegada: no se puede mostrar con el ojo
+    var contrasenaProtegida by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val tokenManager = remember { TokenManager(context) }
+    val scope = rememberCoroutineScope()
+
+    // Valida los campos y, si están bien, inicia sesión mostrando el resultado debajo de los campos
+    val intentarLogin: () -> Unit = {
+        focusManager.clearFocus()
+        val correoLimpio = correo.trim()
+        val error = when {
+            correoLimpio.isEmpty() && password.isEmpty() -> "Ingresa tu correo y tu contraseña"
+            correoLimpio.isEmpty() -> "Ingresa tu correo electrónico"
+            !Patterns.EMAIL_ADDRESS.matcher(correoLimpio).matches() -> "Ingresa un correo electrónico válido"
+            password.isEmpty() -> "Ingresa tu contraseña"
+            else -> null
+        }
+        errorMessage = error
+        if (error == null && !isLoading) {
+            isLoading = true
+            scope.launch {
+                try {
+                    errorMessage = onLoginClick(correoLimpio, password)
+                } finally {
+                    isLoading = false
+                }
+            }
+        }
+    }
 
     val isLandscape =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -166,7 +191,7 @@ fun LoginScreen(
         Text(
             text = "Inicia sesión para gestionar tus vehículos",
             fontSize = 14.sp,
-            color = Color(0xFFCBD5E1),
+            color = AuthEstilo.TextoSuave,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         )
@@ -202,10 +227,11 @@ fun LoginScreen(
                 errorMessage = null
             },
             label = { Text("Correo electrónico") },
-            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFF94A3B8)) },
+            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFFE2E8F0)) },
             singleLine = true,
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth(),
+            // Permite que Android ofrezca el correo guardado (autocompletar)
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username + ContentType.EmailAddress },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -219,43 +245,51 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 14.dp))
 
-        // Campo Contraseña
+        // Campo Contraseña: se puede pegar o autocompletar, pero no copiar ni cortar
+        SinCopiar {
         OutlinedTextField(
             value = password,
             onValueChange = {
+                // Si llega completa de golpe en un campo vacío (autocompletado o pegado),
+                // se oculta y se quita el ojo; al borrarla toda, vuelve a ser editable normal.
+                if (password.isEmpty() && it.length > 1) {
+                    contrasenaProtegida = true
+                    isPasswordVisible = false
+                }
+                if (it.isEmpty()) contrasenaProtegida = false
                 password = it
                 errorMessage = null
             },
             label = { Text("Contraseña") },
-            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFF94A3B8)) },
-            trailingIcon = {
-                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                    Icon(
-                        imageVector = if (isPasswordVisible) VectorEyeOff else VectorEyeOpen,
-                        contentDescription = "Mostrar/Ocultar contraseña",
-                        tint = Color.White.copy(alpha = 0.85f)
-                    )
+            leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE2E8F0)) },
+            // Sin ojo cuando la contraseña fue autocompletada o pegada
+            trailingIcon = if (contrasenaProtegida) null else {
+                {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) VectorEyeOff else VectorEyeOpen,
+                            contentDescription = "Mostrar/Ocultar contraseña",
+                            tint = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
                 }
             },
             singleLine = true,
             enabled = !isLoading,
-            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (isPasswordVisible && !contrasenaProtegida) VisualTransformation.None else PasswordVisualTransformation(),
+            // Permite que Android ofrezca la contraseña guardada (autocompletar)
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
-                onDone = {
-                    focusManager.clearFocus()
-                    if (correo.isNotBlank() && password.isNotBlank()) {
-                        onLoginClick(correo, password)
-                    }
-                }
+                onDone = { intentarLogin() }
             ),
             colors = loginFieldColors()
         )
+        }
 
         AnimatedVisibility(
             visible = !errorMessage.isNullOrEmpty(),
@@ -264,12 +298,12 @@ fun LoginScreen(
         ) {
             Text(
                 text = errorMessage ?: "",
-                color = Color(0xFFF87171),
-                fontSize = 12.sp,
+                color = AuthEstilo.Error,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp)
+                    .padding(top = 8.dp)
             )
         }
 
@@ -277,23 +311,20 @@ fun LoginScreen(
 
         // Botón Ingresar
         Button(
-            onClick = {
-                focusManager.clearFocus()
-                onLoginClick(correo, password)
-            },
-            enabled = !isLoading && correo.isNotBlank() && password.isNotBlank(),
+            onClick = { intentarLogin() },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
             shape = RoundedCornerShape(50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1D4ED8),
-                disabledContainerColor = Color(0xFF596579)
+                containerColor = Color.White,
+                disabledContainerColor = Color.White.copy(alpha = 0.22f)
             )
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = AuthEstilo.AzulWeb,
                     modifier = Modifier.size(22.dp),
                     strokeWidth = 2.dp
                 )
@@ -302,7 +333,7 @@ fun LoginScreen(
                     text = "INGRESAR",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = AuthEstilo.AzulWeb
                 )
             }
         }
@@ -310,7 +341,7 @@ fun LoginScreen(
     }
 
 
-    val colorAzul = Color(0xFF93B4F4)
+    val colorAzul = Color.White // enlaces en blanco sobre el fondo azul
     val avisoOlvido = onForgotPasswordClick
 
     val olvidoPassword: @Composable () -> Unit = {
@@ -342,15 +373,7 @@ fun LoginScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF070C14),
-                        Color(0xFF0F172A),
-                        Color(0xFF030712)
-                    )
-                )
-            )
+            .fondoAuth() // Fondo azul de la variante 4B
             .imePadding(),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -375,9 +398,9 @@ fun LoginScreen(
                 Spacer(Modifier.height(24.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
-                    Text("ó", color = Color(0xFFCBD5E1), fontSize = 16.sp)
-                    HorizontalDivider(Modifier.weight(1f), color = Color(0xFF64748B))
+                    HorizontalDivider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.35f))
+                    Text("ó", color = AuthEstilo.TextoSuave, fontSize = 16.sp)
+                    HorizontalDivider(Modifier.weight(1f), color = Color.White.copy(alpha = 0.35f))
                 }
                 Spacer(Modifier.height(24.dp))
                 botonGoogle()
