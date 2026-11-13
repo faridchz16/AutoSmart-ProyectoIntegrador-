@@ -80,19 +80,18 @@ fun WelcomeScreen(
                         .padding(top = if (compacto) 12.dp else altura * 0.14f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) { MarcaBienvenida(compacto) }
-                // Auto de la portada (vertical); se oculta en pantallas muy chicas
-                if (!compacto) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_welcome_auto),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .widthIn(max = 420.dp)
-                            .fillMaxWidth()
-                            .padding(top = 24.dp)
-                    )
-                }
-                Spacer(Modifier.height(40.dp))
+                // Auto de la portada (vertical); más pequeño en pantallas chicas
+                Image(
+                    painter = painterResource(id = R.drawable.img_welcome_auto),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .widthIn(max = 420.dp)
+                        .fillMaxWidth()
+                        .heightIn(max = if (compacto) 185.dp else 240.dp)
+                        .padding(top = if (compacto) 12.dp else 24.dp)
+                )
+                Spacer(Modifier.height(if (compacto) 16.dp else 40.dp))
                 Box(Modifier.padding(bottom = 24.dp)) { botones() }
             }
         }
