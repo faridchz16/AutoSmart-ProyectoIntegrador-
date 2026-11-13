@@ -28,6 +28,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 
 // Campos translúcidos de la variante 4B (ver AuthEstilo.kt)
 @Composable
@@ -113,7 +116,7 @@ fun RegisterScreen(
             label = { Text("Correo electrónico") },
             singleLine = true,
             isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -127,11 +130,11 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 14.dp))
 
-        // Contraseña sin copiar ni pegar
-        SinCopiarPegar {
+        // Contraseña: se puede pegar o usar una sugerida, pero no copiar ni cortar
+        SinCopiar {
         OutlinedTextField(
             value = password,
-            onValueChange = { password = sinPegar(password, it); errorMessage = null },
+            onValueChange = { password = it; errorMessage = null },
             label = { Text("Contraseña") },
             visualTransformation = PasswordVisualTransformation(),
             // La ayuda solo se muestra en vertical para ahorrar altura en horizontal
@@ -140,7 +143,7 @@ fun RegisterScreen(
             },
             singleLine = true,
             isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.NewPassword },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,

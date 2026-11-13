@@ -198,15 +198,25 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()
+                    val savedRole = tokenManager.getRole.firstOrNull()
 
-                    if (!savedToken.isNullOrEmpty()) {
+                    // Sesión guardada y vigente: entra directo a su pantalla, sin pasar por Bienvenida
+                    val sesionVigente = !savedToken.isNullOrEmpty() && !tokenVencido(savedToken)
+                    if (sesionVigente) {
                         RetrofitClient.token = savedToken
                         sesionCliente = tokenManager.tokenCliente() != null
                         if (sesionCliente) prepararNotificacionesCliente()
+                    } else if (!savedToken.isNullOrEmpty()) {
+                        // Token vencido: se borra y se pide iniciar sesión otra vez
+                        tokenManager.clearSession()
                     }
 
                     if (currentScreen == "loading") {
-                        currentScreen = "welcome"
+                        currentScreen = when {
+                            !sesionVigente -> "welcome"
+                            savedRole.equals("MECANICO", ignoreCase = true) -> "mecanico"
+                            else -> "vehiculos"
+                        }
                     }
                 }
 
@@ -585,4 +595,19 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+/** Revisa si el JWT ya venció (campo "exp") sin llamar al servidor. */
+private fun tokenVencido(token: String): Boolean = try {
+    val partes = token.split(".")
+    if (partes.size < 2) {
+        true
+    } else {
+        val flags = android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING
+        val json = String(android.util.Base64.decode(partes[1], flags), Charsets.UTF_8)
+        val exp = org.json.JSONObject(json).optLong("exp", 0L)
+        exp > 0 && exp * 1000 <= System.currentTimeMillis()
+    }
+} catch (e: Exception) {
+    false
 }

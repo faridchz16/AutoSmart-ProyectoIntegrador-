@@ -2,6 +2,9 @@ package com.tecsup.autosmart.ui.auth
 
 import android.content.res.Configuration
 import android.util.Patterns
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -138,6 +141,8 @@ fun LoginScreen(
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+    // true si la contraseña llegó autocompletada o pegada: no se puede mostrar con el ojo
+    var contrasenaProtegida by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -225,7 +230,8 @@ fun LoginScreen(
             leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFFE2E8F0)) },
             singleLine = true,
             enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth(),
+            // Permite que Android ofrezca el correo guardado (autocompletar)
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Username + ContentType.EmailAddress },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -239,29 +245,40 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 14.dp))
 
-        // Campo Contraseña (sin copiar ni pegar)
-        SinCopiarPegar {
+        // Campo Contraseña: se puede pegar o autocompletar, pero no copiar ni cortar
+        SinCopiar {
         OutlinedTextField(
             value = password,
             onValueChange = {
-                password = sinPegar(password, it)
+                // Si llega completa de golpe en un campo vacío (autocompletado o pegado),
+                // se oculta y se quita el ojo; al borrarla toda, vuelve a ser editable normal.
+                if (password.isEmpty() && it.length > 1) {
+                    contrasenaProtegida = true
+                    isPasswordVisible = false
+                }
+                if (it.isEmpty()) contrasenaProtegida = false
+                password = it
                 errorMessage = null
             },
             label = { Text("Contraseña") },
             leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE2E8F0)) },
-            trailingIcon = {
-                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                    Icon(
-                        imageVector = if (isPasswordVisible) VectorEyeOff else VectorEyeOpen,
-                        contentDescription = "Mostrar/Ocultar contraseña",
-                        tint = Color.White.copy(alpha = 0.85f)
-                    )
+            // Sin ojo cuando la contraseña fue autocompletada o pegada
+            trailingIcon = if (contrasenaProtegida) null else {
+                {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) VectorEyeOff else VectorEyeOpen,
+                            contentDescription = "Mostrar/Ocultar contraseña",
+                            tint = Color.White.copy(alpha = 0.85f)
+                        )
+                    }
                 }
             },
             singleLine = true,
             enabled = !isLoading,
-            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (isPasswordVisible && !contrasenaProtegida) VisualTransformation.None else PasswordVisualTransformation(),
+            // Permite que Android ofrezca la contraseña guardada (autocompletar)
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.Password },
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,

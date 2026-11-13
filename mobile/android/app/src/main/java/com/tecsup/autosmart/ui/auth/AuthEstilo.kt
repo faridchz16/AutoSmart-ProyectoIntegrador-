@@ -3,6 +3,7 @@ package com.tecsup.autosmart.ui.auth
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -47,34 +48,28 @@ fun Modifier.fondoAuth(): Modifier = this.drawBehind {
     )
 }
 
-/** Menú de texto vacío: no aparecen Copiar, Cortar, Pegar ni Seleccionar todo. */
-private object BarraTextoVacia : TextToolbar {
-    override val status: TextToolbarStatus = TextToolbarStatus.Hidden
-    override fun hide() {}
+/**
+ * Menú de texto del sistema sin las opciones Copiar y Cortar.
+ * Pegar y Seleccionar todo siguen funcionando (contraseñas guardadas, autocompletar).
+ */
+private class BarraSinCopiar(private val base: TextToolbar) : TextToolbar {
+    override val status: TextToolbarStatus get() = base.status
+    override fun hide() = base.hide()
     override fun showMenu(
         rect: Rect,
         onCopyRequested: (() -> Unit)?,
         onPasteRequested: (() -> Unit)?,
         onCutRequested: (() -> Unit)?,
         onSelectAllRequested: (() -> Unit)?
-    ) {}
+    ) = base.showMenu(rect, null, onPasteRequested, null, onSelectAllRequested)
 }
 
-/** Envuelve un campo de contraseña para que no se pueda copiar ni pegar desde el menú. */
+/** Envuelve un campo de contraseña para que su texto no se pueda copiar ni cortar. */
 @Composable
-fun SinCopiarPegar(content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalTextToolbar provides BarraTextoVacia, content = content)
-}
-
-/**
- * Acepta escribir un carácter a la vez o borrar, pero rechaza texto pegado
- * (por ejemplo, desde el portapapeles del teclado).
- */
-fun sinPegar(anterior: String, nuevo: String): String {
-    val prefijo = anterior.commonPrefixWith(nuevo).length
-    val sufijo = anterior.substring(prefijo).commonSuffixWith(nuevo.substring(prefijo)).length
-    val insertados = nuevo.length - prefijo - sufijo
-    return if (insertados <= 1) nuevo else anterior
+fun SinCopiar(content: @Composable () -> Unit) {
+    val base = LocalTextToolbar.current
+    val barra = remember(base) { BarraSinCopiar(base) }
+    CompositionLocalProvider(LocalTextToolbar provides barra, content = content)
 }
 
 /** Campos de texto translúcidos sobre el fondo azul. */
