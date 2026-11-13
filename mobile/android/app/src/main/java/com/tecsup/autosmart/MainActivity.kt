@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.annotation.RequiresApi
@@ -65,6 +66,8 @@ import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
 import com.tecsup.autosmart.ui.auth.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
+import com.tecsup.autosmart.ui.theme.Apariencia
+import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -113,8 +116,17 @@ class MainActivity : ComponentActivity() {
         else citaNotificada.value = savedInstanceState.getLong("cita_notificada").takeIf { it > 0 }
         NotificacionesFcm.crearCanal(this)
         enableEdgeToEdge()
+        Apariencia.iniciar(this)
         setContent {
-            AutoSmartAppTheme {
+            val temaOscuro = Apariencia.modoOscuro ?: isSystemInDarkTheme()
+            // Íconos de la barra de estado claros u oscuros según el modo elegido en la app
+            LaunchedEffect(temaOscuro) {
+                val transparente = android.graphics.Color.TRANSPARENT
+                val estilo = if (temaOscuro) SystemBarStyle.dark(transparente)
+                else SystemBarStyle.light(transparente, transparente)
+                enableEdgeToEdge(statusBarStyle = estilo, navigationBarStyle = estilo)
+            }
+            AutoSmartAppTheme(darkTheme = temaOscuro) {
                 val context = LocalContext.current
                 val tokenManager = remember { TokenManager(context) }
                 val scope = rememberCoroutineScope()
@@ -194,6 +206,8 @@ class MainActivity : ComponentActivity() {
                 val serviciosVm: ServiciosViewModel = viewModel()
                 val recuperacionVm: RecuperacionViewModel = viewModel()
                 var correoRecuperacion by rememberSaveable { mutableStateOf("") }
+                // true cuando el cambio de contraseña se abrió desde "Mi perfil" (Seguridad)
+                var recuperacionDesdePerfil by rememberSaveable { mutableStateOf(false) }
 
 
                 LaunchedEffect(Unit) {
@@ -249,7 +263,9 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
                 BackHandler(enabled = currentScreen == "servicio_detalle") { currentScreen = "servicios" }
                 BackHandler(enabled = currentScreen == "reserva") { currentScreen = "servicio_detalle" }
-                BackHandler(enabled = currentScreen == "olvide") { currentScreen = "login" }
+                BackHandler(enabled = currentScreen == "olvide") {
+                    currentScreen = if (recuperacionDesdePerfil) "perfil" else "login"
+                }
                 BackHandler(enabled = currentScreen == "nueva_password") { currentScreen = "olvide" }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -347,6 +363,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                             onForgotPasswordClick = {
                                         recuperacionVm.reiniciar()
+                                        recuperacionDesdePerfil = false
                                         currentScreen = "olvide"
                                     }
                                 )
@@ -450,7 +467,14 @@ class MainActivity : ComponentActivity() {
 
                             "perfil" -> {
                                 PerfilScreen(
-                                    onNavigateBack = { currentScreen = "vehiculos" }
+                                    onNavigateBack = { currentScreen = "vehiculos" },
+                                    onLogout = cerrarSesion,
+                                    onCambiarContrasena = { correo ->
+                                        recuperacionVm.reiniciar()
+                                        correoRecuperacion = correo
+                                        recuperacionDesdePerfil = true
+                                        currentScreen = "olvide"
+                                    }
                                 )
                             }
 
@@ -567,11 +591,12 @@ class MainActivity : ComponentActivity() {
                             "olvide" -> {
                                 OlvideContrasenaScreen(
                                     vm = recuperacionVm,
+                                    correoInicial = if (recuperacionDesdePerfil) correoRecuperacion else "",
                                     onCodigoEnviado = { correo ->
                                         correoRecuperacion = correo
                                         currentScreen = "nueva_password"
                                     },
-                                    onBack = { currentScreen = "login" }
+                                    onBack = { currentScreen = if (recuperacionDesdePerfil) "perfil" else "login" }
                                 )
                             }
                             "nueva_password" -> {
@@ -579,12 +604,18 @@ class MainActivity : ComponentActivity() {
                                     vm = recuperacionVm,
                                     correo = correoRecuperacion,
                                     onActualizada = {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "Contraseña actualizada. Inicia sesión con tu nueva contraseña",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        currentScreen = "login"
+                                        if (recuperacionDesdePerfil) {
+                                            Toast.makeText(this@MainActivity, "Contraseña actualizada correctamente", Toast.LENGTH_LONG).show()
+                                            recuperacionDesdePerfil = false
+                                            currentScreen = "perfil"
+                                        } else {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Contraseña actualizada. Inicia sesión con tu nueva contraseña",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                            currentScreen = "login"
+                                        }
                                     },
                                     onBack = { currentScreen = "olvide" }
                                 )

@@ -91,13 +91,14 @@ internal fun PantallaRecuperacion(
 @Composable
 fun OlvideContrasenaScreen(
     vm: RecuperacionViewModel,
+    correoInicial: String = "",
     onCodigoEnviado: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val estado by vm.estado.collectAsState()
     val focusManager = LocalFocusManager.current
 
-    var correo by rememberSaveable { mutableStateOf("") }
+    var correo by rememberSaveable { mutableStateOf(correoInicial) }
     var errorLocal by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(estado.codigoEnviado) {
