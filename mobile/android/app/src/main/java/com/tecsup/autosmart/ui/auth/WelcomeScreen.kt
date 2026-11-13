@@ -54,15 +54,15 @@ fun WelcomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.weight(1f)) { MarcaBienvenida(compacto = true) }
+                Box(Modifier.weight(1.1f)) { MarcaBienvenida(compacto = true) }
                 // Auto en el centro (horizontal)
                 Image(
                     painter = painterResource(id = R.drawable.img_welcome_auto),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .weight(1.2f)
-                        .heightIn(max = 220.dp)
+                        .weight(1f)
+                        .heightIn(max = 200.dp)
                 )
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { botones() }
             }
@@ -123,12 +123,12 @@ private fun MarcaBienvenida(compacto: Boolean) {
         Spacer(Modifier.height(16.dp))
         Text(
             text = "Gestiona tus vehículos fácil y rápido",
-            fontSize = if (compacto) 18.sp else 20.sp,
-            lineHeight = if (compacto) 25.sp else 28.sp,
+            fontSize = if (compacto) 16.sp else 20.sp,
+            lineHeight = if (compacto) 22.sp else 28.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFFE2E8F0),
             textAlign = TextAlign.Center,
-            maxLines = 2
+            maxLines = 3
         )
     }
 }
