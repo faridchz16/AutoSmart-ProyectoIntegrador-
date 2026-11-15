@@ -2,9 +2,9 @@ from django import forms
 from django.contrib import admin
 
 from .models import (Checklist, ChecklistItem, Cita, ConfiguracionTaller, Deficiencia, Especialidad,
-                     FechaBloqueada, Feriado, HorarioMecanico, Material, MovimientoInventario,
-                     OrdenTrabajo, Presupuesto, PresupuestoItem, Servicio, SolicitudMaterial,
-                     TareaOrden, Usuario, Vehiculo)
+                     FechaBloqueada, Feriado, FotoDeficiencia, HorarioMecanico, Material,
+                     MovimientoInventario, OrdenTrabajo, Presupuesto, PresupuestoItem, Rol, Servicio,
+                     SolicitudMaterial, TareaOrden, Usuario, Vehiculo)
 
 
 class SoloLecturaAdmin(admin.ModelAdmin):
@@ -46,6 +46,16 @@ def solo_mecanicos():
 # --------------------------------------------------------------------------
 # Solo lectura (se gestionan desde Spring Boot)
 # --------------------------------------------------------------------------
+
+@admin.register(Rol)
+class RolAdmin(SoloLecturaAdmin):
+    list_display = ("id_rol", "nombre", "usuarios")
+    search_fields = ("nombre",)
+
+    @admin.display(description="usuarios")
+    def usuarios(self, obj):
+        return Usuario.objects.filter(rol=obj).count()
+
 
 @admin.register(Usuario)
 class UsuarioAdmin(SoloLecturaAdmin):
@@ -179,6 +189,7 @@ class FeriadoAdmin(admin.ModelAdmin):
     list_display = ("fecha", "descripcion")
     date_hierarchy = "fecha"
     search_fields = ("descripcion",)
+    ordering = ("fecha",)
 
 
 class ConfiguracionTallerForm(RangoHorasForm):
@@ -283,8 +294,14 @@ class ChecklistItemInline(InlineSoloLectura):
 
 @admin.register(Checklist)
 class ChecklistAdmin(SoloLecturaAdmin):
-    list_display = ("orden", "fecha_registro", "observacion_general")
+    list_display = ("orden", "ticket", "fecha_registro", "observacion_general")
+    search_fields = ("orden__cita__ticket", "orden__cita__vehiculo__placa", "observacion_general")
+    date_hierarchy = "fecha_registro"
     list_select_related = ("orden", "orden__cita")
+
+    @admin.display(description="ticket", ordering="orden__cita__ticket")
+    def ticket(self, obj):
+        return obj.orden.cita.ticket
     inlines = (ChecklistItemInline,)
 
 
@@ -298,6 +315,7 @@ class PresupuestoItemInline(InlineSoloLectura):
 class PresupuestoAdmin(SoloLecturaAdmin):
     list_display = ("id_presupuesto", "orden", "estado", "total", "fecha_creacion", "fecha_decision")
     list_filter = ("estado",)
+    search_fields = ("descripcion", "orden__cita__ticket", "orden__cita__cliente__nombre")
     date_hierarchy = "fecha_creacion"
     list_select_related = ("orden", "orden__cita")
     inlines = (PresupuestoItemInline,)
@@ -312,6 +330,7 @@ class MaterialAdmin(SoloLecturaAdmin):
     list_display = ("codigo", "nombre", "unidad", "costo_unitario", "stock_actual", "stock_minimo",
                     "alerta_stock")
     search_fields = ("codigo", "nombre")
+    list_filter = ("unidad",)
     exclude = ("version",)
 
     @admin.display(description="stock OK", boolean=True)
@@ -337,3 +356,45 @@ class SolicitudMaterialAdmin(SoloLecturaAdmin):
     search_fields = ("material__codigo", "material__nombre", "solicitado_por")
     date_hierarchy = "fecha_solicitud"
     list_select_related = ("orden", "orden__cita", "material")
+
+
+# --------------------------------------------------------------------------
+# Inspeccion del vehiculo (solo lectura: la registra el mecanico desde la app)
+# --------------------------------------------------------------------------
+
+class FotoInline(InlineSoloLectura):
+    model = FotoDeficiencia
+    fields = ("nombre_archivo", "tipo_contenido", "tamano_bytes", "fecha_registro")
+    readonly_fields = fields
+
+
+@admin.register(Deficiencia)
+class DeficienciaAdmin(SoloLecturaAdmin):
+    list_display = ("id_deficiencia", "orden", "categoria", "severidad", "descripcion", "total_fotos",
+                    "fecha_registro")
+    list_filter = ("severidad", "categoria")
+    search_fields = ("descripcion", "orden__cita__ticket", "orden__cita__vehiculo__placa")
+    date_hierarchy = "fecha_registro"
+    list_select_related = ("orden", "orden__cita")
+    inlines = (FotoInline,)
+
+    @admin.display(description="fotos")
+    def total_fotos(self, obj):
+        return obj.fotos.count()
+
+
+@admin.register(FotoDeficiencia)
+class FotoDeficienciaAdmin(SoloLecturaAdmin):
+    list_display = ("nombre_archivo", "deficiencia", "tipo_contenido", "tamano_bytes", "fecha_registro")
+    list_filter = ("tipo_contenido",)
+    search_fields = ("nombre_archivo", "deficiencia__descripcion")
+    list_select_related = ("deficiencia",)
+
+
+@admin.register(TareaOrden)
+class TareaOrdenAdmin(SoloLecturaAdmin):
+    list_display = ("descripcion", "orden", "completada", "fecha_creacion", "fecha_completada")
+    list_filter = ("completada",)
+    search_fields = ("descripcion", "orden__cita__ticket")
+    date_hierarchy = "fecha_creacion"
+    list_select_related = ("orden", "orden__cita")
