@@ -11,7 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "solo-para-desarrollo")
-DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
+# Por seguridad DEBUG queda apagado si no se indica lo contrario en .env:
+# con DEBUG apagado nunca se muestran trazas, sino las paginas 404, 500 y 503 propias.
+DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
@@ -32,6 +34,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Control de caidas: base de datos sin conexion -> pagina 503
+    "panel.middleware.BaseDeDatosCaidaMiddleware",
 ]
 
 ROOT_URLCONF = "autosmart_admin.urls"
@@ -63,7 +67,8 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", ""),
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {"charset": "utf8mb4"},
+        # Timeouts: si MySQL esta caido o no responde, se falla en 5 s en lugar de quedarse esperando
+        "OPTIONS": {"charset": "utf8mb4", "connect_timeout": 5, "read_timeout": 5, "write_timeout": 5},
     }
 }
 
@@ -96,3 +101,14 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "panel.auth_backend.AutoSmartAdminBackend",
 ]
+
+# Registro de errores en la consola (el detalle tecnico queda aqui y no se muestra al usuario)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"consola": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "django.request": {"handlers": ["consola"], "level": "ERROR"},
+        "panel": {"handlers": ["consola"], "level": "INFO"},
+    },
+}
