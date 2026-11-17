@@ -303,3 +303,19 @@ CREATE TABLE IF NOT EXISTS solicitudes_material (
     FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden),
     FOREIGN KEY (id_material) REFERENCES materiales(id_material)
 );
+
+-- ---------- Metodos de pago (T62.1) ----------
+
+CREATE TABLE IF NOT EXISTS metodos_pago (
+    id_metodo INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE,         -- TARJETA, YAPE_PLIN, EFECTIVO
+    nombre VARCHAR(60) NOT NULL,
+    en_linea TINYINT(1) NOT NULL DEFAULT 1,     -- 1 = se paga desde la app o la web; 0 = en el taller
+    habilitado TINYINT(1) NOT NULL DEFAULT 1,   -- 0 = no se muestra al cliente
+    orden INT NOT NULL DEFAULT 0                -- orden en que se muestran
+);
+
+INSERT IGNORE INTO metodos_pago (codigo, nombre, en_linea, habilitado, orden) VALUES
+    ('TARJETA', 'Tarjeta de crédito o débito', 1, 1, 1),
+    ('YAPE_PLIN', 'Yape / Plin', 1, 1, 2),
+    ('EFECTIVO', 'Efectivo en el taller', 0, 1, 3);
