@@ -319,3 +319,19 @@ INSERT IGNORE INTO metodos_pago (codigo, nombre, en_linea, habilitado, orden) VA
     ('TARJETA', 'Tarjeta de crédito o débito', 1, 1, 1),
     ('YAPE_PLIN', 'Yape / Plin', 1, 1, 2),
     ('EFECTIVO', 'Efectivo en el taller', 0, 1, 3);
+
+CREATE TABLE IF NOT EXISTS pagos (
+    id_pago BIGINT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(20) NOT NULL UNIQUE,
+    id_orden BIGINT NOT NULL,
+    id_metodo INT NOT NULL,
+    estado VARCHAR(10) NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
+    fecha DATETIME NOT NULL,
+    motivo_rechazo VARCHAR(200) NULL,
+    referencia_externa VARCHAR(100) NULL,
+    registrado_por VARCHAR(100) NULL,
+    observacion VARCHAR(200) NULL,
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden),
+    FOREIGN KEY (id_metodo) REFERENCES metodos_pago(id_metodo)
+);
