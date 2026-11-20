@@ -46,7 +46,6 @@ public class AdminCitaService {
         this.turnoService = turnoService;
     }
 
-    // Reservas del taller con filtros combinados y paginacion (T38.1)
     @Transactional(readOnly = true)
     public PaginaResponse<CitaAdminResponse> listar(LocalDate desde, LocalDate hasta, String estado,
                                                     Integer idMecanico, String q, int page, int size) {
@@ -69,7 +68,7 @@ public class AdminCitaService {
             try {
                 est = EstadoCita.valueOf(estado.trim().toUpperCase());
             } catch (IllegalArgumentException e) {
-                throw new BadRequestException("Estado invalido. Usa PENDIENTE, CONFIRMADA, RECHAZADA o CANCELADA");
+                throw new BadRequestException("Estado invalido. Usa PENDIENTE, CONFIRMADA, RECHAZADA, CANCELADA, EN_PROCESO, ESPERA_APROBACION, FINALIZADA o PAGADO");
             }
         }
 
@@ -89,7 +88,6 @@ public class AdminCitaService {
         return res;
     }
 
-    // Mecanicos que pueden tomar la cita (misma especialidad, libres en ese horario, sin el actual) (T39.1)
     @Transactional(readOnly = true)
     public List<MecanicoLibreResponse> mecanicosLibres(Long idCita) {
         Cita cita = citaReasignable(idCita);
@@ -108,10 +106,8 @@ public class AdminCitaService {
                 .collect(Collectors.toList());
     }
 
-    // Reasignar la cita a otro mecanico (T39.1)
     @Transactional
     public CitaAdminResponse reasignar(Long idCita, Integer idMecanico) {
-        // Primero se bloquea al mecanico nuevo: evita que alguien le reserve ese turno mientras tanto
         Usuario nuevo = usuarioRepository.buscarParaReserva(idMecanico)
                 .orElseThrow(() -> new NotFoundException("Mecanico no encontrado"));
         if (!Boolean.TRUE.equals(nuevo.getActivo()) || !"MECANICO".equals(nuevo.getRol().getNombre())) {
@@ -140,7 +136,7 @@ public class AdminCitaService {
         }
 
         cita.setMecanico(nuevo);
-        cita.setEstado(EstadoCita.PENDIENTE); // el mecanico nuevo debe aceptarla
+        cita.cambiarEstado(EstadoCita.PENDIENTE);
         return aAdmin(citaRepository.save(cita));
     }
 

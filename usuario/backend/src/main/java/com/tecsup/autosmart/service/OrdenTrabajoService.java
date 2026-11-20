@@ -45,7 +45,7 @@ public class OrdenTrabajoService {
             throw new ConflictException("La atencion de esta cita ya fue iniciada");
         }
 
-        cita.setEstado(EstadoCita.EN_PROCESO);
+        cita.cambiarEstado(EstadoCita.EN_PROCESO);
         citaRepository.save(cita);
 
         OrdenTrabajo orden = new OrdenTrabajo();

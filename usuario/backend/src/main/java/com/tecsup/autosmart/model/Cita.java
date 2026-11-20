@@ -1,6 +1,8 @@
 package com.tecsup.autosmart.model;
 
+import com.tecsup.autosmart.exception.ConflictException;
 import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -53,6 +55,13 @@ public class Cita {
     private String motivoRechazo;
 
     public Cita() {}
+
+    public void cambiarEstado(EstadoCita destino) {
+        if (!estado.puedeCambiarA(destino)) {
+            throw new ConflictException("La cita no puede pasar de " + estado + " a " + destino);
+        }
+        this.estado = destino;
+    }
 
     public Long getIdCita() { return idCita; }
     public void setIdCita(Long idCita) { this.idCita = idCita; }
