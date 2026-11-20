@@ -62,7 +62,6 @@ public class CitaService {
     @Transactional
     public CitaCreadaResponse reservar(String correoCliente, CitaRequest req) {
 
-        // Lo primero es bloquear la fila del mecanico: serializa las reservas de ese mecanico
         Usuario mecanico = usuarioRepository.buscarParaReserva(req.getIdMecanico())
                 .orElseThrow(() -> new NotFoundException("Mecanico no encontrado"));
 
@@ -120,7 +119,6 @@ public class CitaService {
         res.setMecanico(mecanico.getNombre());
         res.setPlaca(vehiculo.getPlaca());
 
-
         eventPublisher.publishEvent(new CitaReservadaEvent(
                 cliente.getCorreo(), cliente.getNombre(), cita.getTicket(), servicio.getNombre(),
                 mecanico.getNombre(), vehiculo.getPlaca(), res.getFecha(), res.getHoraInicio(),
@@ -132,14 +130,14 @@ public class CitaService {
     @Transactional
     public CitaCreadaResponse aceptar(String correoMecanico, Long idCita) {
         Cita cita = citaPendienteDelMecanico(correoMecanico, idCita);
-        cita.setEstado(EstadoCita.CONFIRMADA);
+        cita.cambiarEstado(EstadoCita.CONFIRMADA);
         return aRespuesta(citaRepository.save(cita));
     }
 
     @Transactional
     public CitaCreadaResponse rechazar(String correoMecanico, Long idCita, String motivo) {
         Cita cita = citaPendienteDelMecanico(correoMecanico, idCita);
-        cita.setEstado(EstadoCita.RECHAZADA);
+        cita.cambiarEstado(EstadoCita.RECHAZADA);
         cita.setMotivoRechazo(motivo.trim());
         return aRespuesta(citaRepository.save(cita));
     }
@@ -174,14 +172,13 @@ public class CitaService {
             throw new BadRequestException("Solo se puede cancelar con al menos 2 horas de anticipacion");
         }
 
-        cita.setEstado(EstadoCita.CANCELADA);
+        cita.cambiarEstado(EstadoCita.CANCELADA);
         return aRespuesta(citaRepository.save(cita));
     }
 
     @Transactional
     public CitaCreadaResponse reprogramar(String correoCliente, Long idCita, ReprogramarRequest req) {
 
-        // Primero se bloquea la cita y luego al mecanico, para no chocar con otras reservas
         Integer idMecanico = citaRepository.bloquearMecanicoDeCita(idCita)
                 .orElseThrow(() -> new NotFoundException("Cita no encontrada"));
         usuarioRepository.buscarParaReserva(idMecanico)
@@ -206,7 +203,6 @@ public class CitaService {
             throw new ConflictException("La cita ya esta en ese turno");
         }
 
-        // El bloqueo propio del cliente no le estorba (T33.1)
         boolean libre = turnoService
                 .turnosLibres(cita.getServicio().getIdServicio(), idMecanico, req.getFecha(),
                         cita.getCliente().getIdUsuario())
@@ -219,7 +215,7 @@ public class CitaService {
         cita.setFecha(req.getFecha());
         cita.setHoraInicio(req.getHoraInicio());
         cita.setHoraFin(req.getHoraInicio().plusMinutes(cita.getServicio().getDuracionMinutos()));
-        cita.setEstado(EstadoCita.PENDIENTE);
+        cita.cambiarEstado(EstadoCita.PENDIENTE);
         return aRespuesta(citaRepository.save(cita));
     }
 

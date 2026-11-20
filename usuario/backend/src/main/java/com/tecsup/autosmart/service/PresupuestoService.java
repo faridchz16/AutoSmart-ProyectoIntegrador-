@@ -80,7 +80,7 @@ public class PresupuestoService {
         presupuesto.setTotal(total);
 
         Cita cita = orden.getCita();
-        cita.setEstado(EstadoCita.ESPERA_APROBACION);
+        cita.cambiarEstado(EstadoCita.ESPERA_APROBACION);
         citaRepository.save(cita);
 
         return aRespuesta(presupuestoRepository.save(presupuesto));
@@ -122,7 +122,7 @@ public class PresupuestoService {
         presupuesto.setEstado(req.getDecision());
         presupuesto.setFechaDecision(LocalDateTime.now(ZONA_LIMA).withNano(0));
 
-        cita.setEstado(EstadoCita.EN_PROCESO);
+        cita.cambiarEstado(EstadoCita.EN_PROCESO);
         citaRepository.save(cita);
 
         return aRespuesta(presupuestoRepository.save(presupuesto));

@@ -37,7 +37,6 @@ public class SeguimientoService {
         this.tareaService = tareaService;
     }
 
-    // T53.1: linea de tiempo de la cita para el cliente duenio
     @Transactional(readOnly = true)
     public SeguimientoResponse seguimiento(String correoCliente, Long idCita) {
         Cita cita = citaRepository.buscarDetalle(idCita)
@@ -88,11 +87,12 @@ public class SeguimientoService {
                     .ifPresent(p -> linea.add(hitoPresupuesto(p)));
         }
 
-        boolean finalizada = estado == EstadoCita.FINALIZADA;
+        boolean finalizada = estado.terminada();
         linea.add(new Hito("EN_REPARACION", "Reparación en curso", finalizada,
                 null, orden == null ? null : "Avance: " + tareaService.resumen(orden.getIdOrden()).getPorcentajeAvance() + " %"));
         linea.add(new Hito("FINALIZADA", "Vehículo listo para recoger", finalizada,
                 orden == null ? null : texto(orden.getFechaFin()), null));
+        linea.add(new Hito("PAGADO", "Servicio pagado", estado == EstadoCita.PAGADO, null, null));
         return linea;
     }
 

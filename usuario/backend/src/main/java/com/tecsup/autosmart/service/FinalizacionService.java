@@ -70,7 +70,7 @@ public class FinalizacionService {
         ordenRepository.save(orden);
 
         Cita cita = orden.getCita();
-        cita.setEstado(EstadoCita.FINALIZADA);
+        cita.cambiarEstado(EstadoCita.FINALIZADA);
         citaRepository.save(cita);
 
         eventos.publishEvent(new OrdenFinalizadaEvent(orden.getIdOrden(), cita.getIdCita(), cita.getTicket(),
