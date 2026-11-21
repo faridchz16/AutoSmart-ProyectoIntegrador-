@@ -402,3 +402,40 @@ a.adm-card:hover {
 @media (prefers-reduced-motion: reduce) {
   .adm *, .adm-contenido { animation: none !important; transition: none !important; }
 }
+
+/* Contador del menú (T60.1: alertas de stock mínimo) */
+.adm-contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tarjeta de alertas de stock en el resumen (T60.1) */
+.adm-alertas-cab { display: flex; align-items: center; gap: 12px; }
+.adm-alertas-cab h3 { margin: 0; }
+.adm-alertas-num {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #065f46;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+.adm-alertas.con-alertas { border-color: #fecdd3; background: linear-gradient(180deg, #fff5f6, #fff 60%); }
+.adm-alertas.con-alertas .adm-alertas-num { background: #e11d48; color: #fff; }
+.adm-alertas-lista { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: 0.86rem; }
+.adm-alertas-lista li { display: flex; justify-content: space-between; gap: 10px; color: var(--suave); }
+.adm-alertas-lista strong { color: #be123c; white-space: nowrap; font-variant-numeric: tabular-nums; }

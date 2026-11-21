@@ -9,10 +9,12 @@ import "./Admin.css";
    Cada panel solo define sus enlaces; las pantallas se dibujan en <Outlet />.
 
    Props:
-     enlaces   [{ to, texto, icono, fin? }]  (fin = true solo marca activo en la ruta exacta)
+     enlaces   [{ to, texto, icono, fin?, contador?, etiquetaContador? }]
+               (fin = true solo marca activo en la ruta exacta; contador > 0 muestra un número rojo, T60.1)
      seccion   título pequeño sobre el menú ("Administración", "Mi taller")
      inicio    ruta del logo (inicio del panel)
-     avisoPrueba  muestra la etiqueta "Datos de prueba" si están activos */
+     avisoPrueba  muestra la etiqueta "Datos de prueba" si están activos
+     titulos   [{ patron, texto }]  título de pantallas que no están en el menú (p. ej., la orden de trabajo) */
 
 export const Icono = ({ children }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -22,14 +24,16 @@ export const Icono = ({ children }) => (
 
 const NOMBRE_ROL = { ADMIN: "Administrador", MECANICO: "Mecánico", CLIENTE: "Cliente" };
 
-function PanelLayout({ enlaces, seccion, inicio, avisoPrueba = false }) {
+function PanelLayout({ enlaces, seccion, inicio, avisoPrueba = false, titulos = [] }) {
   const [abierto, setAbierto] = useState(false); // menú lateral en móvil
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const usuario = obtenerUsuario();
   const rol = normalizarRol(usuario?.rol);
 
-  const actual = enlaces.find((e) => (e.fin ? pathname === e.to : pathname.startsWith(e.to)));
+  const actual =
+    titulos.find((t) => t.patron.test(pathname)) ??
+    enlaces.find((e) => (e.fin ? pathname === e.to : pathname.startsWith(e.to)));
 
   // El título de la pestaña cambia según la pantalla
   useEffect(() => {
@@ -72,6 +76,11 @@ function PanelLayout({ enlaces, seccion, inicio, avisoPrueba = false }) {
             >
               {e.icono}
               {e.texto}
+              {e.contador > 0 && (
+                <span className="adm-contador" aria-label={e.etiquetaContador ?? `${e.contador} avisos`}>
+                  {e.contador}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

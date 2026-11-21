@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { listarAgenda, ESTADOS_CITA } from "../../services/agendaService";
+import { listarAgenda, ESTADOS_CITA, ESTADOS_OCULTOS } from "../../services/agendaService";
 import { listarBloqueos, hoyLima, isoDe, aFecha } from "../../services/bloqueosService";
 import { listarHorarios } from "../../services/horariosService";
 import "../../components/admin/admin-ui.css";
@@ -14,7 +14,6 @@ import { mensajeRespuesta } from "../../services/citasService";
    T35.2: al hacer clic en una cita se abre su detalle; T36.2: desde ahí se acepta o rechaza. */
 
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-const ACTIVAS = ["PENDIENTE", "CONFIRMADA"];
 
 const Flecha = ({ izquierda }) => (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -55,11 +54,11 @@ function Agenda() {
   const [aviso, setAviso] = useState(null);
   const contadorAvisos = useRef(0);
   const cerrarAviso = useCallback(() => setAviso(null), []);
-  const alResponder = (cita, estado) => {
+  const alResponder = (cita, estado, extra) => {
     setAbierta(null);
     setResultado((r) => ({ ...r, citas: r.citas.map((x) => (x.id === cita.id ? { ...x, estado } : x)) }));
     contadorAvisos.current += 1;
-    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado), id: contadorAvisos.current });
+    setAviso({ tipo: "ok", texto: mensajeRespuesta(cita, estado, extra), id: contadorAvisos.current });
   };
   const [resultado, setResultado] = useState({ clave: null, citas: [], bloqueadas: [], laborables: null, error: "" });
 
@@ -92,7 +91,7 @@ function Agenda() {
   }, [clave, lunes, domingo]);
 
   const { citas, bloqueadas, laborables, error } = resultado;
-  const visibles = verTodas ? citas : citas.filter((c) => ACTIVAS.includes(c.estado));
+  const visibles = verTodas ? citas : citas.filter((c) => !ESTADOS_OCULTOS.includes(c.estado));
   const ocultas = citas.length - visibles.length;
   const cuenta = (estado) => citas.filter((c) => c.estado === estado).length;
   const esSemanaActual = lunes === lunesDe(hoy);
@@ -127,6 +126,9 @@ function Agenda() {
             <span><strong>{cuenta("PENDIENTE") + cuenta("CONFIRMADA")}</strong> por atender</span>
             <span className="est-PENDIENTE"><strong>{cuenta("PENDIENTE")}</strong> pendientes</span>
             <span className="est-CONFIRMADA"><strong>{cuenta("CONFIRMADA")}</strong> confirmadas</span>
+            {cuenta("EN_PROCESO") > 0 && (
+              <span className="est-EN_PROCESO"><strong>{cuenta("EN_PROCESO")}</strong> en proceso</span>
+            )}
             <label className="ag-toggle">
               <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} />
               Mostrar canceladas y rechazadas

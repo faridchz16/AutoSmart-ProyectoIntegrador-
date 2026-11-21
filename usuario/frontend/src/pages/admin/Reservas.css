@@ -210,3 +210,8 @@
 @media (max-width: 720px) {
   .rs-tabla td[data-label="Acciones"]:empty { display: none; }
 }
+
+/* ---------- Estados de la orden de trabajo (Sprint 3, T41.2) ---------- */
+.insignia.rs-est-EN_PROCESO { background: #dbeafe; color: #1e40af; }
+.insignia.rs-est-ESPERA_APROBACION { background: #ede9fe; color: #6b21a8; }
+.insignia.rs-est-FINALIZADA { background: #ccfbf1; color: #115e59; }
