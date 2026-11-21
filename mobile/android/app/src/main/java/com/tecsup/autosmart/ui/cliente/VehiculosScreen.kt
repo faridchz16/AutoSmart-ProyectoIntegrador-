@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -104,6 +105,7 @@ fun VehiculosScreen(
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {},
     onNavigateToAgregarVehiculo: () -> Unit = {},
+    onNavigateToAsistente: () -> Unit = {},
     viewModel: VehiculosViewModel = viewModel(),
     onHistorialVehiculo: (Long) -> Unit = {}
 ) {
@@ -171,7 +173,8 @@ fun VehiculosScreen(
     // Destinos del menú inferior (vertical) o lateral (horizontal)
     val destinos = listOf(
         Destino("Inicio", Icons.Filled.Home, seleccionado = true) {},
-        Destino("Servicios", Icons.Outlined.GridView) { if (habilitado) onNavigateToReserva() },
+        // El catálogo de servicios sigue en la pestaña "Servicios" de arriba; aquí va el asistente con IA
+        Destino("Asistente", Icons.Outlined.SmartToy) { if (habilitado) onNavigateToAsistente() },
         Destino("Reservar", Icons.Outlined.EventAvailable) { if (habilitado) onNavigateToReserva() },
         Destino("Perfil", Icons.Outlined.Person) { if (habilitado) onNavigateToPerfil() }
     )

@@ -64,6 +64,11 @@ import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.PagoScreen
+import com.tecsup.autosmart.ui.cliente.AsistenteScreen
+import com.tecsup.autosmart.viewmodel.AsistenteViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.tecsup.autosmart.ui.mecanico.PerfilMecanicoScreen
 import com.tecsup.autosmart.viewmodel.MecanicoViewModel
 import com.tecsup.autosmart.viewmodel.PagoViewModel
@@ -116,6 +121,11 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // App Check protege la IA (Firebase AI Logic). En pruebas se usa el proveedor de depuración:
+        // su token aparece en Logcat y se registra en Firebase > App Check > Administrar tokens de depuración.
+        if (BuildConfig.DEBUG) {
+            Firebase.appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+        }
         if (savedInstanceState == null) recibirAviso(intent)
         else citaNotificada.value = savedInstanceState.getLong("cita_notificada").takeIf { it > 0 }
         NotificacionesFcm.crearCanal(this)
@@ -207,6 +217,8 @@ class MainActivity : ComponentActivity() {
                 val agendaMecanicoVm: AgendaMecanicoViewModel = viewModel()
                 // Inicio y perfil profesional del mecánico; la agenda vuelve a donde se abrió
                 val mecanicoVm: MecanicoViewModel = viewModel()
+                // Asistente AutoSmart con IA (Sprint 4 · chatbot)
+                val asistenteVm: AsistenteViewModel = viewModel()
                 var agendaVolverA by rememberSaveable { mutableStateOf("ordenes_mecanico") }
                 val detalleMecanicoVm: CitaDetalleMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
@@ -276,6 +288,7 @@ class MainActivity : ComponentActivity() {
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
                 // Perfil del mecánico: si hay cambios sin guardar, PerfilMecanicoScreen pregunta antes
                 BackHandler(enabled = currentScreen == "perfil_mecanico") { currentScreen = "mecanico" }
+                BackHandler(enabled = currentScreen == "asistente") { currentScreen = "vehiculos" }
                 // Mientras se procesa un pago, PagoScreen bloquea el botón atrás con su propio BackHandler
                 BackHandler(enabled = currentScreen == "pago") {
                     pagoVm.limpiar()
@@ -423,7 +436,7 @@ class MainActivity : ComponentActivity() {
                                         editarVehiculoVm.iniciar(vehiculo)
                                         currentScreen = "editar_vehiculo"
                                     },
-                                    onLogout = cerrarSesion,
+                                    onLogout = { asistenteVm.limpiar(); cerrarSesion() },
                                     onNavigateToPerfil = {
                                         currentScreen = "perfil"
                                     },
@@ -435,7 +448,15 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToAgregarVehiculo = {
                                         currentScreen = "agregar_vehiculo"
-                                    }
+                                    },
+                                    onNavigateToAsistente = { currentScreen = "asistente" }
+                                )
+                            }
+                            "asistente" -> {
+                                AsistenteScreen(
+                                    viewModel = asistenteVm,
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onReservar = { currentScreen = "servicios" }
                                 )
                             }
 
@@ -495,7 +516,7 @@ class MainActivity : ComponentActivity() {
                             "perfil" -> {
                                 PerfilScreen(
                                     onNavigateBack = { currentScreen = "vehiculos" },
-                                    onLogout = cerrarSesion,
+                                    onLogout = { asistenteVm.limpiar(); cerrarSesion() },
                                     onCambiarContrasena = { correo ->
                                         recuperacionVm.reiniciar()
                                         correoRecuperacion = correo

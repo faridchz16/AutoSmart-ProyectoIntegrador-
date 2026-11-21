@@ -76,7 +76,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation("com.google.firebase:firebase-messaging:26.0.1")
+    // Firebase con BoM: notificaciones (FCM) y el Asistente AutoSmart con IA (Firebase AI Logic + App Check)
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-ai")
+    implementation("com.google.firebase:firebase-appcheck-debug")
     implementation("androidx.work:work-runtime:2.10.1")
 
     // --- LIBRERÍAS AUTOSMART (SPRINT 1) ---
