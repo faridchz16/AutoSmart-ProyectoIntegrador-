@@ -8,233 +8,381 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tecsup.autosmart.R
+import com.tecsup.autosmart.model.AgendaMecanicoDto
+import com.tecsup.autosmart.ui.auth.fondoAuth
+import com.tecsup.autosmart.ui.cliente.coloresCliente
+import com.tecsup.autosmart.viewmodel.MecanicoUiState
+import com.tecsup.autosmart.viewmodel.MecanicoViewModel
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+private val MarcaFuerte = Color(0xFF1150E8)
+private val Ambar = Color(0xFFB45309)
+
+/** Inicio del mecánico: saludo con su nombre, resumen del día y accesos a agenda, órdenes y perfil. */
 @Composable
 fun MecanicoScreen(
     onLogout: () -> Unit,
     onOrdenesClick: (() -> Unit)? = null,
-    onPerfilClick: (() -> Unit)? = null   // se conectará cuando exista la pantalla "Mi perfil"
+    onPerfilClick: (() -> Unit)? = null,
+    onAgendaClick: (() -> Unit)? = null,
+    viewModel: MecanicoViewModel? = null
 ) {
-    val isLandscape =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val estado = viewModel?.estado?.collectAsState()?.value ?: MecanicoUiState(cargando = false)
+    LaunchedEffect(viewModel) { viewModel?.cargarSiNecesario() }
 
-    Box(
-        modifier = Modifier
+    val c = coloresCliente()
+    val horizontal = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var confirmarSalida by remember { mutableStateOf(false) }
+
+    if (confirmarSalida) {
+        AlertDialog(
+            onDismissRequest = { confirmarSalida = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Seguro que quieres salir de tu cuenta?") },
+            confirmButton = {
+                TextButton(onClick = { confirmarSalida = false; onLogout() }) { Text("Cerrar sesión", color = c.rojo) }
+            },
+            dismissButton = { TextButton(onClick = { confirmarSalida = false }) { Text("Cancelar") } }
+        )
+    }
+
+    Column(
+        Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF070C14),
-                        Color(0xFF0F172A),
-                        Color(0xFF030712)
-                    )
-                )
-            ),
-        contentAlignment = Alignment.TopCenter
+            .background(c.fondo)
+            .verticalScroll(rememberScrollState())
     ) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = 760.dp)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp)
-        ) {
-            // ---------- Encabezado ----------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        painter = painterResource(id = R.drawable.xd),
-                        contentDescription = "Logo AutoSmart",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(44.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "AutoSmart",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Panel de mecánico",
-                            fontSize = 12.sp,
-                            color = Color(0xFF94A3B8)
-                        )
-                    }
-                }
+        Encabezado(
+            estado = estado,
+            horizontal = horizontal,
+            onPerfil = onPerfilClick,
+            onActualizar = { viewModel?.cargar() },
+            onSalir = { confirmarSalida = true }
+        )
+        val mod = Modifier.padding(horizontal = 16.dp).offset(y = if (horizontal) (-40).dp else (-52).dp)
 
-                OutlinedButton(
-                    onClick = onLogout,
-                    modifier = Modifier.height(38.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, Color(0xFF334155)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    Text(
-                        text = "Salir",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        val resumen: @Composable (Modifier) -> Unit = { m ->
+            Column(m, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                TarjetaResumen(estado)
+                if (estado.perfilIncompleto) AvisoPerfil(onPerfilClick)
+                CitasDeHoy(estado.citasHoy, onAgendaClick)
             }
-
-            Spacer(modifier = Modifier.height(if (isLandscape) 16.dp else 32.dp))
-
-            // ---------- Saludo ----------
-            Text(
-                text = "Hola, Mecánico",
-                fontSize = if (isLandscape) 24.sp else 30.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Administra tu perfil profesional y mantén tus especialidades al día.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = Color(0xFF94A3B8)
-            )
-
-            Spacer(modifier = Modifier.height(if (isLandscape) 16.dp else 28.dp))
-
-            // ---------- Opciones ----------
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OpcionPanel(
-                        emoji = "👤",
-                        titulo = "Mi perfil profesional",
-                        descripcion = "Tus especialidades y años de experiencia.",
-                        etiqueta = if (onPerfilClick == null) "Próximamente" else null,
-                        onClick = onPerfilClick,
-                        modifier = Modifier.weight(1f)
-                    )
-                    OpcionPanel(
-                        emoji = "🔧",
-                        titulo = "Órdenes de trabajo",
-                        descripcion = "Las órdenes asignadas a ti.",
-                        etiqueta = if (onOrdenesClick == null) "Próximamente" else null,
-                        onClick = onOrdenesClick,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            } else {
-                OpcionPanel(
-                    emoji = "👤",
-                    titulo = "Mi perfil profesional",
-                    descripcion = "Tus especialidades y años de experiencia.",
-                    etiqueta = if (onPerfilClick == null) "Próximamente" else null,
-                    onClick = onPerfilClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                OpcionPanel(
-                    emoji = "🔧",
-                    titulo = "Órdenes de trabajo",
-                    descripcion = "Las órdenes asignadas a ti.",
-                    etiqueta = if (onOrdenesClick == null) "Próximamente" else null,
-                    onClick = onOrdenesClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        }
+        val accesos: @Composable (Modifier) -> Unit = { m ->
+            Column(m, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Accesos rápidos", color = c.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+                Acceso(Icons.Outlined.CalendarMonth, "Mi agenda", "Tus citas por día", onAgendaClick)
+                Acceso(Icons.Outlined.Build, "Órdenes de trabajo",
+                    estado.ordenesActivas?.let { if (it.isEmpty()) "Sin órdenes en curso" else "${it.size} en curso" }
+                        ?: "Las órdenes asignadas a ti", onOrdenesClick)
+                Acceso(Icons.Outlined.Badge, "Mi perfil profesional", "Especialidades y años de experiencia", onPerfilClick)
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
+        }
+        if (horizontal) {
+            Row(mod, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                resumen(Modifier.weight(1f))
+                accesos(Modifier.weight(1f))
+            }
+        } else {
+            Column(mod, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                resumen(Modifier)
+                accesos(Modifier)
+            }
         }
     }
 }
 
-/** Tarjeta de opción del panel: icono, título, descripción y, si aplica, una etiqueta. */
 @Composable
-private fun OpcionPanel(
-    emoji: String,
-    titulo: String,
-    descripcion: String,
-    etiqueta: String?,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier
+private fun Encabezado(
+    estado: MecanicoUiState,
+    horizontal: Boolean,
+    onPerfil: (() -> Unit)?,
+    onActualizar: () -> Unit,
+    onSalir: () -> Unit
 ) {
-    val forma = RoundedCornerShape(20.dp)
-
-    Row(
-        modifier = modifier
-            .clip(forma)
-            .background(Color(0xFF0F172A))
-            .border(1.dp, Color(0xFF1E293B), forma)
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(18.dp),
-        verticalAlignment = Alignment.CenterVertically
+    val nombre = estado.perfil?.nombre?.trim()?.split(" ")?.firstOrNull()?.takeIf { it.isNotBlank() }
+    val hoy = LocalDate.now(ZoneId.of("America/Lima"))
+        .format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale("es", "PE")))
+        .replaceFirstChar { it.uppercase() }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .fondoAuth()
     ) {
-        Box(
+        Image(
+            painter = painterResource(R.drawable.img_welcome_auto),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF1D4ED8).copy(alpha = 0.25f)),
-            contentAlignment = Alignment.Center
+                .align(Alignment.BottomEnd)
+                .height(if (horizontal) 100.dp else 120.dp)
+                .offset(x = 40.dp, y = 6.dp)
+                .alpha(0.28f)
+        )
+        Column(
+            Modifier.padding(start = 18.dp, end = 12.dp, top = if (horizontal) 12.dp else 18.dp,
+                bottom = if (horizontal) 58.dp else 72.dp)
         ) {
-            Text(text = emoji, fontSize = 22.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(painterResource(R.drawable.ic_autosmart_logo), contentDescription = "AutoSmart", modifier = Modifier.size(40.dp))
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("AutoSmart", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, fontStyle = FontStyle.Italic)
+                    Text("Panel del mecánico", color = Color(0xFFDCE6F8), fontSize = 12.sp)
+                }
+                IconButton(onClick = onActualizar, enabled = !estado.cargando) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Actualizar", tint = Color.White)
+                }
+                MenuCuenta(estado, onPerfil, onSalir)
+            }
+            Spacer(Modifier.height(if (horizontal) 10.dp else 18.dp))
+            Text(
+                if (nombre != null) "Hola, $nombre" else "Hola",
+                color = Color.White, fontSize = if (horizontal) 24.sp else 28.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+            Text(hoy, color = Color(0xFFDCE6F8), fontSize = 14.sp)
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = titulo,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = descripcion,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = Color(0xFF94A3B8)
+@Composable
+private fun MenuCuenta(estado: MecanicoUiState, onPerfil: (() -> Unit)?, onSalir: () -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    Box {
+        AvatarMecanico(estado.perfil?.nombre ?: estado.perfil?.correo, 44.dp) { abierto = true }
+        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+            estado.perfil?.let { p ->
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    p.nombre?.let { Text(it, fontWeight = FontWeight.Bold) }
+                    p.correo?.let { Text(it, fontSize = 12.sp) }
+                }
+                HorizontalDivider()
+            }
+            onPerfil?.let { abrir ->
+                DropdownMenuItem(
+                    text = { Text("Mi perfil profesional") },
+                    leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                    onClick = { abierto = false; abrir() }
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Cerrar sesión", color = coloresCliente().rojo) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = coloresCliente().rojo) },
+                onClick = { abierto = false; onSalir() }
             )
         }
+    }
+}
 
-        if (etiqueta != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = etiqueta,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF60A5FA),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFF1D4ED8).copy(alpha = 0.20f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        } else if (onClick != null) {
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "›",
-                fontSize = 26.sp,
-                color = Color(0xFF94A3B8)
-            )
+/** Círculo con las iniciales del nombre (mismo estilo que el avatar del cliente). */
+@Composable
+fun AvatarMecanico(nombre: String?, tamano: Dp, onClick: (() -> Unit)? = null) {
+    val base = nombre?.trim().orEmpty()
+    val iniciales = base.split(" ").filter { it.isNotBlank() }.take(2)
+        .mapNotNull { it.firstOrNull { ch -> ch.isLetterOrDigit() }?.uppercaseChar() }.joinToString("")
+    val paleta = listOf(0xFF1A73E8, 0xFFD93025, 0xFF188038, 0xFFE37400, 0xFF9334E6, 0xFF00897B, 0xFFC2185B, 0xFF3949AB)
+    val color = Color(paleta[base.lowercase().hashCode().mod(paleta.size)])
+    Box(
+        Modifier
+            .size(tamano)
+            .clip(CircleShape)
+            .background(if (iniciales.isNotEmpty()) color else Color.White.copy(alpha = 0.2f))
+            .border(2.dp, Color.White.copy(alpha = 0.9f), CircleShape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        if (iniciales.isNotEmpty()) {
+            Text(iniciales, color = Color.White, fontSize = (tamano.value * 0.38f).sp, fontWeight = FontWeight.Bold)
+        } else {
+            Icon(Icons.Outlined.Person, contentDescription = null, tint = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun Tarjeta(modifier: Modifier = Modifier, contenido: @Composable ColumnScope.() -> Unit) {
+    val c = coloresCliente()
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = c.superficie,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, c.borde),
+        modifier = modifier.fillMaxWidth()
+    ) { Column(content = contenido) }
+}
+
+@Composable
+private fun TarjetaResumen(estado: MecanicoUiState) {
+    val c = coloresCliente()
+    Tarjeta {
+        Row(Modifier.padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Dato(estado.citasHoy?.size, "Citas de hoy", Icons.Outlined.CalendarMonth, estado.cargando, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(44.dp).background(c.borde))
+            Dato(estado.ordenesActivas?.size, "Órdenes en curso", Icons.Outlined.Build, estado.cargando, Modifier.weight(1f))
+            Box(Modifier.width(1.dp).height(44.dp).background(c.borde))
+            Dato(estado.perfil?.aniosExperiencia, "Años de exp.", Icons.Outlined.Badge, estado.cargando, Modifier.weight(1f))
+        }
+        estado.error?.let {
+            Text(it, color = c.rojo, fontSize = 13.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp))
+        }
+    }
+}
+
+@Composable
+private fun Dato(valor: Int?, etiqueta: String, icono: ImageVector, cargando: Boolean, modifier: Modifier) {
+    val c = coloresCliente()
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icono, contentDescription = null, tint = c.azul, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            valor?.toString() ?: if (cargando) "…" else "–",
+            color = c.texto, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold
+        )
+        Text(etiqueta, color = c.textoSecundario, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+@Composable
+private fun AvisoPerfil(onPerfil: (() -> Unit)?) {
+    val c = coloresCliente()
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Ambar.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, Ambar.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Info, contentDescription = null, tint = Ambar)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Completa tu perfil", color = Ambar, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("Agrega tus especialidades para que los clientes puedan elegirte al reservar.",
+                    color = c.texto, fontSize = 13.sp)
+            }
+            onPerfil?.let { TextButton(onClick = it) { Text("Completar") } }
+        }
+    }
+}
+
+@Composable
+private fun CitasDeHoy(citas: List<AgendaMecanicoDto>?, onAgenda: (() -> Unit)?) {
+    val c = coloresCliente()
+    Tarjeta {
+        Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Citas de hoy", color = c.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            onAgenda?.let { TextButton(onClick = it) { Text("Ver agenda") } }
+        }
+        when {
+            citas == null -> Text("Cargando…", color = c.textoSecundario, fontSize = 14.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+            citas.isEmpty() -> Text("No tienes citas para hoy. Revisa tu agenda para ver las próximas.",
+                color = c.textoSecundario, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+            else -> Column(Modifier.padding(bottom = 8.dp)) {
+                citas.take(4).forEach { cita -> FilaCita(cita) }
+                if (citas.size > 4) Text("y ${citas.size - 4} más…", color = c.textoSecundario, fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaCita(cita: AgendaMecanicoDto) {
+    val c = coloresCliente()
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(54.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = c.azul, modifier = Modifier.size(16.dp))
+            Text(cita.horaInicio?.take(5) ?: "--:--", color = c.texto, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(cita.servicio ?: "Servicio", color = c.texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(cita.placa, cita.cliente).joinToString(" · "), color = c.textoSecundario, fontSize = 13.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        EstadoCita(cita.estado)
+    }
+}
+
+@Composable
+fun EstadoCita(estado: String?) {
+    val (color, texto) = when (estado?.uppercase()) {
+        "PENDIENTE" -> Color(0xFFB45309) to "Pendiente"
+        "CONFIRMADA" -> Color(0xFF15803D) to "Confirmada"
+        "EN_PROCESO" -> Color(0xFF1150E8) to "En proceso"
+        "ESPERA_APROBACION" -> Color(0xFFB45309) to "Espera aprob."
+        "FINALIZADA" -> Color(0xFF0E7490) to "Finalizada"
+        "PAGADO" -> Color(0xFF16A34A) to "Pagado"
+        "CANCELADA", "RECHAZADA" -> Color(0xFFDC2626) to estado.lowercase().replaceFirstChar { it.uppercase() }
+        else -> Color(0xFF64748B) to (estado ?: "-")
+    }
+    Surface(shape = RoundedCornerShape(10.dp), color = color.copy(alpha = 0.14f)) {
+        Text(texto, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+    }
+}
+
+@Composable
+private fun Acceso(icono: ImageVector, titulo: String, detalle: String, onClick: (() -> Unit)?) {
+    val c = coloresCliente()
+    Surface(
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null,
+        shape = RoundedCornerShape(20.dp),
+        color = c.superficie,
+        border = BorderStroke(1.dp, c.borde),
+        shadowElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(c.azulSuave),
+                contentAlignment = Alignment.Center
+            ) { Icon(icono, contentDescription = null, tint = c.azul) }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(titulo, color = c.texto, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(detalle, color = c.textoSecundario, fontSize = 13.sp)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.textoSecundario)
         }
     }
 }

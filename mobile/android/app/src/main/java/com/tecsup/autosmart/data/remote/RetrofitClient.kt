@@ -113,6 +113,16 @@ object RetrofitClient {
             .create(PagoApi::class.java)
     }
 
+    // Perfil profesional del mecánico (GET/PUT /mechanics/me)
+    val mecanicoApi: MecanicoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(MecanicoApi::class.java)
+    }
+
     val fotoApi: FotoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

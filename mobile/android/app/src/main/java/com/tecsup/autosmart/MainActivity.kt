@@ -64,6 +64,8 @@ import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
 import com.tecsup.autosmart.ui.cliente.PagoScreen
+import com.tecsup.autosmart.ui.mecanico.PerfilMecanicoScreen
+import com.tecsup.autosmart.viewmodel.MecanicoViewModel
 import com.tecsup.autosmart.viewmodel.PagoViewModel
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
 import com.tecsup.autosmart.ui.auth.WelcomeScreen
@@ -203,6 +205,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 val agendaMecanicoVm: AgendaMecanicoViewModel = viewModel()
+                // Inicio y perfil profesional del mecánico; la agenda vuelve a donde se abrió
+                val mecanicoVm: MecanicoViewModel = viewModel()
+                var agendaVolverA by rememberSaveable { mutableStateOf("ordenes_mecanico") }
                 val detalleMecanicoVm: CitaDetalleMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "agenda_mecanico" && currentScreen != "detalle_cita_mecanico") {
@@ -269,6 +274,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
+                // Perfil del mecánico: si hay cambios sin guardar, PerfilMecanicoScreen pregunta antes
+                BackHandler(enabled = currentScreen == "perfil_mecanico") { currentScreen = "mecanico" }
                 // Mientras se procesa un pago, PagoScreen bloquea el botón atrás con su propio BackHandler
                 BackHandler(enabled = currentScreen == "pago") {
                     pagoVm.limpiar()
@@ -585,7 +592,7 @@ class MainActivity : ComponentActivity() {
                                 OrdenesMecanicoScreen(
                                     viewModel = ordenesMecanicoVm,
                                     onBack = { currentScreen = "mecanico" },
-                                    onAgenda = { currentScreen = "agenda_mecanico" },
+                                    onAgenda = { agendaVolverA = "ordenes_mecanico"; currentScreen = "agenda_mecanico" },
                                     onChecklist = { id, editable ->
                                         checklistOrdenId = id
                                         checklistEditable = editable
@@ -606,7 +613,7 @@ class MainActivity : ComponentActivity() {
                             "agenda_mecanico" -> {
                                 AgendaMecanicoScreen(
                                     viewModel = agendaMecanicoVm,
-                                    onBack = { currentScreen = "ordenes_mecanico" },
+                                    onBack = { currentScreen = agendaVolverA },
                                     onDetalle = { id ->
                                         selectedCitaMecanicoId = id
                                         detalleMecanicoVm.cargar(id, forzar = true)
@@ -624,7 +631,16 @@ class MainActivity : ComponentActivity() {
                             "mecanico" -> {
                                 MecanicoScreen(
                                     onOrdenesClick = { currentScreen = "ordenes_mecanico" },
-                                    onLogout = cerrarSesion
+                                    onPerfilClick = { currentScreen = "perfil_mecanico" },
+                                    onAgendaClick = { agendaVolverA = "mecanico"; currentScreen = "agenda_mecanico" },
+                                    onLogout = { mecanicoVm.limpiar(); cerrarSesion() },
+                                    viewModel = mecanicoVm
+                                )
+                            }
+                            "perfil_mecanico" -> {
+                                PerfilMecanicoScreen(
+                                    viewModel = mecanicoVm,
+                                    onBack = { currentScreen = "mecanico" }
                                 )
                             }
 
