@@ -21,12 +21,14 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -80,52 +82,114 @@ fun MecanicoScreen(
         )
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(c.fondo)
-            .verticalScroll(rememberScrollState())
-    ) {
-        Encabezado(
-            estado = estado,
-            horizontal = horizontal,
-            onPerfil = onPerfilClick,
-            onActualizar = { viewModel?.cargar() },
-            onSalir = { confirmarSalida = true }
-        )
-        val mod = Modifier.padding(horizontal = 16.dp).offset(y = if (horizontal) (-40).dp else (-52).dp)
+    val destinos = listOf(
+        DestinoMecanico("Inicio", Icons.Filled.Home, seleccionado = true, onClick = {}),
+        DestinoMecanico("Agenda", Icons.Outlined.CalendarMonth, onClick = onAgendaClick),
+        DestinoMecanico("Órdenes", Icons.Outlined.Build, onClick = onOrdenesClick),
+        DestinoMecanico("Perfil", Icons.Outlined.Person, onClick = onPerfilClick)
+    )
 
-        val resumen: @Composable (Modifier) -> Unit = { m ->
-            Column(m, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                TarjetaResumen(estado)
-                if (estado.perfilIncompleto) AvisoPerfil(onPerfilClick)
-                CitasDeHoy(estado.citasHoy, onAgendaClick)
+    val contenido: @Composable (Modifier) -> Unit = { m ->
+        Column(
+            m
+                .fillMaxSize()
+                .background(c.fondo)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Encabezado(
+                estado = estado,
+                horizontal = horizontal,
+                onPerfil = onPerfilClick,
+                onActualizar = { viewModel?.cargar() },
+                onSalir = { confirmarSalida = true }
+            )
+            val mod = Modifier.padding(horizontal = 16.dp).offset(y = if (horizontal) (-40).dp else (-52).dp)
+            val izquierda: @Composable (Modifier) -> Unit = { col ->
+                Column(col, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    TarjetaResumen(estado)
+                    if (estado.perfilIncompleto) AvisoPerfil(onPerfilClick)
+                }
             }
-        }
-        val accesos: @Composable (Modifier) -> Unit = { m ->
-            Column(m, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Accesos rápidos", color = c.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(start = 4.dp, top = 4.dp))
-                Acceso(Icons.Outlined.CalendarMonth, "Mi agenda", "Tus citas por día", onAgendaClick)
-                Acceso(Icons.Outlined.Build, "Órdenes de trabajo",
-                    estado.ordenesActivas?.let { if (it.isEmpty()) "Sin órdenes en curso" else "${it.size} en curso" }
-                        ?: "Las órdenes asignadas a ti", onOrdenesClick)
-                Acceso(Icons.Outlined.Badge, "Mi perfil profesional", "Especialidades y años de experiencia", onPerfilClick)
+            val derecha: @Composable (Modifier) -> Unit = { col ->
+                Column(col, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CitasDeHoy(estado.citasHoy, onAgendaClick)
+                    OrdenesEnCurso(estado, onOrdenesClick)
+                }
             }
-        }
-        if (horizontal) {
-            Row(mod, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                resumen(Modifier.weight(1f))
-                accesos(Modifier.weight(1f))
-            }
-        } else {
-            Column(mod, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                resumen(Modifier)
-                accesos(Modifier)
+            if (horizontal) {
+                Row(mod, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    izquierda(Modifier.weight(1f))
+                    derecha(Modifier.weight(1.3f))
+                }
+            } else {
+                Column(mod, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    izquierda(Modifier)
+                    derecha(Modifier)
+                }
             }
         }
     }
+
+    if (horizontal) {
+        // Horizontal: barra lateral para no quitarle alto al contenido (igual que el cliente)
+        Row(Modifier.fillMaxSize().background(c.fondo)) {
+            NavigationRail(containerColor = c.superficie, windowInsets = WindowInsets(0, 0, 0, 0)) {
+                Spacer(Modifier.weight(1f))
+                destinos.forEach { d ->
+                    NavigationRailItem(
+                        selected = d.seleccionado,
+                        onClick = { d.onClick?.invoke() },
+                        enabled = d.seleccionado || d.onClick != null,
+                        icon = { Icon(d.icono, contentDescription = null) },
+                        label = { Text(d.texto, fontSize = 12.sp) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = c.azul, selectedTextColor = c.azul, indicatorColor = c.azulSuave,
+                            unselectedIconColor = c.texto, unselectedTextColor = c.texto
+                        )
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+            }
+            contenido(Modifier.weight(1f))
+        }
+    } else {
+        Scaffold(
+            containerColor = c.fondo,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                NavigationBar(
+                    containerColor = c.superficie,
+                    tonalElevation = 0.dp,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    modifier = Modifier
+                        .shadow(12.dp, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                        .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                ) {
+                    destinos.forEach { d ->
+                        NavigationBarItem(
+                            selected = d.seleccionado,
+                            onClick = { d.onClick?.invoke() },
+                            enabled = d.seleccionado || d.onClick != null,
+                            icon = { Icon(d.icono, contentDescription = null) },
+                            label = { Text(d.texto, fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = c.azul, selectedTextColor = c.azul, indicatorColor = c.azulSuave,
+                                unselectedIconColor = c.texto, unselectedTextColor = c.texto
+                            )
+                        )
+                    }
+                }
+            }
+        ) { padding -> contenido(Modifier.padding(padding)) }
+    }
 }
+
+private class DestinoMecanico(
+    val texto: String,
+    val icono: ImageVector,
+    val seleccionado: Boolean = false,
+    val onClick: (() -> Unit)?
+)
 
 @Composable
 private fun Encabezado(
@@ -360,29 +424,48 @@ fun EstadoCita(estado: String?) {
     }
 }
 
+/** Órdenes que el mecánico tiene en curso (EN_PROCESO o ESPERA_APROBACION). */
 @Composable
-private fun Acceso(icono: ImageVector, titulo: String, detalle: String, onClick: (() -> Unit)?) {
+private fun OrdenesEnCurso(estado: MecanicoUiState, onOrdenes: (() -> Unit)?) {
     val c = coloresCliente()
-    Surface(
-        onClick = { onClick?.invoke() },
-        enabled = onClick != null,
-        shape = RoundedCornerShape(20.dp),
-        color = c.superficie,
-        border = BorderStroke(1.dp, c.borde),
-        shadowElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(c.azulSuave),
-                contentAlignment = Alignment.Center
-            ) { Icon(icono, contentDescription = null, tint = c.azul) }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(titulo, color = c.texto, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(detalle, color = c.textoSecundario, fontSize = 13.sp)
+    val ordenes = estado.ordenesActivas
+    Tarjeta {
+        Row(Modifier.padding(start = 16.dp, end = 6.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Órdenes en curso", color = c.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            onOrdenes?.let { TextButton(onClick = it) { Text("Ver todas") } }
+        }
+        when {
+            ordenes == null -> Text("Cargando…", color = c.textoSecundario, fontSize = 14.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+            ordenes.isEmpty() -> Text("No tienes órdenes en curso.", color = c.textoSecundario, fontSize = 14.sp,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+            else -> Column(Modifier.padding(bottom = 8.dp)) {
+                ordenes.take(3).forEach { o ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = onOrdenes != null) { onOrdenes?.invoke() }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.azulSuave),
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Outlined.Build, contentDescription = null, tint = c.azul, modifier = Modifier.size(20.dp)) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(o.servicio ?: "Orden de trabajo", color = c.texto, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(listOfNotNull(o.ticket, o.placa).joinToString(" · "), color = c.textoSecundario, fontSize = 13.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        EstadoCita(o.estado)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.textoSecundario)
+                    }
+                }
+                if (ordenes.size > 3) Text("y ${ordenes.size - 3} más…", color = c.textoSecundario, fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = c.textoSecundario)
         }
     }
 }
