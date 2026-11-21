@@ -50,7 +50,8 @@ data class CitaUI(
     val estado: String,
     val ticket: String = "",
     val horaFin: String = "",
-    val precio: BigDecimal? = null
+    val precio: BigDecimal? = null,
+    val placa: String = ""
 )
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -60,7 +61,8 @@ fun MisCitasScreen(
     onNavigateBack: () -> Unit = {},
     viewModel: MisCitasViewModel = viewModel(),
     onPresupuesto: (Long) -> Unit = {},
-    onSeguimiento: ((Long) -> Unit)? = null
+    onSeguimiento: ((Long) -> Unit)? = null,
+    onPagar: ((idCita: Long, placa: String) -> Unit)? = null
 ) {
     val estado by viewModel.estado.collectAsState()
     val cancelacion by viewModel.cancelacion.collectAsState()
@@ -97,7 +99,8 @@ fun MisCitasScreen(
                 estado = cita.estado,
                 ticket = cita.ticket,
                 horaFin = cita.horaFin.take(5),
-                precio = cita.precio
+                precio = cita.precio,
+                placa = cita.placa
             )
         }.toMutableStateList()
     }
@@ -155,6 +158,7 @@ fun MisCitasScreen(
                         cancelarHabilitado = !procesando && !estado.cargando && viewModel.puedeCancelar(cita.id),
                         onPresupuesto = { onPresupuesto(cita.id) },
                         onSeguimiento = onSeguimiento?.let { abrir -> { abrir(cita.id) } },
+                        onPagar = onPagar?.let { abrir -> { abrir(cita.id, cita.placa) } },
                         presupuestoHabilitado = !procesando && cancelacion.cita == null && reprogramacion.cita == null
                     )
                 }
@@ -285,7 +289,8 @@ fun CitaCard(
     cancelarHabilitado: Boolean = false,
     onPresupuesto: (() -> Unit)? = null,
     presupuestoHabilitado: Boolean = true,
-    onSeguimiento: (() -> Unit)? = null
+    onSeguimiento: (() -> Unit)? = null,
+    onPagar: (() -> Unit)? = null
 ) {
     val (estadoColor, estadoTexto) = when (cita.estado.uppercase(Locale.ROOT)) {
         "CONFIRMADA" -> Color(0xFF2E7D32) to "CONFIRMADA"
@@ -293,6 +298,10 @@ fun CitaCard(
         "PENDIENTE" -> Color(0xFF8A5700) to "PENDIENTE"
         "RECHAZADA" -> Color(0xFFB3261E) to "RECHAZADA"
         "CANCELADA" -> Color(0xFFD32F2F) to "CANCELADA"
+        "EN_PROCESO" -> Color(0xFF1150E8) to "EN PROCESO"
+        "ESPERA_APROBACION" -> Color(0xFFB45309) to "ESPERA APROBACIÓN"
+        "FINALIZADA" -> Color(0xFF0E7490) to "FINALIZADA"
+        "PAGADO" -> Color(0xFF16A34A) to "PAGADO"
         else -> MaterialTheme.colorScheme.onSurfaceVariant to cita.estado
     }
 
@@ -349,6 +358,15 @@ fun CitaCard(
             }
             onPresupuesto?.let { consultar ->
                 TextButton(onClick = consultar, enabled = presupuestoHabilitado) { Text("Consultar presupuesto") }
+            }
+            // Sprint 4 · T61.2/T63.2: una cita finalizada se paga desde aquí
+            onPagar?.let { pagar ->
+                when (cita.estado) {
+                    "FINALIZADA" -> Button(onClick = pagar, enabled = presupuestoHabilitado, modifier = Modifier.fillMaxWidth()) {
+                        Text("Pagar servicio")
+                    }
+                    "PAGADO" -> TextButton(onClick = pagar, enabled = presupuestoHabilitado) { Text("Ver pago") }
+                }
             }
             if (cita.estado == "CONFIRMADA" || cita.estado == "PENDIENTE") {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))

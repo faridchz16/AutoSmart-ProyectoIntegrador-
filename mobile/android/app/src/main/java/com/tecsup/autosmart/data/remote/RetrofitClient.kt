@@ -103,6 +103,16 @@ object RetrofitClient {
             .create(PresupuestoApi::class.java)
     }
 
+    // Sprint 4 · T61.2, T62.2 y T63.2: costo final, métodos de pago y pago en línea
+    val pagoApi: PagoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PagoApi::class.java)
+    }
+
     val fotoApi: FotoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

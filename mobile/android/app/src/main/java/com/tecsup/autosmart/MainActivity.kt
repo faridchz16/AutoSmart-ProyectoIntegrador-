@@ -63,6 +63,8 @@ import com.tecsup.autosmart.ui.cliente.SeguimientoScreen
 import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
+import com.tecsup.autosmart.ui.cliente.PagoScreen
+import com.tecsup.autosmart.viewmodel.PagoViewModel
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
 import com.tecsup.autosmart.ui.auth.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
@@ -185,6 +187,12 @@ class MainActivity : ComponentActivity() {
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
                 var mantenimientoOrdenId by rememberSaveable { mutableStateOf(0L) }
                 var mantenimientoDesdeHistorial by rememberSaveable { mutableStateOf(false) }
+                // Sprint 4 · pagos: orden a pagar (o cita + placa desde Mis citas) y pantalla de regreso
+                val pagoVm: PagoViewModel = viewModel()
+                var pagoOrdenId by rememberSaveable { mutableStateOf(0L) }
+                var pagoCitaId by rememberSaveable { mutableStateOf(0L) }
+                var pagoPlaca by rememberSaveable { mutableStateOf("") }
+                var pagoVolverA by rememberSaveable { mutableStateOf("mis_citas") }
                 val mantenimientoVm: DetalleMantenimientoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "detalle_mantenimiento") mantenimientoVm.limpiar()
@@ -261,6 +269,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
+                // Mientras se procesa un pago, PagoScreen bloquea el botón atrás con su propio BackHandler
+                BackHandler(enabled = currentScreen == "pago") {
+                    pagoVm.limpiar()
+                    if (pagoVolverA == "historial_vehiculo") historialVehiculoVm.limpiar()
+                    currentScreen = pagoVolverA
+                }
                 BackHandler(enabled = currentScreen == "servicio_detalle") { currentScreen = "servicios" }
                 BackHandler(enabled = currentScreen == "reserva") { currentScreen = "servicio_detalle" }
                 BackHandler(enabled = currentScreen == "olvide") {
@@ -430,6 +444,12 @@ class MainActivity : ComponentActivity() {
                                         mantenimientoOrdenId = idOrden
                                         mantenimientoDesdeHistorial = true
                                         currentScreen = "detalle_mantenimiento"
+                                    },
+                                    onPagar = { idOrden ->
+                                        pagoOrdenId = idOrden
+                                        pagoCitaId = 0L
+                                        pagoVolverA = "historial_vehiculo"
+                                        currentScreen = "pago"
                                     }
                                 )
                             }
@@ -490,7 +510,27 @@ class MainActivity : ComponentActivity() {
                                 MisCitasScreen(
                                     onNavigateBack = { currentScreen = "vehiculos" },
                                     onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" },
-                                    onSeguimiento = { id -> seguimientoCitaId = id; currentScreen = "seguimiento" }
+                                    onSeguimiento = { id -> seguimientoCitaId = id; currentScreen = "seguimiento" },
+                                    onPagar = { idCita, placa ->
+                                        pagoOrdenId = 0L
+                                        pagoCitaId = idCita
+                                        pagoPlaca = placa
+                                        pagoVolverA = "mis_citas"
+                                        currentScreen = "pago"
+                                    }
+                                )
+                            }
+                            "pago" -> {
+                                PagoScreen(
+                                    idOrden = pagoOrdenId,
+                                    idCita = pagoCitaId,
+                                    placa = pagoPlaca,
+                                    viewModel = pagoVm,
+                                    onBack = {
+                                        pagoVm.limpiar()
+                                        if (pagoVolverA == "historial_vehiculo") historialVehiculoVm.limpiar()
+                                        currentScreen = pagoVolverA
+                                    }
                                 )
                             }
 

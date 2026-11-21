@@ -13,5 +13,8 @@ data class MantenimientoHistorialDto(
     val servicio: String?,
     val mecanico: String?,
     val fechaFin: String?,
-    val costoRepuestos: BigDecimal?
+    val costoRepuestos: BigDecimal?,
+    // Sprint 4: el backend ya los envía; sirven para saber si se puede pagar
+    val idCita: Long? = null,
+    val estado: String? = null
 )

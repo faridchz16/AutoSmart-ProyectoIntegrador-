@@ -5,13 +5,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -35,7 +39,8 @@ fun HistorialVehiculoScreen(
     idVehiculoInicial: Long,
     viewModel: HistorialVehiculoViewModel,
     onBack: () -> Unit,
-    onVerDetalle: (Long) -> Unit
+    onVerDetalle: (Long) -> Unit,
+    onPagar: (Long) -> Unit = {}
 ) {
     val estado by viewModel.estado.collectAsState()
     LaunchedEffect(idVehiculoInicial) {
@@ -90,8 +95,20 @@ fun HistorialVehiculoScreen(
                                 mantenimiento.fechaFin?.let { Text("Finalizado: ${it.replace('T', ' ')}") }
                                 mantenimiento.mecanico?.let { Text("Mecánico: $it") }
                                 mantenimiento.costoRepuestos?.let { Text("Costo de repuestos: S/ ${it.toPlainString()}") }
-                                TextButton(onClick = { onVerDetalle(mantenimiento.idOrden) }) {
-                                    Text("Ver detalle")
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(onClick = { onVerDetalle(mantenimiento.idOrden) }) {
+                                        Text("Ver detalle")
+                                    }
+                                    Spacer(Modifier.weight(1f))
+                                    // Sprint 4 · T61.2/T63.2: pagar una orden finalizada o ver su pago
+                                    when (mantenimiento.estado) {
+                                        "FINALIZADA" -> Button(onClick = { onPagar(mantenimiento.idOrden) }) {
+                                            Text("Pagar servicio")
+                                        }
+                                        "PAGADO" -> OutlinedButton(onClick = { onPagar(mantenimiento.idOrden) }) {
+                                            Text("Pagado · ver pago")
+                                        }
+                                    }
                                 }
                             }
                         }
