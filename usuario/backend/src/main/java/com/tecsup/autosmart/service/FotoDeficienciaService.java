@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.service;
 
+import com.tecsup.autosmart.almacenamiento.AlmacenFotos;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.model.Cita;
 import com.tecsup.autosmart.dto.FotoResponse;
@@ -30,12 +31,12 @@ public class FotoDeficienciaService {
     private final FotoDeficienciaRepository fotoRepository;
     private final DeficienciaRepository deficienciaRepository;
     private final OrdenTrabajoService ordenService;
-    private final AlmacenFotosService almacen;
+    private final AlmacenFotos almacen;
 
     public FotoDeficienciaService(FotoDeficienciaRepository fotoRepository,
                                   DeficienciaRepository deficienciaRepository,
                                   OrdenTrabajoService ordenService,
-                                  AlmacenFotosService almacen) {
+                                  AlmacenFotos almacen) {
         this.fotoRepository = fotoRepository;
         this.deficienciaRepository = deficienciaRepository;
         this.ordenService = ordenService;

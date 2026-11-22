@@ -1,8 +1,10 @@
-package com.tecsup.autosmart.service;
+package com.tecsup.autosmart.almacenamiento;
 
 import com.tecsup.autosmart.exception.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -14,15 +16,18 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
-@Service
-public class AlmacenFotosService {
+@Component
+public class AlmacenFotosDisco implements AlmacenFotos {
+
+    private static final Logger log = LoggerFactory.getLogger(AlmacenFotosDisco.class);
 
     private final Path carpeta;
 
-    public AlmacenFotosService(@Value("${app.fotos.directorio}") String directorio) {
+    public AlmacenFotosDisco(@Value("${app.fotos.directorio}") String directorio) {
         this.carpeta = Paths.get(directorio).toAbsolutePath().normalize();
     }
 
+    @Override
     public String guardar(MultipartFile archivo, String extension) {
         String nombre = UUID.randomUUID() + "." + extension;
         try (InputStream entrada = archivo.getInputStream()) {
@@ -34,9 +39,10 @@ public class AlmacenFotosService {
         }
     }
 
+    @Override
     public byte[] leer(String nombreArchivo) {
-        Path ruta = carpeta.resolve(nombreArchivo).normalize();
-        if (!ruta.startsWith(carpeta) || !Files.exists(ruta)) {
+        Path ruta = resolver(nombreArchivo);
+        if (!Files.exists(ruta)) {
             throw new NotFoundException("El archivo de la foto no existe en el servidor");
         }
         try {
@@ -46,11 +52,20 @@ public class AlmacenFotosService {
         }
     }
 
+    @Override
     public void eliminar(String nombreArchivo) {
         try {
-            Files.deleteIfExists(carpeta.resolve(nombreArchivo).normalize());
-        } catch (IOException ignored) {
-            // Si no se puede borrar, solo queda un archivo huerfano en la carpeta
+            Files.deleteIfExists(resolver(nombreArchivo));
+        } catch (IOException | NotFoundException e) {
+            log.warn("No se pudo borrar la foto {}: {}", nombreArchivo, e.getMessage());
         }
+    }
+
+    private Path resolver(String nombreArchivo) {
+        Path ruta = carpeta.resolve(nombreArchivo).normalize();
+        if (!ruta.startsWith(carpeta)) {
+            throw new NotFoundException("El archivo de la foto no existe en el servidor");
+        }
+        return ruta;
     }
 }

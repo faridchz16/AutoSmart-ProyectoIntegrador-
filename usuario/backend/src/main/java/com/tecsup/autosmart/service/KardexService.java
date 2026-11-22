@@ -2,7 +2,7 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.IngresoStockRequest;
 import com.tecsup.autosmart.dto.MovimientoResponse;
-import com.tecsup.autosmart.exception.ConflictException;
+import com.tecsup.autosmart.mapper.MovimientoMapper;
 import com.tecsup.autosmart.model.Material;
 import com.tecsup.autosmart.model.MovimientoInventario;
 import com.tecsup.autosmart.model.OrdenTrabajo;
@@ -29,15 +29,18 @@ public class KardexService {
     private final MaterialRepository materialRepository;
     private final MaterialService materialService;
     private final OrdenTrabajoRepository ordenRepository;
+    private final MovimientoMapper mapper;
 
     public KardexService(MovimientoInventarioRepository movimientoRepository,
                          MaterialRepository materialRepository,
                          MaterialService materialService,
-                         OrdenTrabajoRepository ordenRepository) {
+                         OrdenTrabajoRepository ordenRepository,
+                         MovimientoMapper mapper) {
         this.movimientoRepository = movimientoRepository;
         this.materialRepository = materialRepository;
         this.materialService = materialService;
         this.ordenRepository = ordenRepository;
+        this.mapper = mapper;
     }
 
     @Transactional
@@ -47,7 +50,7 @@ public class KardexService {
         if (req.getCostoUnitario() != null) {
             material.setCostoUnitario(req.getCostoUnitario().setScale(2, RoundingMode.HALF_UP));
         }
-        material.setStockActual(material.getStockActual() + req.getCantidad());
+        material.ingresar(req.getCantidad());
         materialRepository.save(material);
 
         MovimientoInventario movimiento = new MovimientoInventario();
@@ -61,22 +64,17 @@ public class KardexService {
         movimiento.setRegistradoPor(correoAdmin);
         movimiento.setFecha(LocalDateTime.now(ZONA_LIMA).withNano(0));
 
-        return aRespuesta(movimientoRepository.save(movimiento));
+        return mapper.toResponse(movimientoRepository.save(movimiento));
     }
 
     @Transactional
     public MovimientoResponse registrarSalida(OrdenTrabajo orden, Long idMaterial, int cantidad,
                                               String correoUsuario, String referencia) {
         Material material = materialService.buscarPorId(idMaterial);
-        if (material.getStockActual() < cantidad) {
-            throw new ConflictException("Stock insuficiente de " + material.getNombre()
-                    + ": disponible " + material.getStockActual() + ", requerido " + cantidad);
-        }
-        material.setStockActual(material.getStockActual() - cantidad);
+        BigDecimal costo = material.descontar(cantidad);
         materialRepository.saveAndFlush(material);
 
-        BigDecimal costo = material.getCostoUnitario().multiply(BigDecimal.valueOf(cantidad));
-        orden.setCostoRepuestos(orden.getCostoRepuestos().add(costo));
+        orden.sumarCostoRepuestos(costo);
         ordenRepository.save(orden);
 
         MovimientoInventario movimiento = new MovimientoInventario();
@@ -90,14 +88,14 @@ public class KardexService {
         movimiento.setRegistradoPor(correoUsuario);
         movimiento.setFecha(LocalDateTime.now(ZONA_LIMA).withNano(0));
 
-        return aRespuesta(movimientoRepository.save(movimiento));
+        return mapper.toResponse(movimientoRepository.save(movimiento));
     }
 
     @Transactional(readOnly = true)
     public List<MovimientoResponse> consumosDeOrden(Long idOrden) {
         return movimientoRepository.findByOrden_IdOrdenAndTipoOrderByIdMovimientoAsc(idOrden, TipoMovimiento.SALIDA)
                 .stream()
-                .map(this::aRespuesta)
+                .map(mapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -105,23 +103,7 @@ public class KardexService {
     public List<MovimientoResponse> kardex(Long idMaterial) {
         materialService.buscarPorId(idMaterial);
         return movimientoRepository.findByMaterial_IdMaterialOrderByIdMovimientoAsc(idMaterial).stream()
-                .map(this::aRespuesta)
+                .map(mapper::toResponse)
                 .collect(Collectors.toList());
-    }
-
-    private MovimientoResponse aRespuesta(MovimientoInventario m) {
-        MovimientoResponse res = new MovimientoResponse();
-        res.setIdMovimiento(m.getIdMovimiento());
-        res.setIdMaterial(m.getMaterial().getIdMaterial());
-        res.setCodigoMaterial(m.getMaterial().getCodigo());
-        res.setTipo(m.getTipo().name());
-        res.setCantidad(m.getCantidad());
-        res.setCostoUnitario(m.getCostoUnitario());
-        res.setStockResultante(m.getStockResultante());
-        res.setReferencia(m.getReferencia());
-        res.setIdOrden(m.getOrden() == null ? null : m.getOrden().getIdOrden());
-        res.setRegistradoPor(m.getRegistradoPor());
-        res.setFecha(m.getFecha().toString());
-        return res;
     }
 }

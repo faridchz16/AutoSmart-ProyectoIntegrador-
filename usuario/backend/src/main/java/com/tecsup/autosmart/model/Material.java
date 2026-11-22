@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.model;
 
+import com.tecsup.autosmart.exception.ConflictException;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 
@@ -55,5 +56,18 @@ public class Material {
 
     public boolean isBajoStock() {
         return stockActual <= stockMinimo;
+    }
+
+    public void ingresar(int cantidad) {
+        stockActual = stockActual + cantidad;
+    }
+
+    public BigDecimal descontar(int cantidad) {
+        if (stockActual < cantidad) {
+            throw new ConflictException("Stock insuficiente de " + nombre + ": disponible " + stockActual
+                    + ", requerido " + cantidad);
+        }
+        stockActual = stockActual - cantidad;
+        return costoUnitario.multiply(BigDecimal.valueOf(cantidad));
     }
 }
