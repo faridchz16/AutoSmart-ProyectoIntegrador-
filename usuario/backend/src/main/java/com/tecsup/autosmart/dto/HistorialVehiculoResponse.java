@@ -11,6 +11,7 @@ public class HistorialVehiculoResponse {
     private String modelo;
     private Integer anio;
     private Integer kilometraje;
+    private Propietario propietario;
     private int totalMantenimientos;
     private List<Mantenimiento> mantenimientos;
 
@@ -26,10 +27,15 @@ public class HistorialVehiculoResponse {
     public void setAnio(Integer anio) { this.anio = anio; }
     public Integer getKilometraje() { return kilometraje; }
     public void setKilometraje(Integer kilometraje) { this.kilometraje = kilometraje; }
+    public Propietario getPropietario() { return propietario; }
+    public void setPropietario(Propietario propietario) { this.propietario = propietario; }
     public int getTotalMantenimientos() { return totalMantenimientos; }
     public void setTotalMantenimientos(int totalMantenimientos) { this.totalMantenimientos = totalMantenimientos; }
     public List<Mantenimiento> getMantenimientos() { return mantenimientos; }
     public void setMantenimientos(List<Mantenimiento> mantenimientos) { this.mantenimientos = mantenimientos; }
+
+    public record Propietario(String nombre, String correo) {
+    }
 
     public static class Mantenimiento {
         private Long idOrden;
