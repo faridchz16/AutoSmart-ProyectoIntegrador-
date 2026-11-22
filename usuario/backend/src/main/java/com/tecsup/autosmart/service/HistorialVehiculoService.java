@@ -2,9 +2,12 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.HistorialVehiculoResponse;
 import com.tecsup.autosmart.dto.HistorialVehiculoResponse.Mantenimiento;
+import com.tecsup.autosmart.dto.HistorialVehiculoResponse.Propietario;
+import com.tecsup.autosmart.exception.BadRequestException;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.NotFoundException;
 import com.tecsup.autosmart.model.OrdenTrabajo;
+import com.tecsup.autosmart.model.Usuario;
 import com.tecsup.autosmart.model.Vehiculo;
 import com.tecsup.autosmart.repository.OrdenTrabajoRepository;
 import com.tecsup.autosmart.repository.VehiculoRepository;
@@ -32,8 +35,21 @@ public class HistorialVehiculoService {
         if (vehiculo.getCliente() == null || !vehiculo.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
             throw new ForbiddenException("El vehiculo no te pertenece");
         }
+        return armar(vehiculo);
+    }
 
-        List<Mantenimiento> mantenimientos = ordenRepository.historialDelVehiculo(idVehiculo).stream()
+    @Transactional(readOnly = true)
+    public HistorialVehiculoResponse historialPorPlaca(String placa) {
+        if (placa == null || placa.isBlank()) {
+            throw new BadRequestException("La placa es obligatoria");
+        }
+        Vehiculo vehiculo = vehiculoRepository.findByPlacaIgnoreCase(placa.trim())
+                .orElseThrow(() -> new NotFoundException("No existe un vehiculo con la placa " + placa.trim().toUpperCase()));
+        return armar(vehiculo);
+    }
+
+    private HistorialVehiculoResponse armar(Vehiculo vehiculo) {
+        List<Mantenimiento> mantenimientos = ordenRepository.historialDelVehiculo(vehiculo.getIdVehiculo()).stream()
                 .map(this::aMantenimiento)
                 .collect(Collectors.toList());
 
@@ -44,9 +60,14 @@ public class HistorialVehiculoService {
         res.setModelo(vehiculo.getModelo());
         res.setAnio(vehiculo.getAnio());
         res.setKilometraje(vehiculo.getKilometraje());
+        res.setPropietario(propietario(vehiculo.getCliente()));
         res.setTotalMantenimientos(mantenimientos.size());
         res.setMantenimientos(mantenimientos);
         return res;
+    }
+
+    private Propietario propietario(Usuario cliente) {
+        return cliente == null ? null : new Propietario(cliente.getNombre(), cliente.getCorreo());
     }
 
     private Mantenimiento aMantenimiento(OrdenTrabajo o) {
