@@ -48,4 +48,9 @@ public class OrdenTrabajo {
     public void setFechaDiagnostico(LocalDateTime fechaDiagnostico) { this.fechaDiagnostico = fechaDiagnostico; }
     public BigDecimal getCostoRepuestos() { return costoRepuestos; }
     public void setCostoRepuestos(BigDecimal costoRepuestos) { this.costoRepuestos = costoRepuestos; }
+
+    public void sumarCostoRepuestos(BigDecimal monto) {
+        BigDecimal actual = costoRepuestos == null ? BigDecimal.ZERO : costoRepuestos;
+        costoRepuestos = actual.add(monto == null ? BigDecimal.ZERO : monto);
+    }
 }
