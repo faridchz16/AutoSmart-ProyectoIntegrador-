@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,4 +24,12 @@ public interface OrdenTrabajoRepository extends JpaRepository<OrdenTrabajo, Long
     @Query("SELECT o FROM OrdenTrabajo o JOIN FETCH o.cita c JOIN FETCH c.servicio JOIN FETCH c.mecanico " +
             "WHERE c.vehiculo.idVehiculo = :idVehiculo ORDER BY o.fechaInicio DESC")
     List<OrdenTrabajo> historialDelVehiculo(@Param("idVehiculo") Long idVehiculo);
+
+    @Query("SELECT o FROM OrdenTrabajo o JOIN FETCH o.cita c JOIN FETCH c.servicio JOIN FETCH c.vehiculo JOIN FETCH c.cliente " +
+            "WHERE c.mecanico.correo = :correo AND c.estado IN :estados " +
+            "AND o.fechaInicio >= :desde AND o.fechaInicio < :hasta ORDER BY o.fechaInicio DESC")
+    List<OrdenTrabajo> historialDelMecanico(@Param("correo") String correo,
+                                            @Param("estados") List<EstadoCita> estados,
+                                            @Param("desde") LocalDateTime desde,
+                                            @Param("hasta") LocalDateTime hasta);
 }
