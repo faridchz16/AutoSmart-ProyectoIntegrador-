@@ -66,7 +66,7 @@ public class CotizarManejador implements ManejadorIntencion {
         return RespuestaChat.de(intencion(),
                 "El servicio de " + servicio.getNombre() + " cuesta desde S/ " + desde.toPlainString()
                         + ". Es un precio referencial: el costo final se confirma en la inspección.",
-                List.of(OpcionesChat.VER_SERVICIOS, OpcionesChat.HORARIO), datos);
+                List.of(OpcionesChat.AGENDAR, OpcionesChat.VER_SERVICIOS), datos);
     }
 
     private Optional<ServicioResponse> buscar(List<ServicioResponse> servicios, MensajeChat mensaje) {
