@@ -13,6 +13,7 @@ public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
     boolean existsByPlaca(String placa);
     boolean existsByPlacaAndIdVehiculoNot(String placa, Long idVehiculo);
     Optional<Vehiculo> findByPlaca(String placa);
+    Optional<Vehiculo> findByPlacaIgnoreCase(String placa);
     List<Vehiculo> findByCliente(Usuario cliente);
     List<Vehiculo> findByClienteAndActivoTrue(Usuario cliente);
 }
