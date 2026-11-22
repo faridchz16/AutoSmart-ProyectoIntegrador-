@@ -335,3 +335,21 @@ CREATE TABLE IF NOT EXISTS pagos (
     FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden),
     FOREIGN KEY (id_metodo) REFERENCES metodos_pago(id_metodo)
 );
+
+CREATE TABLE IF NOT EXISTS calificaciones (
+    id_calificacion BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_orden BIGINT NOT NULL UNIQUE,
+    id_mecanico INT NOT NULL,
+    id_cliente INT NOT NULL,
+    estrellas INT NOT NULL,
+    comentario VARCHAR(500) NULL,
+    fecha DATETIME NOT NULL,
+    oculto TINYINT(1) NOT NULL DEFAULT 0,
+    motivo_ocultado VARCHAR(200) NULL,
+    ocultado_por VARCHAR(100) NULL,
+    fecha_ocultado DATETIME NULL,
+    CHECK (estrellas BETWEEN 1 AND 5),
+    FOREIGN KEY (id_orden) REFERENCES ordenes_trabajo(id_orden),
+    FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario),
+    FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario)
+);
