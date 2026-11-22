@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.mapper;
 
+import com.tecsup.autosmart.dto.CalificacionAdminResponse;
 import com.tecsup.autosmart.dto.CalificacionMecanicoResponse;
 import com.tecsup.autosmart.dto.CalificacionResponse;
 import com.tecsup.autosmart.model.Calificacion;
@@ -26,6 +27,21 @@ public class CalificacionMapper {
                 calificacion.getEstrellas(),
                 Boolean.TRUE.equals(calificacion.getOculto()) ? null : calificacion.getComentario(),
                 calificacion.getFecha().toString());
+    }
+
+    public CalificacionAdminResponse toAdmin(Calificacion calificacion) {
+        return new CalificacionAdminResponse(
+                calificacion.getIdCalificacion(),
+                calificacion.getOrden().getCita().getTicket(),
+                calificacion.getCliente().getNombre(),
+                calificacion.getMecanico().getNombre(),
+                calificacion.getEstrellas(),
+                calificacion.getComentario(),
+                calificacion.getFecha().toString(),
+                Boolean.TRUE.equals(calificacion.getOculto()),
+                calificacion.getMotivoOcultado(),
+                calificacion.getOcultadoPor(),
+                calificacion.getFechaOcultado() == null ? null : calificacion.getFechaOcultado().toString());
     }
 
     public String nombreCorto(String nombreCompleto) {

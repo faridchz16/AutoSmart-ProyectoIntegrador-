@@ -19,4 +19,8 @@ public interface CalificacionRepository extends JpaRepository<Calificacion, Long
     @Query("SELECT c FROM Calificacion c JOIN FETCH c.orden o JOIN FETCH o.cita JOIN FETCH c.cliente "
             + "WHERE c.mecanico.correo = :correo ORDER BY c.fecha DESC")
     List<Calificacion> delMecanico(@Param("correo") String correo);
+
+    @Query("SELECT c FROM Calificacion c JOIN FETCH c.orden o JOIN FETCH o.cita JOIN FETCH c.cliente JOIN FETCH c.mecanico "
+            + "WHERE (:oculto IS NULL OR c.oculto = :oculto) ORDER BY c.fecha DESC")
+    List<Calificacion> buscarAdmin(@Param("oculto") Boolean oculto);
 }
