@@ -353,3 +353,30 @@ CREATE TABLE IF NOT EXISTS calificaciones (
     FOREIGN KEY (id_mecanico) REFERENCES usuarios(id_usuario),
     FOREIGN KEY (id_cliente) REFERENCES usuarios(id_usuario)
 );
+
+CREATE TABLE IF NOT EXISTS faq (
+    id_faq INT AUTO_INCREMENT PRIMARY KEY,
+    pregunta VARCHAR(255) NOT NULL,
+    respuesta VARCHAR(1000) NOT NULL,
+    palabras_clave VARCHAR(255) NULL,
+    activa TINYINT(1) NOT NULL DEFAULT 1,
+    fecha_creacion DATETIME NOT NULL,
+    fecha_actualizacion DATETIME NULL
+);
+
+INSERT INTO faq (pregunta, respuesta, palabras_clave, activa, fecha_creacion)
+SELECT t.* FROM (
+    SELECT '¿Aceptan Yape o Plin?' AS pregunta,
+           'Sí. Puedes pagar con Yape o Plin desde la app, además de tarjeta o en efectivo en el taller.' AS respuesta,
+           'yape, plin, pago, pagar' AS palabras_clave, 1 AS activa, NOW() AS fecha_creacion
+    UNION ALL SELECT '¿Los trabajos tienen garantía?',
+           'Sí. Todos nuestros servicios tienen 30 días de garantía en mano de obra.',
+           'garantia, garantía, reclamo', 1, NOW()
+    UNION ALL SELECT '¿Me avisan antes de hacer un trabajo adicional?',
+           'Sí. Si el mecánico encuentra algo extra, te enviamos un presupuesto y solo se hace si lo apruebas desde la app.',
+           'adicional, presupuesto, extra, aprobar', 1, NOW()
+    UNION ALL SELECT '¿Dónde descargo mi comprobante?',
+           'Cuando pagas, puedes descargar tu comprobante en PDF desde el detalle de tu servicio.',
+           'comprobante, boleta, recibo, factura', 1, NOW()
+) t
+WHERE NOT EXISTS (SELECT 1 FROM faq);
