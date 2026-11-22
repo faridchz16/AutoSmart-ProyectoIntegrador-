@@ -30,7 +30,7 @@ public class SaludoManejador implements ManejadorIntencion {
                 : "";
         return RespuestaChat.de(intencion(),
                 "¡Hola" + nombre + "! Soy el asistente virtual de AutoSmart. ¿En qué te puedo ayudar?",
-                List.of(OpcionesChat.VER_SERVICIOS, OpcionesChat.HORARIO, OpcionesChat.PREGUNTAS_FRECUENTES),
+                List.of(OpcionesChat.AGENDAR, OpcionesChat.VER_SERVICIOS, OpcionesChat.HORARIO, OpcionesChat.PREGUNTAS_FRECUENTES),
                 null);
     }
 }

@@ -14,7 +14,6 @@ import com.tecsup.autosmart.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -45,7 +44,6 @@ public class ChatbotService {
         this.clock = clock;
     }
 
-    @Transactional
     public ChatbotResponse procesar(String correo, ChatbotRequest request) {
         String idConversacion = resolverConversacion(request.idConversacion());
         Usuario usuario = correo == null ? null : usuarioRepository.findByCorreo(correo).orElse(null);
