@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.mapper;
 
+import com.tecsup.autosmart.dto.CalificacionMecanicoResponse;
 import com.tecsup.autosmart.dto.CalificacionResponse;
 import com.tecsup.autosmart.model.Calificacion;
 import org.springframework.stereotype.Component;
@@ -15,5 +16,26 @@ public class CalificacionMapper {
                 calificacion.getEstrellas(),
                 calificacion.getComentario(),
                 calificacion.getFecha().toString());
+    }
+
+    public CalificacionMecanicoResponse toMecanico(Calificacion calificacion) {
+        return new CalificacionMecanicoResponse(
+                calificacion.getIdCalificacion(),
+                calificacion.getOrden().getCita().getTicket(),
+                nombreCorto(calificacion.getCliente().getNombre()),
+                calificacion.getEstrellas(),
+                Boolean.TRUE.equals(calificacion.getOculto()) ? null : calificacion.getComentario(),
+                calificacion.getFecha().toString());
+    }
+
+    public String nombreCorto(String nombreCompleto) {
+        if (nombreCompleto == null || nombreCompleto.isBlank()) {
+            return "Cliente";
+        }
+        String[] partes = nombreCompleto.trim().split("\\s+");
+        if (partes.length == 1) {
+            return partes[0];
+        }
+        return partes[0] + " " + Character.toUpperCase(partes[1].charAt(0)) + ".";
     }
 }
