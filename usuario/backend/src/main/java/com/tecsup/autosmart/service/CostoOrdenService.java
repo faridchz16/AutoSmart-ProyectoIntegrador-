@@ -57,6 +57,13 @@ public class CostoOrdenService {
         if (!cita.getCliente().getCorreo().equalsIgnoreCase(correoCliente)) {
             throw new ForbiddenException("Esta orden no pertenece a tu cuenta");
         }
+        return calcular(orden);
+    }
+
+    @Transactional(readOnly = true)
+    public CostoOrdenResponse calcular(OrdenTrabajo orden) {
+        Long idOrden = orden.getIdOrden();
+        Cita cita = orden.getCita();
 
         List<Adicional> adicionales = presupuestoRepository
                 .findFirstByOrden_IdOrdenOrderByIdPresupuestoDesc(idOrden)
