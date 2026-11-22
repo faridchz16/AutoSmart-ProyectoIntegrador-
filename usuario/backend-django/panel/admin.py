@@ -1,10 +1,11 @@
 from django import forms
 from django.contrib import admin
+from django.utils import timezone
 
-from .models import (Checklist, ChecklistItem, Cita, ConfiguracionTaller, Deficiencia, Especialidad,
-                     FechaBloqueada, Feriado, FotoDeficiencia, HorarioMecanico, Material,
-                     MovimientoInventario, OrdenTrabajo, Presupuesto, PresupuestoItem, Rol, Servicio,
-                     SolicitudMaterial, TareaOrden, Usuario, Vehiculo)
+from .models import (Calificacion, Checklist, ChecklistItem, Cita, ConfiguracionTaller, Deficiencia, Derivacion,
+                     Especialidad, Faq, FechaBloqueada, Feriado, FotoDeficiencia, HorarioMecanico, Material,
+                     MensajeChatbot, MetodoPago, MovimientoInventario, OrdenTrabajo, Pago, Presupuesto,
+                     PresupuestoItem, Rol, Servicio, SolicitudMaterial, TareaOrden, Usuario, Vehiculo)
 
 
 class SoloLecturaAdmin(admin.ModelAdmin):
@@ -398,3 +399,97 @@ class TareaOrdenAdmin(SoloLecturaAdmin):
     search_fields = ("descripcion", "orden__cita__ticket")
     date_hierarchy = "fecha_creacion"
     list_select_related = ("orden", "orden__cita")
+
+
+@admin.register(MetodoPago)
+class MetodoPagoAdmin(SinBorrarAdmin):
+    list_display = ("codigo", "nombre", "en_linea", "habilitado", "orden")
+    list_editable = ("habilitado", "orden")
+    readonly_fields = ("codigo",)
+
+    def has_add_permission(self, request):
+        return False
+
+
+@admin.register(Pago)
+class PagoAdmin(SoloLecturaAdmin):
+    list_display = ("codigo", "fecha", "ticket", "cliente", "metodo", "estado", "monto", "registrado_por")
+    list_filter = ("estado", "metodo")
+    search_fields = ("codigo", "orden__cita__ticket", "orden__cita__vehiculo__placa", "orden__cita__cliente__nombre")
+    date_hierarchy = "fecha"
+    list_select_related = ("metodo", "orden__cita__cliente")
+
+    @admin.display(description="ticket", ordering="orden__cita__ticket")
+    def ticket(self, obj):
+        return obj.orden.cita.ticket
+
+    @admin.display(description="cliente")
+    def cliente(self, obj):
+        return obj.orden.cita.cliente.nombre
+
+
+@admin.register(Calificacion)
+class CalificacionAdmin(SoloLecturaAdmin):
+    list_display = ("fecha", "ticket", "mecanico", "cliente", "estrellas", "comentario", "oculto")
+    list_filter = ("estrellas", "oculto", "mecanico")
+    search_fields = ("comentario", "orden__cita__ticket", "mecanico__nombre", "cliente__nombre")
+    date_hierarchy = "fecha"
+    list_select_related = ("orden__cita", "mecanico", "cliente")
+
+    @admin.display(description="ticket", ordering="orden__cita__ticket")
+    def ticket(self, obj):
+        return obj.orden.cita.ticket
+
+
+class FaqForm(forms.ModelForm):
+    class Meta:
+        model = Faq
+        fields = ("pregunta", "respuesta", "palabras_clave", "activa")
+        widgets = {"respuesta": forms.Textarea(attrs={"rows": 4})}
+
+    def clean_palabras_clave(self):
+        valor = self.cleaned_data.get("palabras_clave") or ""
+        palabras = []
+        for palabra in valor.split(","):
+            limpia = palabra.strip().lower()
+            if limpia and limpia not in palabras:
+                palabras.append(limpia)
+        return ", ".join(palabras) or None
+
+
+@admin.register(Faq)
+class FaqAdmin(SinBorrarAdmin):
+    form = FaqForm
+    list_display = ("id_faq", "pregunta", "palabras_clave", "activa", "fecha_actualizacion")
+    list_filter = ("activa",)
+    search_fields = ("pregunta", "respuesta", "palabras_clave")
+
+    def save_model(self, request, obj, form, change):
+        ahora = timezone.now().replace(microsecond=0)
+        if change:
+            obj.fecha_actualizacion = ahora
+        else:
+            obj.fecha_creacion = ahora
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(MensajeChatbot)
+class MensajeChatbotAdmin(SoloLecturaAdmin):
+    list_display = ("fecha", "id_conversacion", "usuario", "emisor", "intencion", "texto")
+    list_filter = ("emisor", "intencion")
+    search_fields = ("texto", "id_conversacion", "usuario__correo")
+    date_hierarchy = "fecha"
+    list_select_related = ("usuario",)
+
+
+@admin.register(Derivacion)
+class DerivacionAdmin(SoloLecturaAdmin):
+    list_display = ("id_derivacion", "fecha", "solicitante", "contacto", "estado", "atendido_por", "fecha_atencion")
+    list_filter = ("estado",)
+    search_fields = ("contacto", "resumen", "usuario__nombre", "usuario__correo")
+    date_hierarchy = "fecha"
+    list_select_related = ("usuario",)
+
+    @admin.display(description="solicitante")
+    def solicitante(self, obj):
+        return obj.usuario.nombre if obj.usuario else "Visitante sin cuenta"
