@@ -213,6 +213,7 @@ class Cita(models.Model):
         EN_PROCESO = "EN_PROCESO", "En proceso"
         ESPERA_APROBACION = "ESPERA_APROBACION", "Espera aprobación"
         FINALIZADA = "FINALIZADA", "Finalizada"
+        PAGADO = "PAGADO", "Pagado"
 
     id_cita = models.BigAutoField(primary_key=True)
     ticket = models.CharField(max_length=20, unique=True)
@@ -477,3 +478,149 @@ class MovimientoInventario(models.Model):
 
     def __str__(self):
         return f"{self.tipo} {self.material.codigo} x{self.cantidad}"
+
+
+class MetodoPago(models.Model):
+    id_metodo = models.AutoField(primary_key=True)
+    codigo = models.CharField(max_length=20, unique=True)
+    nombre = models.CharField(max_length=60)
+    en_linea = BitBooleanField(default=True)
+    habilitado = BitBooleanField(default=True)
+    orden = models.IntegerField(default=0)
+
+    class Meta:
+        managed = False
+        db_table = "metodos_pago"
+        verbose_name = "método de pago"
+        verbose_name_plural = "métodos de pago"
+        ordering = ["orden"]
+
+    def __str__(self):
+        return self.nombre
+
+
+class Pago(models.Model):
+    class Estado(models.TextChoices):
+        APROBADO = "APROBADO", "Aprobado"
+        RECHAZADO = "RECHAZADO", "Rechazado"
+
+    id_pago = models.BigAutoField(primary_key=True)
+    codigo = models.CharField(max_length=20, unique=True)
+    orden = models.ForeignKey(OrdenTrabajo, models.DO_NOTHING, db_column="id_orden", related_name="pagos")
+    metodo = models.ForeignKey(MetodoPago, models.DO_NOTHING, db_column="id_metodo", related_name="pagos")
+    estado = models.CharField(max_length=10, choices=Estado.choices)
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateTimeField()
+    motivo_rechazo = models.CharField(max_length=200, null=True, blank=True)
+    referencia_externa = models.CharField(max_length=100, null=True, blank=True)
+    registrado_por = models.CharField(max_length=100, null=True, blank=True)
+    observacion = models.CharField(max_length=200, null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "pagos"
+        verbose_name = "pago"
+        verbose_name_plural = "pagos"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return self.codigo
+
+
+class Calificacion(models.Model):
+    id_calificacion = models.BigAutoField(primary_key=True)
+    orden = models.OneToOneField(OrdenTrabajo, models.DO_NOTHING, db_column="id_orden", related_name="calificacion")
+    mecanico = models.ForeignKey(Usuario, models.DO_NOTHING, db_column="id_mecanico",
+                                 related_name="calificaciones_recibidas")
+    cliente = models.ForeignKey(Usuario, models.DO_NOTHING, db_column="id_cliente",
+                                related_name="calificaciones_dadas")
+    estrellas = models.IntegerField()
+    comentario = models.CharField(max_length=500, null=True, blank=True)
+    fecha = models.DateTimeField()
+    oculto = BitBooleanField(default=False)
+    motivo_ocultado = models.CharField(max_length=200, null=True, blank=True)
+    ocultado_por = models.CharField(max_length=100, null=True, blank=True)
+    fecha_ocultado = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "calificaciones"
+        verbose_name = "calificación"
+        verbose_name_plural = "calificaciones"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"{self.estrellas} estrellas - {self.orden.cita.ticket}"
+
+
+class Faq(models.Model):
+    id_faq = models.AutoField(primary_key=True)
+    pregunta = models.CharField(max_length=255)
+    respuesta = models.CharField(max_length=1000)
+    palabras_clave = models.CharField(max_length=255, null=True, blank=True)
+    activa = BitBooleanField(default=True)
+    fecha_creacion = models.DateTimeField()
+    fecha_actualizacion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "faq"
+        verbose_name = "pregunta frecuente"
+        verbose_name_plural = "preguntas frecuentes del chatbot"
+        ordering = ["id_faq"]
+
+    def __str__(self):
+        return self.pregunta
+
+
+class MensajeChatbot(models.Model):
+    class Emisor(models.TextChoices):
+        USUARIO = "USUARIO", "Usuario"
+        BOT = "BOT", "Bot"
+
+    id_mensaje = models.BigAutoField(primary_key=True)
+    id_conversacion = models.CharField(max_length=36)
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column="id_usuario", null=True, blank=True,
+                                related_name="mensajes_chatbot")
+    emisor = models.CharField(max_length=10, choices=Emisor.choices)
+    texto = models.CharField(max_length=1000)
+    intencion = models.CharField(max_length=30, null=True, blank=True)
+    fecha = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "chatbot_mensajes"
+        verbose_name = "mensaje del chatbot"
+        verbose_name_plural = "mensajes del chatbot"
+        ordering = ["-id_mensaje"]
+
+    def __str__(self):
+        return f"{self.emisor}: {self.texto[:40]}"
+
+
+class Derivacion(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = "PENDIENTE", "Pendiente"
+        ATENDIDA = "ATENDIDA", "Atendida"
+
+    id_derivacion = models.BigAutoField(primary_key=True)
+    id_conversacion = models.CharField(max_length=36)
+    usuario = models.ForeignKey(Usuario, models.DO_NOTHING, db_column="id_usuario", null=True, blank=True,
+                                related_name="derivaciones")
+    contacto = models.CharField(max_length=120, null=True, blank=True)
+    resumen = models.CharField(max_length=2000)
+    estado = models.CharField(max_length=10, choices=Estado.choices)
+    fecha = models.DateTimeField()
+    nota = models.CharField(max_length=500, null=True, blank=True)
+    atendido_por = models.CharField(max_length=100, null=True, blank=True)
+    fecha_atencion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "chatbot_derivaciones"
+        verbose_name = "derivación a asesor"
+        verbose_name_plural = "derivaciones a asesor"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"Derivación {self.id_derivacion} ({self.get_estado_display()})"
