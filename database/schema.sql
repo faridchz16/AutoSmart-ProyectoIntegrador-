@@ -380,3 +380,15 @@ SELECT t.* FROM (
            'comprobante, boleta, recibo, factura', 1, NOW()
 ) t
 WHERE NOT EXISTS (SELECT 1 FROM faq);
+
+CREATE TABLE IF NOT EXISTS chatbot_mensajes (
+    id_mensaje BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_conversacion VARCHAR(36) NOT NULL,
+    id_usuario INT NULL,
+    emisor VARCHAR(10) NOT NULL,
+    texto VARCHAR(1000) NOT NULL,
+    intencion VARCHAR(30) NULL,
+    fecha DATETIME NOT NULL,
+    INDEX idx_chatbot_conversacion (id_conversacion),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
