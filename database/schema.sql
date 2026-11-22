@@ -392,3 +392,19 @@ CREATE TABLE IF NOT EXISTS chatbot_mensajes (
     INDEX idx_chatbot_conversacion (id_conversacion),
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
 );
+
+CREATE TABLE IF NOT EXISTS chatbot_derivaciones (
+    id_derivacion BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id_conversacion VARCHAR(36) NOT NULL,
+    id_usuario INT NULL,
+    contacto VARCHAR(120) NULL,
+    resumen VARCHAR(2000) NOT NULL,
+    estado VARCHAR(10) NOT NULL DEFAULT 'PENDIENTE',
+    fecha DATETIME NOT NULL,
+    nota VARCHAR(500) NULL,
+    atendido_por VARCHAR(100) NULL,
+    fecha_atencion DATETIME NULL,
+    INDEX idx_derivacion_conversacion (id_conversacion),
+    INDEX idx_derivacion_estado (estado),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+);
