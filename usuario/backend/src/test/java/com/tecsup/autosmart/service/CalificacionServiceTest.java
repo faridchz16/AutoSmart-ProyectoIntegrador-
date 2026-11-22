@@ -2,6 +2,7 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.CalificacionRequest;
 import com.tecsup.autosmart.dto.CalificacionResponse;
+import com.tecsup.autosmart.dto.MisCalificacionesResponse;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.NotFoundException;
@@ -18,12 +19,15 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -97,5 +101,47 @@ class CalificacionServiceTest {
     void lanzaNotFoundSiLaOrdenNoExiste() {
         assertThrows(NotFoundException.class,
                 () -> service.calificar("cliente2@mail.com", 99L, new CalificacionRequest(4, null)));
+    }
+
+    @Test
+    void misCalificacionesOcultaElComentarioModeradoPeroCuentaLaNota() {
+        Usuario cliente = new Usuario();
+        cliente.setNombre("Cliente Prueba");
+        Calificacion visible = calificacion(5, "Muy bueno", false, cliente);
+        Calificacion oculta = calificacion(4, "Comentario ofensivo", true, cliente);
+        Calificacion tercera = calificacion(5, null, false, cliente);
+        when(calificacionRepository.delMecanico("mecanico@mail.com")).thenReturn(List.of(visible, oculta, tercera));
+
+        MisCalificacionesResponse res = service.misCalificaciones("mecanico@mail.com");
+
+        assertEquals(3, res.total());
+        assertEquals(4.7, res.promedio());
+        assertEquals("Cliente P.", res.calificaciones().get(0).cliente());
+        assertEquals("Muy bueno", res.calificaciones().get(0).comentario());
+        assertNull(res.calificaciones().get(1).comentario());
+        assertEquals(4, res.calificaciones().get(1).estrellas());
+    }
+
+    @Test
+    void sinCalificacionesElPromedioEsNulo() {
+        when(calificacionRepository.delMecanico("nuevo@mail.com")).thenReturn(List.of());
+
+        MisCalificacionesResponse res = service.misCalificaciones("nuevo@mail.com");
+
+        assertEquals(0, res.total());
+        assertNull(res.promedio());
+        assertTrue(res.calificaciones().isEmpty());
+    }
+
+    private Calificacion calificacion(int estrellas, String comentario, boolean oculto, Usuario cliente) {
+        Calificacion c = new Calificacion();
+        c.setOrden(orden);
+        c.setCliente(cliente);
+        c.setMecanico(orden.getCita().getMecanico());
+        c.setEstrellas(estrellas);
+        c.setComentario(comentario);
+        c.setOculto(oculto);
+        c.setFecha(LocalDateTime.of(2026, 11, 20, 10, 0));
+        return c;
     }
 }
