@@ -2,6 +2,7 @@ package com.tecsup.autosmart.service;
 
 import com.tecsup.autosmart.dto.CalificacionRequest;
 import com.tecsup.autosmart.dto.CalificacionResponse;
+import com.tecsup.autosmart.dto.MisCalificacionesResponse;
 import com.tecsup.autosmart.exception.ConflictException;
 import com.tecsup.autosmart.exception.ForbiddenException;
 import com.tecsup.autosmart.exception.NotFoundException;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class CalificacionService {
@@ -63,6 +65,16 @@ public class CalificacionService {
         calificacion.setFecha(LocalDateTime.now(clock).withNano(0));
 
         return mapper.toResponse(calificacionRepository.save(calificacion));
+    }
+
+    @Transactional(readOnly = true)
+    public MisCalificacionesResponse misCalificaciones(String correoMecanico) {
+        List<Calificacion> calificaciones = calificacionRepository.delMecanico(correoMecanico);
+        Double promedio = calificaciones.isEmpty()
+                ? null
+                : Math.round(calificaciones.stream().mapToInt(Calificacion::getEstrellas).average().orElse(0) * 10) / 10.0;
+        return new MisCalificacionesResponse(promedio, calificaciones.size(),
+                calificaciones.stream().map(mapper::toMecanico).toList());
     }
 
     private String limpiar(String comentario) {
