@@ -1512,3 +1512,58 @@ export async function guardarPerfilCliente({ nombre, telefono }) {
   perfilCliente = { ...perfilCliente, nombre, telefono: telefono || null };
   return { ...perfilCliente, telefono: perfilCliente.telefono ?? "" };
 }
+
+/* ---------- Vehículos del cliente (CLI-02) ---------- */
+
+// Placas de otros clientes: registrarlas responde 409, igual que el backend
+const PLACAS_OTROS_CLIENTES = ["BCD-456", "MNP-934", "DEF-321", "JKL-482", "GHI-246", "CDE-789", "HIJ-135", "FGH-987"];
+let vehiculosCliente = [
+  { idVehiculo: 1, placa: "ABC-123", marca: "Toyota", modelo: "Yaris", anio: 2019, kilometraje: 58200, idCliente: 3, nombreCliente: "Lucía Fernández", activo: true },
+  { idVehiculo: 2, placa: "BKR-482", marca: "Hyundai", modelo: "Accent", anio: 2021, kilometraje: 31500, idCliente: 3, nombreCliente: "Lucía Fernández", activo: true },
+];
+const sinActivo = ({ activo, ...v }) => (void activo, { ...v });
+const vehiculoDelCliente = (id) => {
+  const v = vehiculosCliente.find((x) => x.idVehiculo === Number(id) && x.activo);
+  if (!v) throw conEstado("Vehiculo no encontrado", 404);
+  return v;
+};
+
+export async function listarVehiculosCliente() {
+  await esperar();
+  return vehiculosCliente.filter((v) => v.activo).map(sinActivo);
+}
+
+export async function registrarVehiculoCliente({ placa, marca, modelo, anio, kilometraje }) {
+  await esperar(400);
+  const p = String(placa ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9]{3}-[0-9]{3}$/.test(p)) throw conEstado("Formato de placa inválido. Usa el formato ABC-123", 400);
+  // Como en el backend, una placa eliminada sigue registrada en el sistema
+  if (PLACAS_OTROS_CLIENTES.includes(p) || vehiculosCliente.some((v) => v.placa === p)) {
+    throw conEstado("La placa ya se encuentra registrada en el sistema", 409);
+  }
+  const v = {
+    idVehiculo: Math.max(0, ...vehiculosCliente.map((x) => x.idVehiculo)) + 1,
+    placa: p, marca, modelo, anio, kilometraje: kilometraje ?? 0,
+    idCliente: 3, nombreCliente: perfilCliente.nombre, activo: true,
+  };
+  vehiculosCliente = [...vehiculosCliente, v];
+  return sinActivo(v);
+}
+
+export async function editarVehiculoCliente(id, { marca, modelo, anio, kilometraje }) {
+  await esperar(400);
+  const v = vehiculoDelCliente(id);
+  if (!marca?.trim()) throw conEstado("La marca es obligatoria", 400);
+  if (!modelo?.trim()) throw conEstado("El modelo es obligatorio", 400);
+  if (anio == null) throw conEstado("El año es obligatorio", 400);
+  const nuevo = kilometraje ?? v.kilometraje;
+  if (nuevo < 0) throw conEstado("El kilometraje no puede ser negativo", 400);
+  if (nuevo < v.kilometraje) throw conEstado(`El kilometraje no puede ser menor al registrado (${v.kilometraje} km)`, 400);
+  Object.assign(v, { marca: marca.trim(), modelo: modelo.trim(), anio, kilometraje: nuevo });
+  return sinActivo(v);
+}
+
+export async function eliminarVehiculoCliente(id) {
+  await esperar(400);
+  vehiculoDelCliente(id).activo = false;
+}

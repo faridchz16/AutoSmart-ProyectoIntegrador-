@@ -1,0 +1,106 @@
+/* ===== Mis vehículos del cliente (CLI-02) ===== */
+
+.veh-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+.veh-lista.actualizando { opacity: 0.6; }
+
+.veh-item {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  padding: 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.veh-item:hover { border-color: #c9d6f0; box-shadow: 0 8px 22px rgba(17, 80, 232, 0.07); }
+
+/* Placa con el formato de las placas peruanas: franja azul arriba y caracteres grandes */
+.veh-placa {
+  display: inline-grid;
+  justify-self: start;
+  min-width: 132px;
+  overflow: hidden;
+  border: 2px solid #0b1b3a;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
+  padding-bottom: 6px;
+}
+.veh-placa-pais {
+  display: block;
+  margin-bottom: 6px;
+  padding: 3px 0 2px;
+  background: #1150e8;
+  color: #fff;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+}
+
+.veh-datos h3 {
+  margin: 0 0 10px;
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.08rem;
+  overflow-wrap: anywhere;
+}
+.veh-datos dl { display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0; }
+.veh-datos dt { color: #7a8aa6; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.veh-datos dd { margin: 2px 0 0; color: #0b1b3a; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.veh-acciones {
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #eef2f9;
+}
+.veh-acciones .btn { flex: 1; justify-content: center; padding-top: 8px; padding-bottom: 8px; }
+.veh-acciones .veh-quitar { color: #be123c; }
+.veh-acciones .veh-quitar:hover:not(:disabled) { border-color: #fda4af; background: #fff1f2; }
+
+/* Sin vehículos */
+.veh-vacio {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 42px 20px;
+  border: 1px dashed #c9d6f0;
+  border-radius: 18px;
+  background: #f8faff;
+  text-align: center;
+}
+.veh-vacio h3 { margin: 6px 0 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.1rem; }
+.veh-vacio p { margin: 0 0 10px; max-width: 360px; color: #5b6b88; }
+.veh-vacio-icono {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e8efff;
+  color: #1150e8;
+}
+
+/* Formulario */
+.veh .campo { align-content: start; }
+.veh-input-placa { font-family: "Sora", "Manrope", sans-serif; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.campo .veh-km input { padding-left: 13px; padding-right: 42px; }
+.veh-km span { left: auto; right: 13px; }
+
+@media (max-width: 720px) {
+  .veh-lista { grid-template-columns: 1fr; }
+}

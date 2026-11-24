@@ -20,6 +20,18 @@ export const ENLACES_CLIENTE = [
     ),
   },
   {
+    to: "/cliente/vehiculos",
+    texto: "Mis vehículos",
+    descripcion: "Registra tus autos con su placa, año y kilometraje.",
+    icono: (
+      <Icono>
+        <path d="M5 16v-4.5l1.8-4.2A2 2 0 0 1 8.6 6h6.8a2 2 0 0 1 1.8 1.3L19 11.5V16" />
+        <path d="M4 16h16v2.5a.5.5 0 0 1-.5.5H18a1 1 0 0 1-1-1v-.5H7v.5a1 1 0 0 1-1 1H4.5a.5.5 0 0 1-.5-.5Z" />
+        <path d="M5 11.5h14" />
+      </Icono>
+    ),
+  },
+  {
     to: "/cliente/perfil",
     texto: "Mi perfil",
     descripcion: "Tu nombre y teléfono de contacto.",
