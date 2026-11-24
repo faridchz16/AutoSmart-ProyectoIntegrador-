@@ -1567,3 +1567,103 @@ export async function eliminarVehiculoCliente(id) {
   await esperar(400);
   vehiculoDelCliente(id).activo = false;
 }
+
+/* ---------- Reserva de citas del cliente (CLI-03) ---------- */
+
+// Mecánicos que atienden reservas: horario por día de la semana (1 = lunes ... 7 = domingo; el taller cierra domingo)
+const MECANICOS_RESERVA = [
+  { idMecanico: 2, nombre: "Carlos Quispe", aniosExperiencia: 8, especialidades: ["Frenos", "Mecánica general", "Suspensión"], calificacionPromedio: 4.7, totalResenas: 23, dias: [1, 2, 3, 4, 5, 6], tramos: [["08:00", "13:00"], ["14:00", "18:00"]] },
+  { idMecanico: 6, nombre: "Miguel Rojas", aniosExperiencia: 5, especialidades: ["Electricidad automotriz", "Mecánica general", "Motor"], calificacionPromedio: 4.4, totalResenas: 11, dias: [1, 2, 3, 4, 5], tramos: [["09:00", "13:00"], ["14:00", "17:00"]] },
+  { idMecanico: 10, nombre: "Luis Chávez", aniosExperiencia: 12, especialidades: ["Frenos", "Motor"], calificacionPromedio: null, totalResenas: 0, dias: [2, 4, 6], tramos: [["08:00", "14:00"]] },
+];
+const ESPECIALIDAD_SERVICIO = (nombre) => (/fren/i.test(nombre) ? "Frenos" : /motor|afinamiento/i.test(nombre) ? "Motor" : null);
+const momentoLima = () => {
+  const t = ahoraLima();
+  return { fecha: t.slice(0, 10), hora: t.slice(11, 16) };
+};
+const aMinutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+const aHora = (m) => `${dosCifras(Math.floor(m / 60))}:${dosCifras(m % 60)}`;
+let citasReservadas = []; // citas que reserva el cliente en la demo: ocupan sus turnos
+let bloqueoReserva = null;
+let siguienteCitaReserva = 140;
+
+function servicioReserva(id) {
+  const s = servicios.find((x) => x.id === Number(id) && x.activo);
+  if (!s) throw conEstado("Servicio no encontrado", 404);
+  return s;
+}
+
+export async function catalogoReserva() {
+  await esperar();
+  return servicios
+    .filter((s) => s.activo)
+    .map((s) => ({ idServicio: s.id, nombre: s.nombre, descripcion: s.descripcion, precioBase: s.precioBase, duracionMinutos: s.duracionMinutos, categoria: s.categoria, especialidad: ESPECIALIDAD_SERVICIO(s.nombre) }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+export async function mecanicosReserva(idServicio) {
+  await esperar();
+  const requerida = ESPECIALIDAD_SERVICIO(servicioReserva(idServicio).nombre);
+  return MECANICOS_RESERVA.filter((m) => !requerida || m.especialidades.includes(requerida)).map(({ dias, tramos, ...m }) => (void dias, void tramos, { ...m }));
+}
+
+// Mismo cálculo que TurnoService: tramos del mecánico cortados por la duración del servicio, sin los ocupados
+function turnosLibresReserva(idServicio, idMecanico, fecha, conBloqueoPropio) {
+  const s = servicioReserva(idServicio);
+  const m = MECANICOS_RESERVA.find((x) => x.idMecanico === Number(idMecanico));
+  if (!m) throw conEstado("Mecanico no encontrado", 404);
+  const ahora = momentoLima();
+  if (fecha < ahora.fecha) throw conEstado("La fecha no puede ser pasada", 400);
+  const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay() || 7;
+  if (!m.dias.includes(dia)) return [];
+  const libres = [];
+  m.tramos.forEach(([ini, fin]) => {
+    for (let t = aMinutos(ini); t + s.duracionMinutos <= aMinutos(fin); t += s.duracionMinutos) {
+      const inicio = aHora(t);
+      const final = aHora(t + s.duracionMinutos);
+      const cruza = (a, b) => inicio < b && final > a;
+      // Agenda de ejemplo: algunos turnos ya ocupados por otros clientes
+      const ocupadoDemo = (Number(fecha.slice(8, 10)) + m.idMecanico + t / 15) % 5 === 0;
+      const ocupado = citasReservadas.some((c) => c.idMecanico === m.idMecanico && c.fecha === fecha && cruza(c.horaInicio, c.horaFin));
+      const bloqueado = !conBloqueoPropio && bloqueoReserva && bloqueoReserva.idMecanico === m.idMecanico && bloqueoReserva.fecha === fecha && cruza(bloqueoReserva.horaInicio, bloqueoReserva.horaFin);
+      const yaPaso = fecha === ahora.fecha && inicio <= ahora.hora;
+      if (!ocupadoDemo && !ocupado && !bloqueado && !yaPaso) libres.push({ horaInicio: inicio, horaFin: final });
+    }
+  });
+  return libres;
+}
+
+export async function turnosReserva(idServicio, idMecanico, fecha) {
+  await esperar();
+  return turnosLibresReserva(idServicio, idMecanico, fecha, false);
+}
+
+export async function bloquearTurnoReserva({ idServicio, idMecanico, fecha, horaInicio }) {
+  await esperar(250);
+  const s = servicioReserva(idServicio);
+  if (!turnosLibresReserva(idServicio, idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El turno no esta disponible", 409);
+  bloqueoReserva = { idBloqueo: Date.now(), idMecanico: Number(idMecanico), fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos) };
+  return { ...bloqueoReserva, expiraEn: null, segundosRestantes: 600 };
+}
+
+export async function liberarTurnoReserva(id) {
+  if (bloqueoReserva?.idBloqueo === id) bloqueoReserva = null;
+}
+
+export async function reservarCitaCliente({ idServicio, idMecanico, idVehiculo, fecha, horaInicio }) {
+  await esperar(500);
+  const s = servicioReserva(idServicio);
+  const m = MECANICOS_RESERVA.find((x) => x.idMecanico === Number(idMecanico));
+  const v = vehiculoDelCliente(idVehiculo);
+  if (!turnosLibresReserva(idServicio, idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El turno ya no esta disponible", 409);
+  const c = {
+    idCita: siguienteCitaReserva++, estado: "PENDIENTE", fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos),
+    precio: s.precioBase, servicio: s.nombre, mecanico: m.nombre, placa: v.placa, idMecanico: m.idMecanico,
+  };
+  c.ticket = `AS-${fecha.slice(0, 4)}-${String(c.idCita).padStart(5, "0")}`;
+  citasReservadas = [...citasReservadas, c];
+  bloqueoReserva = null;
+  const { idMecanico: _id, ...respuesta } = c;
+  void _id;
+  return respuesta;
+}

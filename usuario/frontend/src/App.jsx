@@ -34,6 +34,7 @@ import ClienteLayout from "./layouts/ClienteLayout";
 import InicioCliente from "./pages/cliente/Inicio";
 import PerfilCliente from "./pages/cliente/Perfil";
 import VehiculosCliente from "./pages/cliente/Vehiculos";
+import ReservarCita from "./pages/cliente/Reservar";
 import Historial from "./pages/mecanico/Historial";
 
 function App() {
@@ -86,6 +87,7 @@ function App() {
         <Route element={<RutaProtegida roles={["CLIENTE"]} />}>
           <Route path="/cliente" element={<ClienteLayout />}>
             <Route index element={<InicioCliente />} />
+            <Route path="reservar" element={<ReservarCita />} />
             <Route path="vehiculos" element={<VehiculosCliente />} />
             <Route path="perfil" element={<PerfilCliente />} />
           </Route>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { listarVehiculos, eliminarVehiculo, formatoKm } from "../../services/vehiculosService";
 import FormVehiculo from "./FormVehiculo";
 import Modal from "../../components/admin/Modal";
@@ -10,7 +11,8 @@ import "./Vehiculos.css";
 /* CLI-02 – Mis vehículos del cliente (API de T07.1 a T09.1: /vehicles).
    - Tarjeta por vehículo con su placa, marca, modelo, año y kilometraje
    - Registrar y editar en una ventana con las mismas validaciones del backend
-   - Eliminar con confirmación (el taller conserva su historial; la placa queda registrada) */
+   - Eliminar con confirmación (el taller conserva su historial; la placa queda registrada)
+   - "Reservar cita" abre la reserva con ese vehículo ya elegido (CLI-03) */
 
 function Placa({ placa }) {
   return (
@@ -175,6 +177,9 @@ function Vehiculos() {
                 </dl>
               </div>
               <div className="veh-acciones">
+                <Link to={`/cliente/reservar?vehiculo=${v.id}`} className="btn btn-pri veh-reservar">
+                  Reservar cita
+                </Link>
                 <button type="button" className="btn btn-sec" onClick={() => setFormulario({ vehiculo: v })} aria-label={`Editar ${v.placa}`}>
                   Editar
                 </button>

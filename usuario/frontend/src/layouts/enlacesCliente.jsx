@@ -20,6 +20,18 @@ export const ENLACES_CLIENTE = [
     ),
   },
   {
+    to: "/cliente/reservar",
+    texto: "Reservar cita",
+    descripcion: "Elige servicio, mecánico y horario en cuatro pasos.",
+    icono: (
+      <Icono>
+        <rect x="4" y="5.5" width="16" height="14" rx="2.5" />
+        <path d="M8 3.5v4M16 3.5v4M4 10h16" />
+        <path d="M12 12.5v4M10 14.5h4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/cliente/vehiculos",
     texto: "Mis vehículos",
     descripcion: "Registra tus autos con su placa, año y kilometraje.",
