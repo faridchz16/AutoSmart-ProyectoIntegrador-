@@ -20,6 +20,7 @@ import Indicadores from "./pages/admin/Indicadores";
 import Pagos from "./pages/admin/Pagos";
 import HistorialPlaca from "./pages/admin/HistorialPlaca";
 import CalificacionesAdmin from "./pages/admin/Calificaciones";
+import Derivaciones from "./pages/admin/Derivaciones";
 import InicioMecanico from "./pages/mecanico/Inicio";
 import Agenda from "./pages/mecanico/Agenda";
 import CitasHoy from "./pages/mecanico/CitasHoy";
@@ -51,6 +52,7 @@ function App() {
             <Route path="pagos" element={<Pagos />} />
             <Route path="historial-placa" element={<HistorialPlaca />} />
             <Route path="calificaciones" element={<CalificacionesAdmin />} />
+            <Route path="derivaciones" element={<Derivaciones />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="servicios" element={<Servicios />} />
             <Route path="inventario" element={<Inventario />} />

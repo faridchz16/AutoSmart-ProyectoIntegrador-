@@ -1408,3 +1408,25 @@ export async function ocultarComentario(id, { motivo }) {
   Object.assign(c, { oculto: true, motivoOcultado: motivo, ocultadoPor: "admin@autosmart.com", fechaOcultado: enHora(0, "12:00") });
   return copia(c);
 }
+
+/* ---------- Derivaciones del chatbot (T79.3, contrato de T79.1) ---------- */
+
+const derivacionesPrueba = [
+  { idDerivacion: 4, idConversacion: "c-4", fecha: enHora(0, "09:12"), usuario: "Lucía Fernández", contacto: "lucia.fernandez@correo.com", resumen: "USUARIO: ¿puedo cambiar la fecha de mi cita?\nBOT: Puedes reprogramarla desde Mis citas en la app.\nUSUARIO: y si es para hoy mismo?\nBOT: No entendí tu consulta. Puedo ayudarte con estas opciones:\nUSUARIO: quiero hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 3, idConversacion: "c-3", fecha: enHora(0, "08:40"), usuario: "Visitante sin cuenta", contacto: "987 654 321", resumen: "USUARIO: hacen planchado y pintura?\nBOT: Estos son nuestros servicios:\n• Cambio de aceite – desde S/ 50.00\n• Revisión de frenos – desde S/ 80.00\nUSUARIO: hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 2, idConversacion: "c-2", fecha: enHora(-2, "16:40"), usuario: "Visitante sin cuenta", contacto: null, resumen: "USUARIO: tienen servicio de grúa?\nBOT: No entendí tu consulta.\nUSUARIO: hablar con asesor", estado: "ATENDIDA", nota: "Volvió a escribir; se le indicó que no contamos con grúa.", atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(-2, "17:05") },
+];
+
+export async function listarDerivaciones(estado) {
+  await esperar();
+  return copia(derivacionesPrueba.filter((d) => !estado || d.estado === estado));
+}
+
+export async function atenderDerivacion(id, { nota }) {
+  await esperar(400);
+  const d = derivacionesPrueba.find((x) => x.idDerivacion === Number(id));
+  if (!d) throw conEstado("Derivación no encontrada", 404);
+  if (d.estado === "ATENDIDA") throw conEstado("La derivación ya fue atendida", 409);
+  Object.assign(d, { estado: "ATENDIDA", nota, atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(0, "12:00") });
+  return copia(d);
+}

@@ -1,0 +1,86 @@
+/* ===== Bandeja de derivaciones del chatbot (T79.3) ===== */
+
+.der-lista { display: grid; gap: 12px; margin: 0; padding: 12px; list-style: none; }
+
+.der-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid #e3e9f5;
+  border-left: 4px solid #a855f7;
+  border-radius: 12px;
+  background: #fff;
+}
+.der-item.der-ATENDIDA { border-left-color: #10b981; }
+
+.der-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.der-cab strong { color: #0b1b3a; font-size: 0.98rem; }
+.der-num {
+  padding: 2px 8px;
+  border-radius: 7px;
+  background: #f3e8ff;
+  color: #7e22ce;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.der-ATENDIDA .der-num { background: #d1fae5; color: #065f46; }
+.der-fecha { color: #7a8aa6; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+
+.der-contacto { margin: 0; color: #5b6b88; font-size: 0.86rem; }
+.der-contacto a { color: #1150e8; font-weight: 700; text-decoration: none; }
+.der-contacto a:hover { text-decoration: underline; }
+.der-sin-contacto { color: #9aa8c0; font-style: italic; }
+
+/* ---------- Conversación ---------- */
+.der-chat {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f7f9fd;
+}
+.der-msg {
+  max-width: 80%;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.der-msg.usuario { justify-self: end; border-bottom-right-radius: 4px; background: #1150e8; color: #fff; }
+.der-msg.bot { justify-self: start; border: 1px solid #e3e9f5; border-bottom-left-radius: 4px; background: #fff; color: #3b4a66; }
+.der-ver-mas {
+  justify-self: center;
+  padding: 2px 8px;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.der-ver-mas:hover { text-decoration: underline; }
+.der-sin-resumen { margin: 0; color: #9aa8c0; font-size: 0.86rem; font-style: italic; }
+
+.der-pie { display: flex; justify-content: flex-end; }
+.der-atendida {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid #eef2f9;
+  color: #5b6b88;
+  font-size: 0.84rem;
+}
+.der-atendida strong { color: #065f46; }
+.der-atendida span { color: #3b4a66; font-style: italic; }
+.der .confirmar textarea { width: 100%; }
+
+@media (max-width: 520px) {
+  .der-lista { padding: 8px; }
+  .der-msg { max-width: 92%; }
+  .der-pie .btn { flex: 1; }
+}
