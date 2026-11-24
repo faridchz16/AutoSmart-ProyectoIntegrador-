@@ -66,6 +66,18 @@ export const ENLACES_MECANICO = [
     ),
   },
   {
+    to: "/mecanico/historial",
+    texto: "Mi historial",
+    descripcion: "Los servicios que terminaste, con filtro de fechas.",
+    icono: (
+      <Icono>
+        <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+        <path d="M3.5 4.5V9H8" />
+        <path d="M12 7.5V12l3 2" />
+      </Icono>
+    ),
+  },
+  {
     to: "/mecanico/calificaciones",
     texto: "Mis calificaciones",
     descripcion: "Las estrellas y comentarios que te dejan los clientes.",

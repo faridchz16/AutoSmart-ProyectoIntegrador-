@@ -24,6 +24,7 @@ import Bloqueos from "./pages/mecanico/Bloqueos";
 import Perfil from "./pages/mecanico/Perfil";
 import OrdenTrabajo from "./pages/mecanico/OrdenTrabajo";
 import Calificaciones from "./pages/mecanico/Calificaciones";
+import Historial from "./pages/mecanico/Historial";
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
             <Route path="horarios" element={<Horarios />} />
             <Route path="bloqueos" element={<Bloqueos />} />
             <Route path="perfil" element={<Perfil />} />
+            <Route path="historial" element={<Historial />} />
             <Route path="calificaciones" element={<Calificaciones />} />
             <Route path="citas/:idCita/orden" element={<OrdenTrabajo />} />
           </Route>

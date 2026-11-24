@@ -28,7 +28,7 @@ import "./DetalleCita.css";
    TEC3.2 – Si la atención ya se inició, el botón "Ver orden de trabajo" abre la orden con la inspección. */
 
 // Estados en los que la cita ya tiene orden de trabajo
-const CON_ORDEN = ["EN_PROCESO", "ESPERA_APROBACION", "FINALIZADA"];
+const CON_ORDEN = ["EN_PROCESO", "ESPERA_APROBACION", "FINALIZADA", "PAGADO"];
 
 // Aviso bajo el encabezado según el estado de la cita
 const NOTAS = {
@@ -36,6 +36,7 @@ const NOTAS = {
   EN_PROCESO: { clase: "dc-nota dc-nota-proceso", texto: "La atención de este vehículo está en proceso." },
   ESPERA_APROBACION: { clase: "dc-nota dc-nota-espera", texto: "Esperando que el cliente apruebe el presupuesto." },
   FINALIZADA: { clase: "dc-nota dc-nota-fin", texto: "La atención de este vehículo ya finalizó." },
+  PAGADO: { clase: "dc-nota dc-nota-fin", texto: "La atención de este vehículo finalizó y el cliente ya pagó." },
 };
 
 const MOTIVOS_RAPIDOS = [

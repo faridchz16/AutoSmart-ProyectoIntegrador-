@@ -1153,3 +1153,37 @@ export async function obtenerMisCalificaciones() {
     calificaciones: copia(calificacionesMecanico),
   };
 }
+
+/* ---------- Historial de servicios del mecánico (T68.2, contrato de T68.1) ---------- */
+
+// La primera es la orden 2 (cita 12, finalizada ayer): se puede abrir en solo lectura
+const historialMecanico = [
+  [2, 12, "AS-2026-00112", "Cambio de aceite y filtro", "MNP-934", "Ricardo Paredes", -1, "10:02", 56, "FINALIZADA", null],
+  [31, 131, "AS-2026-00091", "Revisión de frenos", "BCD-456", "José Huamán", -6, "09:00", 80, "PAGADO", 4],
+  [29, 129, "AS-2026-00087", "Afinamiento de motor", "CDE-789", "Andrea Salazar", -12, "14:00", 140, "PAGADO", 5],
+  [27, 127, "AS-2026-00085", "Revisión de suspensión", "DEF-321", "Camila Flores", -25, "11:00", 95, "PAGADO", 3],
+  [24, 124, "AS-2026-00080", "Cambio de aceite y filtro", "ABC-123", "Lucía Fernández", -48, "08:30", 45, "PAGADO", 5],
+  [20, 120, "AS-2026-00072", "Alineamiento y balanceo", "JKL-482", "Daniela Vargas", -95, "15:00", 70, "PAGADO", null],
+].map(([idOrden, idCita, ticket, servicio, placa, cliente, dias, hora, minutos, estado, estrellas]) => {
+  const [h, m] = hora.split(":").map(Number);
+  const fin = h * 60 + m + minutos;
+  return {
+    idOrden,
+    idCita,
+    ticket,
+    servicio,
+    placa,
+    cliente,
+    fechaInicio: enHora(dias, hora),
+    fechaFin: enHora(dias, `${dosCifras(Math.floor(fin / 60))}:${dosCifras(fin % 60)}`),
+    estado,
+    estrellas,
+  };
+});
+
+export async function listarHistorialMecanico({ desde, hasta }) {
+  await esperar();
+  if (desde && hasta && desde > hasta) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const fin = hasta || fechaRelativa(0);
+  return copia(historialMecanico.filter((o) => (!desde || o.fechaFin.slice(0, 10) >= desde) && o.fechaFin.slice(0, 10) <= fin));
+}
