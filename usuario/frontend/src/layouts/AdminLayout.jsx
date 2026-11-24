@@ -50,6 +50,16 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/historial-placa",
+    texto: "Historial por placa",
+    icono: (
+      <Icono>
+        <rect x="3" y="7" width="18" height="10" rx="2" />
+        <path d="M7 12h3M13 12h4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/usuarios",
     texto: "Usuarios",
     icono: (

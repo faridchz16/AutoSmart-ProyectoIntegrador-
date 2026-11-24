@@ -1,0 +1,156 @@
+/* ===== Historial de mantenimiento por placa (T72.2) ===== */
+
+/* ---------- Búsqueda ---------- */
+.hp-busqueda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.hp-campo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 320px;
+}
+.hp-campo svg { position: absolute; left: 14px; color: #7a8aa6; pointer-events: none; }
+.hp-campo input {
+  width: 100%;
+  padding: 12px 14px 12px 44px;
+  border: 1px solid #d6e0f2;
+  border-radius: 12px;
+  background: #fff;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.hp-campo input::placeholder { color: #b4c0d6; font-weight: 600; }
+.hp-campo input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+.hp-campo input[aria-invalid="true"] { border-color: #e11d48; }
+.hp-busqueda .btn { padding-block: 12px; }
+.hp-error { flex-basis: 100%; }
+
+.hp-resultado { display: grid; gap: 18px; }
+
+/* ---------- Ficha del vehículo ---------- */
+.hp-ficha {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 60%);
+}
+
+.hp-ficha-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.hp-ficha-cab h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.15rem; }
+.hp-ficha-cab h3 span { color: #5b6b88; font-weight: 600; }
+.hp-ficha-cab p { margin: 2px 0 0; color: #5b6b88; font-size: 0.88rem; }
+
+.hp-placa {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 2px solid #0b1b3a;
+  border-radius: 8px;
+  background: #fff;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.hp-datos {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.hp-datos > div { display: grid; align-content: start; gap: 2px; min-width: 0; }
+.hp-datos dt { color: #7a8aa6; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.hp-datos dd { display: grid; margin: 0; color: #0b1b3a; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.hp-datos dd span { color: #5b6b88; font-size: 0.84rem; font-weight: 500; }
+
+/* ---------- Línea de tiempo ---------- */
+.hp-linea { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+.hp-item { position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; }
+.hp-item::before {
+  content: "";
+  position: absolute;
+  top: 22px;
+  bottom: -12px;
+  left: 10px;
+  width: 2px;
+  background: #e3e9f5;
+}
+.hp-item:last-child::before { display: none; }
+.hp-punto {
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  margin: 16px 0 0 4px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: #94a3b8;
+  box-shadow: 0 0 0 1px #cbd5e1;
+}
+.hp-item.est-PAGADO .hp-punto { background: #16a34a; box-shadow: 0 0 0 1px #86efac; }
+.hp-item.est-FINALIZADA .hp-punto { background: #0d9488; box-shadow: 0 0 0 1px #5eead4; }
+.hp-item.est-EN_PROCESO .hp-punto,
+.hp-item.est-ESPERA_APROBACION .hp-punto { background: #2563eb; box-shadow: 0 0 0 1px #93c5fd; }
+
+.hp-item-caja {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e3e9f5;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.hp-item-cab { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.hp-item-cab > div { display: grid; gap: 2px; }
+.hp-item-cab strong { color: #0b1b3a; font-size: 0.98rem; }
+.hp-item-cab span:not(.insignia) { color: #7a8aa6; font-size: 0.82rem; }
+
+.hp-item-datos {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.hp-item-datos > div { display: grid; gap: 2px; min-width: 0; }
+.hp-item-datos dt { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.hp-item-datos dd { margin: 0; color: #3b4a66; font-size: 0.88rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.hp-diagnostico {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7f9fd;
+  color: #3b4a66;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.hp-diagnostico span { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.hp-sin-diagnostico { margin: 0; color: #9aa8c0; font-size: 0.86rem; font-style: italic; }
+
+@media (max-width: 900px) {
+  .hp-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hp-item-datos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .hp-campo { flex: 1 1 100%; }
+  .hp-busqueda .btn { flex: 1; }
+  .hp-ficha { padding: 16px; }
+  .hp-item-datos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
