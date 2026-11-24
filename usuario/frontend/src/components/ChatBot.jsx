@@ -1,21 +1,28 @@
 import { useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { enviarMensaje, formatoSoles } from "../services/chatbotService";
+import { ESTADOS_CITA } from "../services/agendaService";
 import "./ChatBot.css";
 
 /* ------------------------------------------------------------------
-   Asistente AutoSmart
-   Versión inicial basada en reglas: reconoce palabras clave y responde
-   con información del catálogo. Más adelante se puede conectar a un
-   servicio externo sustituyendo la función `responder`.
+   Asistente AutoSmart (TEC4.1)
+   Conversa con el chatbot del backend (POST /chatbot/messages), el mismo que usa la app:
+   servicios, horario, preguntas frecuentes, cotización referencial, estado del vehículo,
+   agendar una cita y hablar con un asesor. Muestra las opciones rápidas que devuelve el servidor
+   y tarjetas para la cotización, el estado del vehículo y el resumen de la cita.
+   Los consejos de mantenimiento del Sprint 1 se mantienen como respaldo: se usan cuando el
+   servidor no entiende la pregunta o no responde.
 ------------------------------------------------------------------- */
 
 const SALUDO =
-  "Hola, soy el asistente de AutoSmart. Puedo orientarte sobre los servicios, el kilometraje y cómo usar la plataforma. ¿Qué necesitas?";
+  "Hola, soy el asistente de AutoSmart. Puedo contarte sobre nuestros servicios y precios, el horario, las preguntas frecuentes o el estado de tu vehículo. ¿Qué necesitas?";
 
 const SUGERENCIAS = [
-  "¿Cada cuánto cambio el aceite?",
-  "¿Cuándo reviso los frenos?",
   "¿Qué servicios ofrecen?",
-  "¿Cómo creo mi cuenta?",
+  "¿Cuál es su horario?",
+  "¿Cuánto cuesta un cambio de aceite?",
+  "Preguntas frecuentes",
+  "¿Cada cuánto cambio el aceite?",
 ];
 
 // Quita tildes y signos para comparar palabras clave sin errores de ortografía
@@ -27,11 +34,6 @@ const normalizar = (texto) =>
     .replace(/[^a-z0-9ñ\s]/g, " ");
 
 const REGLAS = [
-  {
-    claves: ["hola", "buenas", "buenos dias", "buenas tardes", "buenas noches"],
-    respuesta:
-      "¡Hola! Cuéntame qué necesitas: servicios, kilometraje o tu cuenta.",
-  },
   {
     claves: ["aceite", "filtro", "lubricante"],
     respuesta:
@@ -63,11 +65,6 @@ const REGLAS = [
       "Se recomienda revisar la batería y las luces cada 6 meses. Si el auto cuesta arrancar o las luces se ven débiles, conviene hacerla revisar pronto.",
   },
   {
-    claves: ["servicio", "servicios", "catalogo", "ofrecen", "precio", "precios", "costo", "cuanto cuesta"],
-    respuesta:
-      "El catálogo incluye alineamiento vehicular, cambio de aceite, revisión de frenos, control de kilometraje, diagnóstico con escáner y revisión de batería y luces, entre otros. Cada servicio muestra su precio base y su duración estimada.",
-  },
-  {
     claves: ["cuenta", "registro", "registrar", "registrarme", "crear", "unirme", "inscribir"],
     respuesta:
       "Para crear tu cuenta de cliente, entra a «Crear cuenta», escribe tu nombre, tu correo y una contraseña de mínimo 8 caracteres, con una mayúscula y un número. Después podrás iniciar sesión y registrar tus vehículos.",
@@ -75,45 +72,87 @@ const REGLAS = [
   {
     claves: ["contrasena", "clave", "olvide", "recuperar", "restablecer"],
     respuesta:
-      "Si olvidaste tu contraseña, podrás recuperarla desde el correo que registraste. Esta opción se está habilitando en la plataforma.",
+      "Si olvidaste tu contraseña, entra a «Iniciar sesión» y elige «¿Olvidaste tu contraseña?». Te enviaremos un código a tu correo para crear una nueva.",
   },
   {
     claves: ["iniciar sesion", "login", "ingresar", "entrar", "acceder"],
     respuesta:
-      "Usa el botón «Iniciar sesión» e ingresa tu correo y tu contraseña. Si olvidaste tu contraseña, pronto podrás recuperarla desde esa misma pantalla.",
-  },
-  {
-    claves: ["mecanico", "mecanicos", "taller", "tecnico"],
-    respuesta:
-      "Los mecánicos que aparecen en AutoSmart son validados antes de mostrarse en la plataforma, para que sepas que estás en buenas manos.",
-  },
-  {
-    claves: ["cita", "agendar", "reservar", "reserva", "turno"],
-    respuesta:
-      "La reserva de citas en línea todavía no está disponible. Por ahora puedes registrar tus vehículos y consultar el catálogo de servicios.",
-  },
-  {
-    claves: ["seguro", "seguridad", "confiable", "confianza"],
-    respuesta:
-      "Los mecánicos que aparecen en AutoSmart son validados antes de mostrarse, y el catálogo muestra el precio y la duración de cada servicio antes de que lo solicites.",
-  },
-  {
-    claves: ["gracias", "listo", "perfecto", "genial"],
-    respuesta: "¡Con gusto! Si tienes otra duda, aquí estoy.",
+      "Usa el botón «Iniciar sesión» e ingresa tu correo y tu contraseña. Si la olvidaste, puedes recuperarla desde esa misma pantalla.",
   },
 ];
 
-const FALLBACK =
-  "No estoy seguro de haberte entendido. Prueba preguntando por: aceite, frenos, alineamiento, kilometraje, servicios o cómo crear una cuenta.";
+const SIN_CONEXION =
+  "No pude conectarme con el asistente en este momento. Inténtalo en unos minutos o escríbenos desde la app.";
 
-function responder(texto) {
+// Consejo de mantenimiento que coincide con la pregunta (null si ninguno)
+function consejoLocal(texto) {
   const limpio = ` ${normalizar(texto).replace(/\s+/g, " ").trim()} `;
-  for (const regla of REGLAS) {
-    if (regla.claves.some((c) => limpio.includes(` ${c} `) || (c.length > 4 && limpio.includes(c)))) {
-      return regla.respuesta;
-    }
+  const regla = REGLAS.find((r) => r.claves.some((c) => limpio.includes(` ${c} `) || (c.length > 4 && limpio.includes(c))));
+  return regla?.respuesta ?? null;
+}
+
+const OPCION_LOGIN = "Iniciar sesión";
+
+/* Tarjetas con los datos que acompañan algunas respuestas */
+function TarjetaDatos({ intencion, datos }) {
+  if (!datos) return null;
+  if (intencion === "cotizar" && datos.precioDesde !== undefined) {
+    return (
+      <div className="chat-card">
+        <span className="chat-card-etq">{datos.servicio}</span>
+        <strong>
+          {formatoSoles(datos.precioDesde)}
+          {datos.precioHasta && datos.precioHasta !== datos.precioDesde && ` – ${formatoSoles(datos.precioHasta)}`}
+        </strong>
+        {datos.referencial && <small>Precio referencial: el monto final depende del diagnóstico.</small>}
+      </div>
+    );
   }
-  return FALLBACK;
+  if (intencion === "consultar_estado" && datos.placa) {
+    const avance = Math.max(0, Math.min(100, Number(datos.avance) || 0));
+    return (
+      <div className="chat-card">
+        <span className="chat-card-etq">
+          {datos.placa} · {datos.ticket}
+        </span>
+        <strong>{ESTADOS_CITA[datos.estado] ?? datos.estado}</strong>
+        <span className="chat-barra" role="progressbar" aria-valuenow={avance} aria-valuemin={0} aria-valuemax={100} aria-label="Avance">
+          <span style={{ width: `${avance}%` }} />
+        </span>
+        <small>{avance} % de avance</small>
+      </div>
+    );
+  }
+  if (intencion === "agendar" && datos.fecha) {
+    return (
+      <dl className="chat-card chat-resumen">
+        <dt>Servicio</dt>
+        <dd>{datos.servicio}</dd>
+        <dt>Vehículo</dt>
+        <dd>{datos.placa}</dd>
+        <dt>Fecha</dt>
+        <dd>
+          {String(datos.fecha).split("-").reverse().join("/")} · {String(datos.hora ?? "").slice(0, 5)}
+        </dd>
+        {datos.mecanico && (
+          <>
+            <dt>Mecánico</dt>
+            <dd>{datos.mecanico}</dd>
+          </>
+        )}
+      </dl>
+    );
+  }
+  if (intencion === "agendar" && datos.ticket) {
+    return (
+      <div className="chat-card chat-card-ok">
+        <span className="chat-card-etq">Cita registrada</span>
+        <strong>{datos.ticket}</strong>
+        <small>{ESTADOS_CITA[datos.estado] ?? datos.estado}</small>
+      </div>
+    );
+  }
+  return null;
 }
 
 const IconoChat = () => (
@@ -136,25 +175,39 @@ const IconoEnviar = () => (
 );
 
 function ChatBot({ ref }) {
+  const navigate = useNavigate();
   const [abierto, setAbierto] = useState(false);
   const [mensajes, setMensajes] = useState([{ de: "bot", texto: SALUDO }]);
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
   const listaRef = useRef(null);
   const inputRef = useRef(null);
-  const temporizador = useRef(null);
+  const conversacion = useRef(null);
 
-  const enviar = (contenido) => {
+  const enviar = async (contenido) => {
     const limpio = contenido.trim();
-    if (!limpio) return;
+    if (!limpio || escribiendo) return;
+    if (limpio === OPCION_LOGIN) {
+      navigate("/login");
+      return;
+    }
     setMensajes((prev) => [...prev, { de: "usuario", texto: limpio }]);
     setTexto("");
     setEscribiendo(true);
-    clearTimeout(temporizador.current);
-    temporizador.current = setTimeout(() => {
-      setMensajes((prev) => [...prev, { de: "bot", texto: responder(limpio) }]);
-      setEscribiendo(false);
-    }, 650);
+    let respuesta;
+    try {
+      const r = await enviarMensaje(limpio, conversacion.current);
+      conversacion.current = r.idConversacion ?? conversacion.current;
+      const consejo = r.intencion === "no_entendido" ? consejoLocal(limpio) : null;
+      respuesta = consejo
+        ? { de: "bot", texto: consejo, opciones: r.opciones }
+        : { de: "bot", texto: r.respuesta, intencion: r.intencion, datos: r.datos, opciones: r.opciones };
+    } catch {
+      const consejo = consejoLocal(limpio);
+      respuesta = consejo ? { de: "bot", texto: consejo } : { de: "bot", texto: SIN_CONEXION, error: true };
+    }
+    setMensajes((prev) => [...prev, respuesta]);
+    setEscribiendo(false);
   };
 
   // Permite que la página abra el asistente o le haga una pregunta
@@ -181,9 +234,9 @@ function ChatBot({ ref }) {
     return () => window.removeEventListener("keydown", alTeclear);
   }, [abierto]);
 
-  useEffect(() => () => clearTimeout(temporizador.current), []);
-
-  const soloSaludo = mensajes.length === 1;
+  // Opciones rápidas: las sugerencias al inicio y luego las que devuelve el último mensaje del asistente
+  const ultimo = mensajes[mensajes.length - 1];
+  const opciones = mensajes.length === 1 ? SUGERENCIAS : ultimo.de === "bot" ? ultimo.opciones ?? [] : [];
 
   return (
     <>
@@ -206,20 +259,21 @@ function ChatBot({ ref }) {
 
           <div className="chat-list" ref={listaRef} aria-live="polite">
             {mensajes.map((m, i) => (
-              <p key={i} className={`chat-msg chat-msg-${m.de}`}>
-                {m.texto}
-              </p>
+              <div key={i} className={`chat-fila chat-fila-${m.de}`}>
+                <p className={`chat-msg chat-msg-${m.de}${m.error ? " chat-msg-error" : ""}`}>{m.texto}</p>
+                <TarjetaDatos intencion={m.intencion} datos={m.datos} />
+              </div>
             ))}
             {escribiendo && (
               <p className="chat-msg chat-msg-bot chat-typing" aria-label="El asistente está escribiendo">
                 <span /><span /><span />
               </p>
             )}
-            {soloSaludo && (
+            {!escribiendo && opciones.length > 0 && (
               <div className="chat-chips">
-                {SUGERENCIAS.map((s) => (
-                  <button key={s} type="button" onClick={() => enviar(s)}>
-                    {s}
+                {opciones.map((o) => (
+                  <button key={o} type="button" className={o === OPCION_LOGIN ? "chat-chip-login" : undefined} onClick={() => enviar(o)}>
+                    {o}
                   </button>
                 ))}
               </div>
@@ -240,14 +294,14 @@ function ChatBot({ ref }) {
               onChange={(e) => setTexto(e.target.value)}
               placeholder="Escribe tu pregunta"
               aria-label="Escribe tu pregunta"
-              maxLength={200}
+              maxLength={500}
               autoComplete="off"
             />
-            <button type="submit" disabled={!texto.trim()} aria-label="Enviar pregunta">
+            <button type="submit" disabled={!texto.trim() || escribiendo} aria-label="Enviar pregunta">
               <IconoEnviar />
             </button>
           </form>
-          <p className="chat-note">Asistente automático. Las recomendaciones son orientativas.</p>
+          <p className="chat-note">Asistente automático. Los precios son referenciales y los consejos, orientativos.</p>
         </section>
       )}
 

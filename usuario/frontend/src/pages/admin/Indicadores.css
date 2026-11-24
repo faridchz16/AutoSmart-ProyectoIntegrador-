@@ -1,0 +1,198 @@
+/* ===== Indicadores del taller (T73.2) ===== */
+
+.ind-mes { display: flex; align-items: center; gap: 6px; }
+.ind-mes .btn-icono { width: 38px; height: 38px; justify-content: center; padding: 0; }
+.ind-mes .btn-icono:disabled { opacity: 0.4; cursor: default; }
+.ind-mes input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1b3a;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.ind-mes input:focus { outline: 3px solid #93b4ff; outline-offset: 1px; border-color: #1150e8; }
+.ind-mes .btn { margin-left: 6px; }
+
+.ind-exportar { display: flex; justify-content: flex-end; margin: -8px 0 14px; }
+
+.ind-panel { display: grid; gap: 16px; transition: opacity 0.2s; }
+.ind-panel.actualizando { opacity: 0.6; }
+
+/* ---------- Indicadores principales ---------- */
+.ind-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ind-kpis li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.ind-kpi-titulo { color: #5b6b88; font-size: 0.8rem; font-weight: 700; }
+.ind-kpi-valor {
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ind-kpi-estrellas { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ind-kpi-sub { min-height: 1.2em; color: #7a8aa6; font-size: 0.8rem; }
+
+.ind-var { color: #5b6b88; font-size: 0.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ind-var.bueno { color: #047857; }
+.ind-var.malo { color: #be123c; }
+
+/* ---------- Tarjetas de gráficos ---------- */
+.ind-fila { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+
+.ind-tarjeta {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 18px 20px 20px;
+  border: 1px solid #e3e9f5;
+  border-radius: 16px;
+  background: #fff;
+}
+.ind-tarjeta h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1rem; }
+.ind-ayuda { margin: 0 0 12px; color: #7a8aa6; font-size: 0.82rem; }
+.ind-vacio { margin: 0; padding: 18px 0; color: #7a8aa6; font-size: 0.9rem; text-align: center; }
+
+/* ---------- Columnas: ingresos por mes ---------- */
+.ind-columnas {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  height: 210px;
+  padding-top: 8px;
+}
+.ind-col { display: flex; min-width: 0; }
+
+.ind-col-btn {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.ind-col-btn:focus-visible { outline: 3px solid #93b4ff; outline-offset: 2px; }
+
+.ind-col-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  border-bottom: 1px solid #c9d4e8;
+}
+.ind-col-barra {
+  width: min(44px, 70%);
+  border-radius: 4px 4px 0 0;
+  background: #9bbcf0;
+  transition: background 0.2s, height 0.4s;
+}
+.ind-col-btn:hover .ind-col-barra { background: #5b8fe6; }
+.ind-col-btn.actual .ind-col-barra { background: #2a78d6; }
+
+.ind-col-valor {
+  margin-bottom: 4px;
+  color: #0b1b3a;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ind-col-mes { color: #5b6b88; font-size: 0.78rem; font-weight: 600; text-align: center; }
+.ind-col-btn.actual .ind-col-mes { color: #0b1b3a; font-weight: 800; }
+
+.ind-tip {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  left: 50%;
+  z-index: 2;
+  display: none;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #0b1b3a;
+  color: #fff;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(11, 27, 58, 0.2);
+}
+.ind-tip strong { font-weight: 800; }
+.ind-col-btn:hover .ind-tip,
+.ind-col-btn:focus-visible .ind-tip { display: grid; }
+.ind-col:first-child .ind-tip { left: 0; transform: none; }
+.ind-col:last-child .ind-tip { right: 0; left: auto; transform: none; }
+
+/* ---------- Barras horizontales: métodos y estados ---------- */
+.ind-barras { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ind-barras li {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 130px;
+  align-items: center;
+  gap: 12px;
+}
+.ind-estados li { grid-template-columns: 140px minmax(0, 1fr) 80px; }
+
+.ind-barra-nombre { color: #3b4a66; font-size: 0.88rem; font-weight: 600; }
+.ind-barra-pista { height: 12px; overflow: hidden; border-radius: 4px; background: #eef2f9; }
+.ind-barra-pista span { display: block; height: 100%; border-radius: 4px; background: #2a78d6; transition: width 0.4s; }
+.ind-barra-valor { color: #0b1b3a; font-size: 0.88rem; font-weight: 800; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ind-barra-valor small { margin-left: 4px; color: #7a8aa6; font-size: 0.76rem; font-weight: 600; }
+
+.ind-total { padding-top: 10px; border-top: 1px solid #eef2f9; }
+.ind-total .ind-barra-nombre { color: #0b1b3a; font-weight: 800; }
+
+.ind-estados li.cero .ind-barra-nombre,
+.ind-estados li.cero .ind-barra-valor { color: #9aa8c0; }
+
+@media (max-width: 1100px) {
+  .ind-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ind-fila { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .ind-mes { flex-wrap: wrap; }
+  .ind-mes label { flex: 1; }
+  .ind-mes input { width: 100%; }
+  .ind-mes .btn { margin-left: 0; }
+}
+
+@media (max-width: 520px) {
+  .ind-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ind-kpis li { padding: 14px; }
+  .ind-kpi-valor { font-size: 1.3rem; }
+  .ind-tarjeta { padding: 16px; }
+  .ind-columnas { gap: 4px; height: 180px; }
+  .ind-col-valor { font-size: 0.68rem; }
+  .ind-barras li,
+  .ind-estados li { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .ind-barra-pista { grid-column: 1 / -1; grid-row: 2; }
+}

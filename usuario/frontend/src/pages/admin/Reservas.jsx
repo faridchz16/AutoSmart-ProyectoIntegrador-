@@ -6,11 +6,13 @@ import { formatoPrecio } from "../../services/serviciosService";
 import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
 import ReasignarReserva from "./ReasignarReserva";
+import BotonesExportar from "../../components/admin/BotonesExportar";
 import "../../components/admin/admin-ui.css";
 import "./Reservas.css";
 
 /* T38.2 – Tabla de reservas del taller para el administrador:
    filtros por periodo, estado y mecánico, búsqueda por ticket, cliente o placa, y paginación.
+   T74.2 – Exportar a Excel o PDF las citas del periodo y estado elegidos (el mecánico y la búsqueda no aplican).
    Usa GET /admin/appointments (T38.1).
    T39.2 – Botón "Reasignar" en las citas activas de hoy en adelante (ver ReasignarReserva.jsx). */
 
@@ -142,6 +144,12 @@ function Reservas() {
     });
   };
 
+  // T74.2: resultado de la exportación a Excel o PDF
+  const avisarExportacion = (tipo, texto) => {
+    contadorAvisos.current += 1;
+    setAviso({ tipo, texto, id: contadorAvisos.current });
+  };
+
   const { reservas, total, paginas, error, pendiente } = resultado;
   const conAcciones = reservas.some((r) => esReasignable(r, hoy));
   const paginaActual = Math.min(pagina, paginas - 1);
@@ -167,6 +175,12 @@ function Reservas() {
             )}
           </p>
         </div>
+        <BotonesExportar
+          tipo="citas"
+          filtros={{ desde: rango.desde, hasta: rango.hasta, estado }}
+          deshabilitado={!rangoValido}
+          alResultado={avisarExportacion}
+        />
       </div>
 
       {/* ---------- Filtros ---------- */}

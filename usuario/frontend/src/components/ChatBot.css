@@ -122,6 +122,8 @@
 .chat-msg {
   margin: 0;
   max-width: 86%;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
   padding: 10px 13px;
   border-radius: 14px;
   font-size: 14.5px;
@@ -142,6 +144,41 @@
   background: #1150e8;
   color: #fff;
 }
+
+/* ---------- Respuestas del chatbot del backend (TEC4.1) ---------- */
+.chat-fila { display: flex; flex-direction: column; gap: 6px; }
+.chat-fila-usuario { align-items: flex-end; }
+.chat-fila-bot { align-items: flex-start; }
+.chat-fila .chat-msg { align-self: inherit; }
+
+.chat-msg-error { border: 1px solid #fecdd3; background: #fff1f2; color: #9f1239; }
+
+.chat-card {
+  display: grid;
+  gap: 4px;
+  width: min(86%, 280px);
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid #dbe5fb;
+  border-radius: 14px;
+  background: #fff;
+  color: #14213d;
+  font-size: 13.5px;
+}
+.chat-card strong { color: #0b1b3a; font-size: 16px; font-variant-numeric: tabular-nums; }
+.chat-card small { color: #5b6b88; font-size: 12px; line-height: 1.4; }
+.chat-card-etq { color: #1150e8; font-size: 12px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+.chat-card-ok { border-color: #a7f3d0; background: #ecfdf5; }
+.chat-card-ok .chat-card-etq { color: #047857; }
+
+.chat-barra { display: block; height: 8px; overflow: hidden; border-radius: 999px; background: #e7edf9; }
+.chat-barra span { display: block; height: 100%; border-radius: 999px; background: #1150e8; }
+
+.chat-resumen { grid-template-columns: auto 1fr; gap: 4px 10px; }
+.chat-resumen dt { color: #5b6b88; font-size: 12px; font-weight: 700; }
+.chat-resumen dd { margin: 0; font-weight: 700; }
+
+.chat-chips .chat-chip-login { border-color: #1150e8; background: #1150e8; color: #fff; }
 
 .chat-typing { display: flex; gap: 5px; padding: 14px; }
 

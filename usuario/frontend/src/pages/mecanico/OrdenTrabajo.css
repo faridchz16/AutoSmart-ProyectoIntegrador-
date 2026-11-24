@@ -57,6 +57,7 @@
 
 .ot-ficha.est-ESPERA_APROBACION { border-top-color: #7c3aed; }
 .ot-ficha.est-FINALIZADA { border-top-color: #0d9488; }
+.ot-ficha.est-PAGADO { border-top-color: #16a34a; }
 
 .ot-dato {
   display: grid;

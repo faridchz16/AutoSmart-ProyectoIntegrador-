@@ -1,0 +1,101 @@
+/* ===== Historial de servicios del mecánico (T68.2) ===== */
+
+/* ---------- Periodo ---------- */
+.hm-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hm-rango { display: flex; flex-wrap: wrap; gap: 10px; }
+.hm-rango label { display: grid; gap: 4px; color: #5b6b88; font-size: 0.76rem; font-weight: 700; }
+.hm-rango input {
+  padding: 8px 10px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1b3a;
+  font: inherit;
+  font-size: 0.9rem;
+}
+.hm-rango input:focus { outline: 3px solid #93b4ff; outline-offset: 1px; border-color: #1150e8; }
+
+.hm-error { margin: -6px 0 16px; }
+
+/* ---------- Resumen ---------- */
+.hm-resumen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+.hm-resumen.actualizando { opacity: 0.6; }
+
+.hm-resumen li {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid #e3e9f5;
+  border-radius: 14px;
+  background: #fff;
+}
+.hm-resumen span { color: #7a8aa6; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.hm-resumen strong {
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hm-resumen small { color: #7a8aa6; font-size: 0.78rem; }
+.hm-resumen .hm-resumen-estrellas { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.hm-encontrados { color: #5b6b88; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+
+/* ---------- Tabla ---------- */
+.hm-fecha,
+.hm-duracion { color: #3b4a66; font-size: 0.88rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.hm-placa {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid #d6e0f2;
+  border-radius: 7px;
+  background: #f7f9fd;
+  color: #0b1b3a;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.insignia.hm-est-PAGADO { background: #dcfce7; color: #166534; }
+.insignia.hm-est-FINALIZADA { background: #ccfbf1; color: #115e59; }
+
+.hm-sin-calificar { color: #9aa8c0; font-size: 0.84rem; font-style: italic; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .hm-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .hm-tabla td[data-label="Servicio"] { padding-bottom: 10px; border-bottom: 1px solid #eef2f9; }
+  .hm-tabla td[data-label="Servicio"]::before { display: none; }
+  .hm-tabla td[data-label="Terminado"] { padding-top: 10px; }
+}
+
+@media (max-width: 520px) {
+  .hm-periodo .segmentos { width: 100%; }
+  .hm-periodo .segmentos button { flex: 1; padding-inline: 6px; }
+  .hm-rango { width: 100%; }
+  .hm-rango label { flex: 1; }
+  .hm-rango input { width: 100%; }
+  .hm-resumen strong { font-size: 1.15rem; }
+}

@@ -1120,3 +1120,379 @@ export async function editarMaterial(id, datos) {
   Object.assign(material, datos, { codigo: datos.codigo.trim().toUpperCase(), unidad: datos.unidad.trim().toLowerCase() });
   return copiaMaterial(material);
 }
+
+/* ---------- Calificaciones del mecánico (T67.2, contrato de T67.1) ---------- */
+
+const RESENAS_PRUEBA = [
+  [5, "Lucía F.", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!"],
+  [4, "José H.", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto."],
+  [5, "Andrea S.", null],
+  [3, "Diego M.", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo."],
+  [5, "Camila F.", "Excelente atención, el auto quedó como nuevo."],
+  [5, "Rosa P.", null],
+  [2, "Jorge R.", null],
+  [4, "Paola M.", "Amable y ordenado. Volvería."],
+];
+
+const calificacionesMecanico = RESENAS_PRUEBA.map(([estrellas, cliente, comentario], i) => ({
+  idCalificacion: 40 - i,
+  ticket: `AS-${fechaRelativa(-(i * 4 + 1)).replaceAll("-", "").slice(2)}-${String(14 + i * 3).padStart(4, "0")}`,
+  cliente,
+  estrellas,
+  comentario,
+  fecha: `${fechaRelativa(-(i * 4 + 1))}T${dosCifras(9 + (i % 8))}:${dosCifras((i * 13) % 60)}:00`,
+}));
+
+export async function obtenerMisCalificaciones() {
+  await esperar();
+  const total = calificacionesMecanico.length;
+  const suma = calificacionesMecanico.reduce((s, c) => s + c.estrellas, 0);
+  return {
+    promedio: total ? Math.round((suma / total) * 10) / 10 : null,
+    total,
+    calificaciones: copia(calificacionesMecanico),
+  };
+}
+
+/* ---------- Historial de servicios del mecánico (T68.2, contrato de T68.1) ---------- */
+
+// La primera es la orden 2 (cita 12, finalizada ayer): se puede abrir en solo lectura
+const historialMecanico = [
+  [2, 12, "AS-2026-00112", "Cambio de aceite y filtro", "MNP-934", "Ricardo Paredes", -1, "10:02", 56, "FINALIZADA", null],
+  [31, 131, "AS-2026-00091", "Revisión de frenos", "BCD-456", "José Huamán", -6, "09:00", 80, "PAGADO", 4],
+  [29, 129, "AS-2026-00087", "Afinamiento de motor", "CDE-789", "Andrea Salazar", -12, "14:00", 140, "PAGADO", 5],
+  [27, 127, "AS-2026-00085", "Revisión de suspensión", "DEF-321", "Camila Flores", -25, "11:00", 95, "PAGADO", 3],
+  [24, 124, "AS-2026-00080", "Cambio de aceite y filtro", "ABC-123", "Lucía Fernández", -48, "08:30", 45, "PAGADO", 5],
+  [20, 120, "AS-2026-00072", "Alineamiento y balanceo", "JKL-482", "Daniela Vargas", -95, "15:00", 70, "PAGADO", null],
+].map(([idOrden, idCita, ticket, servicio, placa, cliente, dias, hora, minutos, estado, estrellas]) => {
+  const [h, m] = hora.split(":").map(Number);
+  const fin = h * 60 + m + minutos;
+  return {
+    idOrden,
+    idCita,
+    ticket,
+    servicio,
+    placa,
+    cliente,
+    fechaInicio: enHora(dias, hora),
+    fechaFin: enHora(dias, `${dosCifras(Math.floor(fin / 60))}:${dosCifras(fin % 60)}`),
+    estado,
+    estrellas,
+  };
+});
+
+export async function listarHistorialMecanico({ desde, hasta }) {
+  await esperar();
+  if (desde && hasta && desde > hasta) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const fin = hasta || fechaRelativa(0);
+  return copia(historialMecanico.filter((o) => (!desde || o.fechaFin.slice(0, 10) >= desde) && o.fechaFin.slice(0, 10) <= fin));
+}
+
+/* ---------- Indicadores del taller (T73.2, contrato de T73.1) ---------- */
+
+export async function obtenerMetricas(mes) {
+  await esperar(250);
+  const actual = fechaRelativa(0).slice(0, 7);
+  const vacio = mes > actual || mes < "2026-08";
+  const k = vacio ? 0 : mes === actual ? 1 : 0.55 + ((Number(mes.slice(5)) * 37) % 40) / 100;
+  const n = (x) => Math.round(x * k);
+  const s = (x) => Math.round(x * k * 100) / 100;
+  return {
+    mes,
+    totalCitas: n(42),
+    citasPorEstado: {
+      PENDIENTE: n(4),
+      CONFIRMADA: n(6),
+      RECHAZADA: n(1),
+      CANCELADA: n(3),
+      EN_PROCESO: n(2),
+      ESPERA_APROBACION: n(1),
+      FINALIZADA: n(5),
+      PAGADO: n(20),
+    },
+    ingresos: s(1820) + s(1090.5) + s(540),
+    ingresosPorMetodo: { TARJETA: s(1820), YAPE_PLIN: s(1090.5), EFECTIVO: s(540) },
+    tiempoPromedioMinutos: n(84),
+    calificacionPromedio: vacio ? null : mes === actual ? 4.3 : 4.1,
+    totalCalificaciones: vacio ? 0 : n(6),
+  };
+}
+
+/* ---------- Pagos del taller (T70.2, contrato de T70.1) ---------- */
+
+const pagosPrueba = [
+  [12, 0, "11:20", "Lucía Fernández", "ABC-123", "AS-2026-00112", "TARJETA", "APROBADO", 185.5, null],
+  [11, -1, "17:05", "Rosa Paredes", "GHI-246", "AS-2026-00108", "YAPE_PLIN", "APROBADO", 120, null],
+  [10, -2, "09:40", "Diego Mendoza", "DEF-321", "AS-2026-00104", "TARJETA", "RECHAZADO", 240, null],
+  [9, -2, "10:02", "Diego Mendoza", "DEF-321", "AS-2026-00104", "YAPE_PLIN", "APROBADO", 240, null],
+  [8, -4, "16:30", "Andrea Salazar", "CDE-789", "AS-2026-00099", "EFECTIVO", "APROBADO", 140, "admin@autosmart.com"],
+  [7, -6, "12:15", "Camila Flores", "HIJ-135", "AS-2026-00095", "TARJETA", "APROBADO", 95, null],
+  [6, -9, "15:45", "José Huamán", "BCD-456", "AS-2026-00090", "EFECTIVO", "APROBADO", 230, "admin@autosmart.com"],
+  [5, -12, "10:10", "Paola Medina", "GHI-246", "AS-2026-00086", "YAPE_PLIN", "APROBADO", 70, null],
+  [4, -26, "14:00", "Jorge Ramírez", "FGH-987", "AS-2026-00078", "TARJETA", "APROBADO", 310, null],
+  [3, -33, "09:30", "Daniela Vargas", "JKL-482", "AS-2026-00071", "TARJETA", "APROBADO", 150, null],
+].map(([idPago, dias, hora, cliente, placa, ticket, metodo, estado, monto, registradoPor]) => ({
+  idPago,
+  codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+  fecha: enHora(dias, hora),
+  ticket,
+  cliente,
+  placa,
+  metodo,
+  estado,
+  monto,
+  registradoPor,
+}));
+
+export async function listarPagosAdmin({ desde, hasta, metodo, estado }) {
+  await esperar();
+  const hoy = fechaRelativa(0);
+  const inicio = desde || `${hoy.slice(0, 8)}01`;
+  const fin = hasta || hoy;
+  if (inicio > fin) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const lista = pagosPrueba
+    .filter((p) => p.fecha.slice(0, 10) >= inicio && p.fecha.slice(0, 10) <= fin)
+    .filter((p) => (!metodo || p.metodo === metodo) && (!estado || p.estado === estado))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const total = lista.filter((p) => p.estado === "APROBADO").reduce((s, p) => s + p.monto, 0);
+  return { desde: inicio, hasta: fin, cantidad: lista.length, totalAprobado: Math.round(total * 100) / 100, pagos: copia(lista) };
+}
+
+// PDF de una página con una línea de texto (para los archivos de ejemplo)
+function pdfDeTexto(texto) {
+  const limpio = texto.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[()\\]/g, "");
+  const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 520 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${limpio.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${limpio}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+// Comprobante de ejemplo con el código del pago
+export async function comprobantePrueba(pago) {
+  await esperar(250);
+  return pdfDeTexto(`Comprobante ${pago.codigo} - ${pago.cliente} - S/ ${pago.monto.toFixed(2)} (datos de prueba)`);
+}
+
+/* ---------- Historial por placa (T72.2) y cobro en efectivo (T69.2), contratos de T72.1 y T69.1 ---------- */
+
+const vehiculosAdmin = {
+  "MNP-934": {
+    idVehiculo: 12, placa: "MNP-934", marca: "Nissan", modelo: "Sentra", anio: 2018, kilometraje: 87400,
+    propietario: { nombre: "Ricardo Paredes", correo: "ricardo.paredes@correo.com" },
+    mantenimientos: [
+      { idOrden: 2, idCita: 12, ticket: "AS-2026-00112", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", mecanico: "Carlos Quispe", fechaInicio: enHora(-1, "10:02"), fechaFin: enHora(-1, "10:58"), diagnostico: "Aceite degradado y filtro saturado; se reemplazaron.", costoRepuestos: 114.5 },
+      { idOrden: 14, idCita: 64, ticket: "AS-2026-00064", estado: "PAGADO", servicio: "Revisión de frenos", mecanico: "Miguel Rojas", fechaInicio: enHora(-75, "09:00"), fechaFin: enHora(-75, "10:15"), diagnostico: "Pastillas delanteras al 30 %; se recomienda cambio en 5000 km.", costoRepuestos: 0 },
+    ],
+  },
+  "BCD-456": {
+    idVehiculo: 7, placa: "BCD-456", marca: "Hyundai", modelo: "Accent", anio: 2017, kilometraje: 91200,
+    propietario: { nombre: "José Huamán", correo: "jose.huaman@correo.com" },
+    mantenimientos: [
+      { idOrden: 31, idCita: 131, ticket: "AS-2026-00091", estado: "FINALIZADA", servicio: "Revisión de frenos", mecanico: "Carlos Quispe", fechaInicio: enHora(-6, "09:00"), fechaFin: enHora(-6, "10:20"), diagnostico: "Pastillas delanteras gastadas y disco rayado.", costoRepuestos: 150 },
+    ],
+  },
+  "ABC-123": {
+    idVehiculo: 3, placa: "ABC-123", marca: "Toyota", modelo: "Yaris", anio: 2019, kilometraje: 58200,
+    propietario: { nombre: "Lucía Fernández", correo: "lucia.fernandez@correo.com" },
+    mantenimientos: [],
+  },
+};
+
+// Total que calcula el backend para cada orden (servicio + adicionales aprobados + repuestos)
+const totalesOrden = { 2: 204.5, 31: 230 };
+
+const porCobrarPrueba = [
+  { idCita: 12, ticket: "AS-2026-00112", fecha: fechaRelativa(-1), horaInicio: "10:00", horaFin: "11:00", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", precio: 90, cliente: "Ricardo Paredes", placa: "MNP-934", idMecanico: 2, mecanico: "Carlos Quispe" },
+  { idCita: 131, ticket: "AS-2026-00091", fecha: fechaRelativa(-6), horaInicio: "09:00", horaFin: "10:00", estado: "FINALIZADA", servicio: "Revisión de frenos", precio: 80, cliente: "José Huamán", placa: "BCD-456", idMecanico: 2, mecanico: "Carlos Quispe" },
+];
+
+export async function obtenerHistorialPlaca(placa) {
+  await esperar();
+  const v = vehiculosAdmin[placa.trim().toUpperCase()];
+  if (!v) throw conEstado(`No existe un vehiculo con la placa ${placa.trim().toUpperCase()}`, 404);
+  return { ...copia(v), totalMantenimientos: v.mantenimientos.length };
+}
+
+export async function listarPorCobrar() {
+  await esperar();
+  return porCobrarPrueba
+    .filter((c) => c.estado === "FINALIZADA")
+    .map((c) => ({ ...c, id: c.idCita }));
+}
+
+export async function registrarCobroEfectivo({ idOrden, monto, fecha, observacion }) {
+  await esperar(450);
+  const vehiculo = Object.values(vehiculosAdmin).find((v) => v.mantenimientos.some((m) => m.idOrden === idOrden));
+  const mant = vehiculo?.mantenimientos.find((m) => m.idOrden === idOrden);
+  if (!mant) throw conEstado("Orden de trabajo no encontrada", 404);
+  if (mant.estado === "PAGADO") throw conEstado("La orden ya fue pagada", 409);
+  const total = totalesOrden[idOrden] ?? 0;
+  if (monto < total) throw conEstado(`El monto recibido es menor al total de la orden (S/ ${total.toFixed(2)})`, 400);
+  mant.estado = "PAGADO";
+  const cita = porCobrarPrueba.find((c) => c.idCita === mant.idCita);
+  if (cita) cita.estado = "PAGADO";
+  const idPago = Math.max(...pagosPrueba.map((p) => p.idPago)) + 1;
+  const pago = {
+    idPago,
+    codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+    fecha: fecha || enHora(0, "12:00"),
+    ticket: mant.ticket,
+    cliente: vehiculo.propietario.nombre,
+    placa: vehiculo.placa,
+    metodo: "EFECTIVO",
+    estado: "APROBADO",
+    monto: total,
+    registradoPor: "admin@autosmart.com",
+    observacion,
+  };
+  pagosPrueba.unshift(pago);
+  return { ...pago, idOrden, motivoRechazo: null, comprobanteUrl: `/payments/${idPago}/receipt` };
+}
+
+/* ---------- Reportes en Excel y PDF (T74.2, contrato de T74.1) ---------- */
+
+// Sin backend no se puede armar un .xlsx real: el "Excel" de prueba es un CSV que Excel abre igual
+export async function reportePrueba(tipo, formato, filtros) {
+  await esperar(400);
+  const periodo = filtros.mes || `${filtros.desde || "inicio"}_${filtros.hasta || "hoy"}`;
+  let filas;
+  if (tipo === "pagos") {
+    const { pagos } = await listarPagosAdmin(filtros);
+    filas = [["Codigo", "Fecha", "Ticket", "Cliente", "Placa", "Metodo", "Estado", "Monto"], ...pagos.map((p) => [p.codigo, p.fecha, p.ticket, p.cliente, p.placa, p.metodo, p.estado, p.monto])];
+  } else if (tipo === "metricas") {
+    const m = await obtenerMetricas(filtros.mes || fechaRelativa(0).slice(0, 7));
+    filas = [["Indicador", "Valor"], ["Citas", m.totalCitas], ["Ingresos (S/)", m.ingresos], ["Tiempo promedio (min)", m.tiempoPromedioMinutos], ["Calificacion promedio", m.calificacionPromedio ?? "-"]];
+  } else {
+    filas = [["Ticket", "Fecha", "Estado", "Cliente", "Placa"], ...reservasPrueba.filter((r) => (!filtros.desde || r.fecha >= filtros.desde) && (!filtros.hasta || r.fecha <= filtros.hasta) && (!filtros.estado || r.estado === filtros.estado)).map((r) => [r.ticket, r.fecha, r.estado, r.cliente, r.placa])];
+  }
+  if (formato === "pdf") {
+    return { blob: pdfDeTexto(`Reporte de ${tipo} ${periodo}: ${filas.length - 1} filas (datos de prueba)`), nombre: `reporte-${tipo}-${periodo}.pdf` };
+  }
+  const csv = "\ufeff" + filas.map((f) => f.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\r\n");
+  return { blob: new Blob([csv], { type: "text/csv;charset=utf-8" }), nombre: `reporte-${tipo}-${periodo}.csv` };
+}
+
+/* ---------- Moderación de calificaciones (T71.2, contrato de T71.1) ---------- */
+
+const calificacionesAdmin = [
+  [41, 5, "Lucía Fernández", "Carlos Quispe", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!", -1],
+  [40, 1, "Diego Mendoza", "Miguel Rojas", "Un idiota me atendió, son unos estafadores. No vuelvo más.", -2],
+  [39, 4, "José Huamán", "Carlos Quispe", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto.", -4],
+  [38, 2, "Jorge Ramírez", "Luis Chávez", "Llámenme al 987 654 321 para reclamar, el auto sigue sonando.", -6],
+  [37, 5, "Andrea Salazar", "Carlos Quispe", null, -8],
+  [36, 3, "Camila Flores", "Miguel Rojas", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo.", -11],
+  [35, 1, "Paola Medina", "Luis Chávez", "Visiten mitallerbarato.com, ahí sí atienden bien.", -15],
+].map(([idCalificacion, estrellas, cliente, mecanico, comentario, dias], i) => ({
+  idCalificacion,
+  ticket: `AS-2026-${String(160 - i).padStart(5, "0")}`,
+  cliente,
+  mecanico,
+  estrellas,
+  comentario,
+  fecha: enHora(dias, `${dosCifras(10 + i)}:${dosCifras((i * 17) % 60)}`),
+  oculto: idCalificacion === 35,
+  motivoOcultado: idCalificacion === 35 ? "Publicidad o spam" : null,
+  ocultadoPor: idCalificacion === 35 ? "admin@autosmart.com" : null,
+  fechaOcultado: idCalificacion === 35 ? enHora(-14, "09:30") : null,
+}));
+
+export async function listarCalificacionesAdmin(oculto) {
+  await esperar();
+  return copia(calificacionesAdmin.filter((c) => !oculto || String(c.oculto) === oculto));
+}
+
+export async function ocultarComentario(id, { motivo }) {
+  await esperar(400);
+  const c = calificacionesAdmin.find((x) => x.idCalificacion === Number(id));
+  if (!c) throw conEstado("Calificación no encontrada", 404);
+  if (c.oculto) throw conEstado("La calificación ya está oculta", 409);
+  if (!motivo) throw conEstado("El motivo es obligatorio", 400);
+  Object.assign(c, { oculto: true, motivoOcultado: motivo, ocultadoPor: "admin@autosmart.com", fechaOcultado: enHora(0, "12:00") });
+  return copia(c);
+}
+
+/* ---------- Derivaciones del chatbot (T79.3, contrato de T79.1) ---------- */
+
+const derivacionesPrueba = [
+  { idDerivacion: 4, idConversacion: "c-4", fecha: enHora(0, "09:12"), usuario: "Lucía Fernández", contacto: "lucia.fernandez@correo.com", resumen: "USUARIO: ¿puedo cambiar la fecha de mi cita?\nBOT: Puedes reprogramarla desde Mis citas en la app.\nUSUARIO: y si es para hoy mismo?\nBOT: No entendí tu consulta. Puedo ayudarte con estas opciones:\nUSUARIO: quiero hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 3, idConversacion: "c-3", fecha: enHora(0, "08:40"), usuario: "Visitante sin cuenta", contacto: "987 654 321", resumen: "USUARIO: hacen planchado y pintura?\nBOT: Estos son nuestros servicios:\n• Cambio de aceite – desde S/ 50.00\n• Revisión de frenos – desde S/ 80.00\nUSUARIO: hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 2, idConversacion: "c-2", fecha: enHora(-2, "16:40"), usuario: "Visitante sin cuenta", contacto: null, resumen: "USUARIO: tienen servicio de grúa?\nBOT: No entendí tu consulta.\nUSUARIO: hablar con asesor", estado: "ATENDIDA", nota: "Volvió a escribir; se le indicó que no contamos con grúa.", atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(-2, "17:05") },
+];
+
+export async function listarDerivaciones(estado) {
+  await esperar();
+  return copia(derivacionesPrueba.filter((d) => !estado || d.estado === estado));
+}
+
+export async function atenderDerivacion(id, { nota }) {
+  await esperar(400);
+  const d = derivacionesPrueba.find((x) => x.idDerivacion === Number(id));
+  if (!d) throw conEstado("Derivación no encontrada", 404);
+  if (d.estado === "ATENDIDA") throw conEstado("La derivación ya fue atendida", 409);
+  Object.assign(d, { estado: "ATENDIDA", nota, atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(0, "12:00") });
+  return copia(d);
+}
+
+/* ---------- Base de conocimiento y respuestas del chatbot (T80.2, TEC4.1; contratos de T80.1 y T75.1) ---------- */
+
+let faqPrueba = [
+  [1, "¿Aceptan Yape o Plin?", "Sí. Puedes pagar con Yape o Plin desde la app, además de tarjeta o en efectivo en el taller.", "yape, plin, pago, pagar", true],
+  [2, "¿Los trabajos tienen garantía?", "Sí. Todos nuestros servicios tienen 30 días de garantía en mano de obra.", "garantia, garantía, reclamo", true],
+  [3, "¿Me avisan antes de hacer un trabajo adicional?", "Sí. Si el mecánico encuentra algo más, te enviamos un presupuesto a la app y solo se hace si lo apruebas.", "adicional, presupuesto, aprobar", true],
+  [4, "¿Dónde están ubicados?", "Estamos en Av. Cascanueces 2221, Santa Anita, Lima.", "ubicacion, ubicación, direccion, dirección, donde", false],
+].map(([idFaq, pregunta, respuesta, palabrasClave, activa]) => ({
+  idFaq, pregunta, respuesta, palabrasClave, activa, fechaCreacion: enHora(-30, "10:00"), fechaActualizacion: activa ? null : enHora(-3, "16:20"),
+}));
+let siguienteFaq = 5;
+
+export async function listarFaq() {
+  await esperar();
+  return copia(faqPrueba);
+}
+
+export async function crearFaq(datos) {
+  await esperar(400);
+  const faq = { idFaq: siguienteFaq++, ...datos, activa: true, fechaCreacion: enHora(0, "12:00"), fechaActualizacion: null };
+  faqPrueba = [...faqPrueba, faq];
+  return copia(faq);
+}
+
+export async function editarFaq(id, datos) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  Object.assign(faq, datos, { fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+export async function desactivarFaq(id) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  if (!faq.activa) throw conEstado("La pregunta frecuente ya está desactivada", 409);
+  Object.assign(faq, { activa: false, fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+const OPCIONES_CHAT = ["Ver servicios", "Horario de atención", "Cotizar un servicio", "Preguntas frecuentes", "Hablar con un asesor"];
+
+// Respuestas de ejemplo con las mismas intenciones que el chatbot real
+export async function mensajeChatbot({ mensaje, idConversacion }) {
+  await esperar(450);
+  const texto = sinTildes(String(mensaje).toLowerCase());
+  const id = idConversacion || `prueba-${Date.now()}`;
+  const r = (intencion, respuesta, opciones = [], datos = null, requiereLogin = false) => ({ idConversacion: id, intencion, respuesta, opciones, datos, requiereLogin });
+  if (/(hola|buen(os|as)|saludos)/.test(texto)) return r("saludo", "¡Hola! Soy el asistente de AutoSmart. ¿En qué te ayudo?", OPCIONES_CHAT);
+  if (/preguntas frecuentes|faq/.test(texto)) return r("faq", "Estas son las preguntas más frecuentes. Toca una para ver la respuesta.", faqPrueba.filter((f) => f.activa).map((f) => f.pregunta));
+  const faq = faqPrueba
+    .filter((f) => f.activa)
+    .map((f) => ({ f, puntos: sinTildes(f.pregunta.toLowerCase()) === texto ? 100 : String(f.palabrasClave ?? "").split(",").filter((p) => p.trim() && texto.includes(sinTildes(p.trim()))).length }))
+    .filter((x) => x.puntos > 0)
+    .sort((a, b) => b.puntos - a.puntos)[0];
+  if (faq) return r("faq", faq.f.respuesta, ["Preguntas frecuentes", "Ver servicios"], { idFaq: faq.f.idFaq });
+  if (/horario|hora|abren|atienden/.test(texto)) return r("horario", "Nuestro horario de atención:\nLunes a viernes: 08:00 a 18:00\nSábado: 08:00 a 13:00\nDomingo: cerrado", ["Agendar una cita"]);
+  if (/precio|cotiz|cuanto (cuesta|sale|vale)|costo/.test(texto)) return r("cotizar", "Cambio de aceite y filtro cuesta entre S/ 90.00 y S/ 103.50. Es un precio referencial: el monto final depende del diagnóstico.", ["Agendar una cita", "Ver servicios"], { servicio: "Cambio de aceite y filtro", precioDesde: 90, precioHasta: 103.5, referencial: true });
+  if (/servicio/.test(texto)) return r("servicios", "Estos son nuestros servicios:\n• Cambio de aceite y filtro – desde S/ 90.00 (45 min)\n• Revisión de frenos – desde S/ 80.00 (60 min)\n• Alineamiento y balanceo – desde S/ 70.00 (60 min)", ["Cotizar un servicio", "Agendar una cita"]);
+  if (/estado|mi (auto|carro|vehiculo)|como va/.test(texto)) return r("consultar_estado", "Para consultar el estado de tu vehículo necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/agendar|reservar|cita/.test(texto)) return r("agendar", "Para agendar una cita necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/asesor|humano|persona/.test(texto)) return r("hablar_asesor", "Listo, registré tu solicitud. Un asesor te contactará en horario de atención.", [], { idDerivacion: 9 });
+  return r("no_entendido", "No entendí tu consulta. Puedo ayudarte con estas opciones:", OPCIONES_CHAT);
+}
