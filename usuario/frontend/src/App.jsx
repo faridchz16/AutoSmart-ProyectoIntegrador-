@@ -35,6 +35,7 @@ import InicioCliente from "./pages/cliente/Inicio";
 import PerfilCliente from "./pages/cliente/Perfil";
 import VehiculosCliente from "./pages/cliente/Vehiculos";
 import ReservarCita from "./pages/cliente/Reservar";
+import MisCitas from "./pages/cliente/MisCitas";
 import Historial from "./pages/mecanico/Historial";
 
 function App() {
@@ -88,6 +89,7 @@ function App() {
           <Route path="/cliente" element={<ClienteLayout />}>
             <Route index element={<InicioCliente />} />
             <Route path="reservar" element={<ReservarCita />} />
+            <Route path="citas" element={<MisCitas />} />
             <Route path="vehiculos" element={<VehiculosCliente />} />
             <Route path="perfil" element={<PerfilCliente />} />
           </Route>

@@ -1583,7 +1583,24 @@ const momentoLima = () => {
 };
 const aMinutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
 const aHora = (m) => `${dosCifras(Math.floor(m / 60))}:${dosCifras(m % 60)}`;
-let citasReservadas = []; // citas que reserva el cliente en la demo: ocupan sus turnos
+// Citas del cliente de la demo (las nuevas reservas se agregan aquí). Las PENDIENTE y CONFIRMADA ocupan su turno.
+let citasReservadas = [
+  [131, 3, "09:00", 60, "CONFIRMADA", 2, 2, "ABC-123", "AS-2026-00131"],
+  [133, 1, "10:00", 45, "PENDIENTE", 1, 6, "BKR-482", "AS-2026-00133"],
+  [128, 0, "08:00", 60, "ESPERA_APROBACION", 3, 2, "BKR-482", "AS-2026-00128"],
+  [125, -1, "15:00", 40, "FINALIZADA", 4, 6, "ABC-123", "AS-2026-00125"],
+  [124, -48, "08:30", 45, "PAGADO", 1, 2, "ABC-123", "AS-2026-00080"],
+  [110, -20, "11:00", 60, "CANCELADA", 2, 6, "ABC-123", "AS-2026-00110"],
+  [105, -12, "16:00", 60, "RECHAZADA", 3, 2, "BKR-482", "AS-2026-00105"],
+].map(([idCita, dias, horaInicio, duracion, estado, idServicio, idMecanico, placa, ticket]) => {
+  const s = servicios.find((x) => x.id === idServicio);
+  const fin = Number(horaInicio.slice(0, 2)) * 60 + Number(horaInicio.slice(3, 5)) + duracion;
+  return {
+    idCita, ticket, estado, fecha: fechaRelativa(dias), horaInicio, horaFin: `${dosCifras(Math.floor(fin / 60))}:${dosCifras(fin % 60)}`,
+    precio: s.precioBase, servicio: s.nombre, mecanico: ["", "", "Carlos Quispe", "", "", "", "Miguel Rojas"][idMecanico], placa, idMecanico, idServicio,
+  };
+});
+const OCUPAN_TURNO = ["PENDIENTE", "CONFIRMADA"];
 let bloqueoReserva = null;
 let siguienteCitaReserva = 140;
 
@@ -1624,7 +1641,7 @@ function turnosLibresReserva(idServicio, idMecanico, fecha, conBloqueoPropio) {
       const cruza = (a, b) => inicio < b && final > a;
       // Agenda de ejemplo: algunos turnos ya ocupados por otros clientes
       const ocupadoDemo = (Number(fecha.slice(8, 10)) + m.idMecanico + t / 15) % 5 === 0;
-      const ocupado = citasReservadas.some((c) => c.idMecanico === m.idMecanico && c.fecha === fecha && cruza(c.horaInicio, c.horaFin));
+      const ocupado = citasReservadas.some((c) => OCUPAN_TURNO.includes(c.estado) && c.idMecanico === m.idMecanico && c.fecha === fecha && cruza(c.horaInicio, c.horaFin));
       const bloqueado = !conBloqueoPropio && bloqueoReserva && bloqueoReserva.idMecanico === m.idMecanico && bloqueoReserva.fecha === fecha && cruza(bloqueoReserva.horaInicio, bloqueoReserva.horaFin);
       const yaPaso = fecha === ahora.fecha && inicio <= ahora.hora;
       if (!ocupadoDemo && !ocupado && !bloqueado && !yaPaso) libres.push({ horaInicio: inicio, horaFin: final });
@@ -1658,12 +1675,50 @@ export async function reservarCitaCliente({ idServicio, idMecanico, idVehiculo, 
   if (!turnosLibresReserva(idServicio, idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El turno ya no esta disponible", 409);
   const c = {
     idCita: siguienteCitaReserva++, estado: "PENDIENTE", fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos),
-    precio: s.precioBase, servicio: s.nombre, mecanico: m.nombre, placa: v.placa, idMecanico: m.idMecanico,
+    precio: s.precioBase, servicio: s.nombre, mecanico: m.nombre, placa: v.placa, idMecanico: m.idMecanico, idServicio: s.id,
   };
   c.ticket = `AS-${fecha.slice(0, 4)}-${String(c.idCita).padStart(5, "0")}`;
   citasReservadas = [...citasReservadas, c];
   bloqueoReserva = null;
-  const { idMecanico: _id, ...respuesta } = c;
-  void _id;
-  return respuesta;
+  return citaParaCliente(c);
+}
+
+/* ---------- Mis citas del cliente (CLI-04) ---------- */
+
+const citaParaCliente = ({ idMecanico, idServicio, ...c }) => (void idMecanico, void idServicio, { ...c });
+const inicioCita = (c) => new Date(`${c.fecha}T${c.horaInicio}:00-05:00`).getTime();
+function citaDelCliente(id) {
+  const c = citasReservadas.find((x) => x.idCita === Number(id));
+  if (!c) throw conEstado("Cita no encontrada", 404);
+  return c;
+}
+
+export async function listarMisCitas(futuras) {
+  await esperar();
+  const hoy = momentoLima().fecha;
+  return citasReservadas
+    .filter((c) => !futuras || (c.fecha >= hoy && OCUPAN_TURNO.includes(c.estado)))
+    .sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`))
+    .map(citaParaCliente);
+}
+
+export async function cancelarMiCita(id) {
+  await esperar(400);
+  const c = citaDelCliente(id);
+  if (!OCUPAN_TURNO.includes(c.estado)) throw conEstado(`La cita ya no esta activa (estado: ${c.estado})`, 409);
+  if (inicioCita(c) - Date.now() < 2 * 3600 * 1000) throw conEstado("Solo se puede cancelar con al menos 2 horas de anticipacion", 400);
+  c.estado = "CANCELADA";
+  return citaParaCliente(c);
+}
+
+export async function reprogramarMiCita(id, { fecha, horaInicio }) {
+  await esperar(400);
+  const c = citaDelCliente(id);
+  if (!OCUPAN_TURNO.includes(c.estado)) throw conEstado(`La cita ya no esta activa (estado: ${c.estado})`, 409);
+  if (inicioCita(c) - Date.now() < 24 * 3600 * 1000) throw conEstado("Solo se puede reprogramar con al menos 24 horas de anticipacion", 400);
+  if (c.fecha === fecha && c.horaInicio === horaInicio) throw conEstado("La cita ya esta en ese turno", 409);
+  if (!turnosLibresReserva(c.idServicio, c.idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El nuevo turno no esta disponible", 409);
+  const s = servicioReserva(c.idServicio);
+  Object.assign(c, { fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos), estado: "PENDIENTE" });
+  return citaParaCliente(c);
 }

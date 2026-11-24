@@ -137,15 +137,15 @@ function Exito({ cita, alReservarOtra }) {
         )}
       </dl>
       <p className="res-exito-nota">
-        Te enviamos el detalle a tu correo. El mecánico revisará tu reserva y te avisaremos cuando la confirme. Llega unos minutos antes con tu
+        Te enviamos el detalle a tu correo. El mecánico revisará tu reserva; en Mis citas verás cuando la confirme. Llega unos minutos antes con tu
         vehículo.
       </p>
       <div className="form-acciones">
         <button type="button" className="btn btn-sec" onClick={alReservarOtra}>
           Reservar otra cita
         </button>
-        <Link to="/cliente" className="btn btn-pri">
-          Ir al inicio
+        <Link to={`/cliente/citas?nueva=${cita.id}`} className="btn btn-pri">
+          Ver mis citas
         </Link>
       </div>
     </section>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   listarCatalogo,
   listarMecanicos,
@@ -208,8 +208,10 @@ export function PasoMecanico({ servicio, elegido, alElegir, alCambiarServicio })
 
 /* ---------- Paso 3: fecha y hora ---------- */
 
-export function PasoHorario({ servicio, mecanico, fecha, alCambiarFecha, bloqueo, bloqueando, alElegir, recargaExterna }) {
+// bloqueo = turno ya elegido ({ fecha, inicio, fin, idMecanico }); nota = texto de ayuda bajo los turnos
+export function PasoHorario({ servicio, mecanico, fecha, alCambiarFecha, bloqueo, bloqueando, alElegir, recargaExterna, nota }) {
   const [recarga, setRecarga] = useState(0);
+  const tira = useRef(null);
   const hoy = hoyLima();
   const dias = Array.from({ length: DIAS_RESERVA }, (_, i) => sumarDias(hoy, i));
   const { datos, error, cargando, clave } = useCarga(`${servicio.id}|${mecanico.id}|${fecha}|${recarga}|${recargaExterna}`, () =>
@@ -225,9 +227,18 @@ export function PasoHorario({ servicio, mecanico, fecha, alCambiarFecha, bloqueo
   ].filter(([, lista]) => lista.length);
   const indice = dias.indexOf(fecha);
 
+  // El día elegido siempre queda a la vista en la tira (p. ej., al reprogramar una cita de dentro de una semana)
+  useEffect(() => {
+    const caja = tira.current;
+    const dia = caja?.querySelector(".res-dia.elegido");
+    if (!caja || !dia) return;
+    const izq = dia.offsetLeft - caja.offsetLeft;
+    if (izq < caja.scrollLeft || izq + dia.offsetWidth > caja.scrollLeft + caja.clientWidth) caja.scrollLeft = izq - 8;
+  }, [fecha]);
+
   return (
     <>
-      <div className="res-dias" role="group" aria-label="Elige el día">
+      <div className="res-dias" role="group" aria-label="Elige el día" ref={tira}>
         {dias.map((d, i) => (
           <button key={d} type="button" className={d === fecha ? "res-dia elegido" : "res-dia"} aria-pressed={d === fecha} onClick={() => alCambiarFecha(d)}>
             <span>{i === 0 ? "Hoy" : i === 1 ? "Mañana" : diaSemana(d).slice(0, 3)}</span>
@@ -281,7 +292,7 @@ export function PasoHorario({ servicio, mecanico, fecha, alCambiarFecha, bloqueo
         )}
       </div>
       <p className="res-nota">
-        Cada turno dura {formatoDuracion(servicio.duracion)}. Al elegirlo lo separamos para ti por 10 minutos mientras confirmas.
+        Cada turno dura {formatoDuracion(servicio.duracion)}. {nota ?? "Al elegirlo lo separamos para ti por 10 minutos mientras confirmas."}
       </p>
     </>
   );

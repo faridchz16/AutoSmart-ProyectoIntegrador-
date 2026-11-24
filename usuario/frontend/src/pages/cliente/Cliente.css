@@ -17,6 +17,26 @@
 .cli-aviso strong { color: #78350f; }
 .cli-aviso span { font-size: 0.88rem; }
 
+.cli-proxima {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(120deg, #1150e8 0%, #3b82f6 100%);
+  color: #dbe6ff;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(17, 80, 232, 0.2);
+  transition: transform 0.2s;
+}
+.cli-proxima:hover { transform: translateY(-1px); }
+.cli-proxima strong { color: #fff; font-family: "Sora", "Manrope", sans-serif; font-size: 1.05rem; }
+.cli-proxima strong::first-letter { text-transform: uppercase; }
+.cli-proxima > span:last-child { font-size: 0.88rem; }
+.cli-proxima-etiqueta { font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.cli-proxima.vacia { border: 1px dashed #9db6f5; background: #f4f8ff; color: #1150e8; box-shadow: none; }
+.cli-proxima.vacia strong { color: #0b1b3a; }
+
 /* ---------- Mi perfil ---------- */
 .cli-perfil {
   display: grid;

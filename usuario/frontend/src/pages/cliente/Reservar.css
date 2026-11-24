@@ -214,7 +214,8 @@
 }
 .res-hora:hover:not(:disabled) { border-color: #1150e8; background: #f4f8ff; }
 .res-hora:disabled { cursor: wait; opacity: 0.7; }
-.res-hora.elegida { border-color: #1150e8; background: #1150e8; color: #fff; opacity: 1; }
+.res-hora.elegida,
+.res-hora.elegida:hover:not(:disabled) { border-color: #1150e8; background: #1150e8; color: #fff; opacity: 1; }
 .res-hora .btn-spinner { border-color: rgba(17, 80, 232, 0.25); border-top-color: #1150e8; }
 
 /* Confirmar */

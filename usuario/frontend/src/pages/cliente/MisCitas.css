@@ -1,0 +1,100 @@
+/* ===== Mis citas del cliente (CLI-04) ===== */
+
+.cit-cab-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.cit .filtros { margin-bottom: 14px; }
+.cit-contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #eef2f9;
+  color: #5b6b88;
+  font-size: 0.72rem;
+}
+.segmentos .activo .cit-contador { background: rgba(255, 255, 255, 0.2); color: inherit; }
+
+.cit-lista { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; transition: opacity 0.2s; }
+.cit-lista.actualizando { opacity: 0.6; }
+
+.cit-item {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+  scroll-margin: 90px;
+}
+.cit-item.nueva { border-color: #1150e8; box-shadow: 0 0 0 3px rgba(17, 80, 232, 0.12); }
+.cit-CANCELADA, .cit-RECHAZADA, .cit-VENCIDA { background: #fbfcfe; }
+.cit-CANCELADA .cit-cab h3, .cit-RECHAZADA .cit-cab h3, .cit-VENCIDA .cit-cab h3 { color: #5b6b88; }
+
+.cit-fecha {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  height: 82px;
+  border-radius: 14px;
+  background: #f4f8ff;
+  color: #5b6b88;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cit-fecha strong { color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.6rem; line-height: 1.1; letter-spacing: 0; }
+.cit-CONFIRMADA .cit-fecha, .cit-PENDIENTE .cit-fecha { background: #1150e8; color: #dbe6ff; }
+.cit-CONFIRMADA .cit-fecha strong, .cit-PENDIENTE .cit-fecha strong { color: #fff; }
+
+.cit-cuerpo { display: grid; gap: 8px; min-width: 0; }
+.cit-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.cit-cab h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.04rem; }
+.cit-nueva { padding: 3px 9px; border-radius: 999px; background: #1150e8; color: #fff; font-size: 0.72rem; font-weight: 800; }
+
+.cit-estado { padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+.est-PENDIENTE { background: #fff7e0; color: #a35a00; }
+.est-CONFIRMADA { background: #dcfce7; color: #15803d; }
+.est-EN_PROCESO { background: #e6f0ff; color: #1150e8; }
+.est-ESPERA_APROBACION { background: #f3e8ff; color: #7e22ce; }
+.est-FINALIZADA { background: #ccfbf1; color: #0f766e; }
+.est-PAGADO { background: #eef2f9; color: #3b4a66; }
+.est-CANCELADA, .est-VENCIDA { background: #f1f5f9; color: #64748b; }
+.est-RECHAZADA { background: #fff1f2; color: #be123c; }
+
+.cit-cuando { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 0; color: #0b1b3a; font-variant-numeric: tabular-nums; }
+.cit-falta { color: #1150e8; font-size: 0.84rem; font-weight: 700; }
+
+.cit-datos { display: flex; flex-wrap: wrap; gap: 6px 26px; margin: 0; font-size: 0.86rem; }
+.cit-datos dt { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.cit-datos dd { margin: 1px 0 0; color: #0b1b3a; font-weight: 700; }
+
+.cit-detalle { margin: 0; color: #5b6b88; font-size: 0.88rem; line-height: 1.5; }
+
+.cit-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid #eef2f9; }
+.cit-acciones .btn { padding-top: 8px; padding-bottom: 8px; }
+.cit-acciones .cit-cancelar { color: #be123c; }
+.cit-acciones .cit-cancelar:hover:not(:disabled) { border-color: #fda4af; background: #fff1f2; }
+.cit-regla { flex: 1 1 260px; margin: 0; color: #7a8aa6; font-size: 0.82rem; line-height: 1.45; }
+
+/* Reprogramar */
+.cit-reprogramar { display: grid; gap: 14px; }
+.cit-actual { display: grid; gap: 2px; margin: 0; padding: 12px 14px; border-radius: 12px; background: #f4f8ff; font-size: 0.88rem; color: #5b6b88; }
+.cit-actual span:first-child { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.cit-actual strong { color: #0b1b3a; }
+.cit-actual strong::first-letter { text-transform: uppercase; }
+.cit-reprogramar .res-dias { margin-bottom: 10px; }
+.cit-reprogramar .res-turnos { min-height: 90px; }
+.cit-nuevo { margin: 0; padding: 10px 14px; border-radius: 12px; background: #ecfdf5; color: #065f46; font-size: 0.88rem; line-height: 1.5; }
+
+@media (max-width: 720px) {
+  .cit-item { grid-template-columns: 1fr; gap: 12px; }
+  .cit-fecha { display: flex; justify-content: flex-start; gap: 8px; height: auto; padding: 8px 12px; align-items: baseline; }
+  .cit-fecha strong { font-size: 1.15rem; }
+  .cit-acciones .btn { flex: 1 1 auto; }
+  .cit-cab-acciones { width: 100%; }
+  .cit-cab-acciones .btn { flex: 1; }
+}

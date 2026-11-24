@@ -32,6 +32,18 @@ export const ENLACES_CLIENTE = [
     ),
   },
   {
+    to: "/cliente/citas",
+    texto: "Mis citas",
+    descripcion: "Estado de tus reservas; cámbialas de horario o cancélalas.",
+    icono: (
+      <Icono>
+        <rect x="4" y="5.5" width="16" height="14" rx="2.5" />
+        <path d="M8 3.5v4M16 3.5v4M4 10h16" />
+        <path d="m9 14.5 2 2 4-4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/cliente/vehiculos",
     texto: "Mis vehículos",
     descripcion: "Registra tus autos con su placa, año y kilometraje.",
