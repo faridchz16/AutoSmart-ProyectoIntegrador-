@@ -1,6 +1,8 @@
 import { apiFetch, descargarArchivo, guardarBlob } from "./api";
 import * as prueba from "./datosPrueba";
 import { NOMBRES_METODO, nombreMetodo } from "./indicadoresService";
+import { listarReservas } from "./reservasService";
+import { obtenerHistorialPlaca } from "./historialPlacaService";
 
 /* Pagos del taller para el administrador (Sprint 4). Backend de Farid (rama main):
    Supervisión (T70.1):
@@ -12,6 +14,14 @@ import { NOMBRES_METODO, nombreMetodo } from "./indicadoresService";
        400 si "desde" es posterior a "hasta" o si el estado no es válido.
    Métodos habilitados:  GET /payment-methods -> [{ codigo, nombre, enLinea }]
    Comprobante PDF (T64.1, también para ADMIN): GET /payments/{id}/receipt
+   Cobro en efectivo (T69.1):
+     POST /admin/payments/cash { idOrden, monto (lo recibido, > 0), fecha (opcional, no futura), observacion (≤ 200) }
+       -> 201 { idPago, codigo, idOrden, ticket, metodo EFECTIVO, estado APROBADO, monto (= total de la orden),
+                fecha, motivoRechazo, comprobanteUrl, registradoPor }
+       La cita pasa a PAGADO. El backend calcula el total (servicio + adicionales aprobados + repuestos):
+       400 "El monto recibido es menor al total de la orden (S/ 230.00)" · 409 si ya fue pagada o no está FINALIZADA.
+       Las órdenes por cobrar son las citas FINALIZADAS (GET /admin/appointments?estado=FINALIZADA);
+       su número de orden sale del historial del vehículo (GET /admin/vehicles/{placa}/history).
    Con VITE_DATOS_PRUEBA=true todo sale de datosPrueba.js. */
 
 export const ESTADOS_PAGO = { APROBADO: "Aprobado", RECHAZADO: "Rechazado" };
@@ -91,4 +101,49 @@ export function resumirPagos(pagos) {
       .map(([metodo, monto]) => ({ metodo, monto: Math.round(monto * 100) / 100 }))
       .sort((a, b) => b.monto - a.monto),
   };
+}
+
+/* ---------- Cobro en efectivo (T69.2) ---------- */
+
+export const MAX_OBSERVACION_COBRO = 200;
+
+// Citas finalizadas que esperan su pago, de la más reciente a la más antigua
+export async function listarPorCobrar() {
+  if (prueba.DATOS_PRUEBA) return prueba.listarPorCobrar();
+  const { reservas } = await listarReservas({ estado: "FINALIZADA", pagina: 0, tamano: 50 });
+  return reservas.sort((a, b) => `${b.fecha} ${b.horaInicio}`.localeCompare(`${a.fecha} ${a.horaInicio}`));
+}
+
+// Número de la orden de una cita y su costo de repuestos, desde el historial del vehículo
+export async function buscarOrdenDeCita(cita) {
+  const historial = await obtenerHistorialPlaca(cita.placa);
+  const m = historial.mantenimientos.find((x) => String(x.idCita) === String(cita.id) || x.ticket === cita.ticket);
+  if (!m) throw new Error(`No se encontró la orden de trabajo de ${cita.ticket} en el historial de ${cita.placa}.`);
+  return { idOrden: m.idOrden, estado: m.estado, costoRepuestos: m.costoRepuestos, propietario: historial.propietario };
+}
+
+export async function registrarCobroEfectivo({ idOrden, monto, fecha, observacion }) {
+  const cuerpo = {
+    idOrden,
+    monto: Number(monto),
+    fecha: fecha ? `${fecha.slice(0, 16)}:00` : null,
+    observacion: observacion?.trim() || null,
+  };
+  const datos = prueba.DATOS_PRUEBA
+    ? await prueba.registrarCobroEfectivo(cuerpo)
+    : await apiFetch("/admin/payments/cash", { metodo: "POST", cuerpo });
+  return {
+    id: datos.idPago,
+    codigo: datos.codigo ?? "",
+    ticket: datos.ticket ?? "",
+    monto: numero(datos.monto),
+    fecha: datos.fecha ?? "",
+    vuelto: Math.max(0, Math.round((Number(monto) - numero(datos.monto)) * 100) / 100),
+  };
+}
+
+// "El monto recibido es menor al total de la orden (S/ 230.00)" -> 230
+export function totalDelError(mensaje) {
+  const m = String(mensaje ?? "").match(/S\/\s*([\d.,]+)\)?\s*$/);
+  return m ? Number(m[1].replace(",", "")) : null;
 }

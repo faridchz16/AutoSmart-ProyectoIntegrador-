@@ -10,6 +10,8 @@ import { nombreMetodo, formatoSoles } from "../../services/indicadoresService";
 import { hoyLima, sumarDias, inicioDeMes, finDelMesAnterior, fechaHora, fechaCorta, validarRango } from "../../utils/fechas";
 import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
+import Modal from "../../components/admin/Modal";
+import FormCobroEfectivo from "./FormCobroEfectivo";
 import "../../components/admin/admin-ui.css";
 import "./Reservas.css";
 import "./Pagos.css";
@@ -18,7 +20,8 @@ import "./Pagos.css";
    - Filtros por periodo (este mes, mes anterior, 7 días o un rango propio), método y estado
    - Total aprobado del periodo, cuántos pagos se aprobaron o rechazaron y cuánto entró por cada método
    - Tabla con código, fecha, cliente, placa, método, estado y monto; búsqueda por código, ticket, cliente o placa
-   - Descarga del comprobante PDF de los pagos aprobados */
+   - Descarga del comprobante PDF de los pagos aprobados
+   T69.2 – Botón "Cobro en efectivo" para registrar el pago de un servicio finalizado en el taller */
 
 const TAMANO = 10;
 
@@ -50,6 +53,7 @@ function Pagos() {
   const [pagina, setPagina] = useState(0);
   const [descargando, setDescargando] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [cobrando, setCobrando] = useState(false);
 
   const contadorAvisos = useRef(0);
   const avisar = (tipo, texto) => {
@@ -134,6 +138,14 @@ function Pagos() {
         <div className="pg-acciones">
           <button type="button" className="btn btn-sec" onClick={() => setRecarga((n) => n + 1)} disabled={cargando}>
             Actualizar
+          </button>
+          <button type="button" className="btn btn-pri" onClick={() => setCobrando(true)}>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2.5" y="6" width="19" height="12" rx="2" />
+              <circle cx="12" cy="12" r="2.6" />
+              <path d="M6 9.5v5M18 9.5v5" />
+            </svg>
+            Cobro en efectivo
           </button>
         </div>
       </div>
@@ -341,6 +353,19 @@ function Pagos() {
       {!resultado.error && !errorRango && (
         <Paginacion pagina={paginaActual} paginas={paginas} total={filtrados.length} tamano={TAMANO} alCambiar={setPagina} />
       )}
+
+      {/* ---------- Cobro en efectivo (T69.2) ---------- */}
+      <Modal abierto={cobrando} alCerrar={() => setCobrando(false)} titulo="Cobro en efectivo">
+        {cobrando && (
+          <FormCobroEfectivo
+            alCerrar={() => setCobrando(false)}
+            alRegistrar={(pago) => {
+              setRecarga((n) => n + 1);
+              avisar("ok", `Cobro registrado: ${pago.codigo} por ${formatoSoles(pago.monto)}.`);
+            }}
+          />
+        )}
+      </Modal>
 
       <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>

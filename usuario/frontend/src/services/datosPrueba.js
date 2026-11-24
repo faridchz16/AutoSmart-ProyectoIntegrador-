@@ -1265,3 +1265,79 @@ export async function comprobantePrueba(pago) {
   const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 420 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${texto.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${texto}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
   return new Blob([pdf], { type: "application/pdf" });
 }
+
+/* ---------- Historial por placa (T72.2) y cobro en efectivo (T69.2), contratos de T72.1 y T69.1 ---------- */
+
+const vehiculosAdmin = {
+  "MNP-934": {
+    idVehiculo: 12, placa: "MNP-934", marca: "Nissan", modelo: "Sentra", anio: 2018, kilometraje: 87400,
+    propietario: { nombre: "Ricardo Paredes", correo: "ricardo.paredes@correo.com" },
+    mantenimientos: [
+      { idOrden: 2, idCita: 12, ticket: "AS-2026-00112", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", mecanico: "Carlos Quispe", fechaInicio: enHora(-1, "10:02"), fechaFin: enHora(-1, "10:58"), diagnostico: "Aceite degradado y filtro saturado; se reemplazaron.", costoRepuestos: 114.5 },
+      { idOrden: 14, idCita: 64, ticket: "AS-2026-00064", estado: "PAGADO", servicio: "Revisión de frenos", mecanico: "Miguel Rojas", fechaInicio: enHora(-75, "09:00"), fechaFin: enHora(-75, "10:15"), diagnostico: "Pastillas delanteras al 30 %; se recomienda cambio en 5000 km.", costoRepuestos: 0 },
+    ],
+  },
+  "BCD-456": {
+    idVehiculo: 7, placa: "BCD-456", marca: "Hyundai", modelo: "Accent", anio: 2017, kilometraje: 91200,
+    propietario: { nombre: "José Huamán", correo: "jose.huaman@correo.com" },
+    mantenimientos: [
+      { idOrden: 31, idCita: 131, ticket: "AS-2026-00091", estado: "FINALIZADA", servicio: "Revisión de frenos", mecanico: "Carlos Quispe", fechaInicio: enHora(-6, "09:00"), fechaFin: enHora(-6, "10:20"), diagnostico: "Pastillas delanteras gastadas y disco rayado.", costoRepuestos: 150 },
+    ],
+  },
+  "ABC-123": {
+    idVehiculo: 3, placa: "ABC-123", marca: "Toyota", modelo: "Yaris", anio: 2019, kilometraje: 58200,
+    propietario: { nombre: "Lucía Fernández", correo: "lucia.fernandez@correo.com" },
+    mantenimientos: [],
+  },
+};
+
+// Total que calcula el backend para cada orden (servicio + adicionales aprobados + repuestos)
+const totalesOrden = { 2: 204.5, 31: 230 };
+
+const porCobrarPrueba = [
+  { idCita: 12, ticket: "AS-2026-00112", fecha: fechaRelativa(-1), horaInicio: "10:00", horaFin: "11:00", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", precio: 90, cliente: "Ricardo Paredes", placa: "MNP-934", idMecanico: 2, mecanico: "Carlos Quispe" },
+  { idCita: 131, ticket: "AS-2026-00091", fecha: fechaRelativa(-6), horaInicio: "09:00", horaFin: "10:00", estado: "FINALIZADA", servicio: "Revisión de frenos", precio: 80, cliente: "José Huamán", placa: "BCD-456", idMecanico: 2, mecanico: "Carlos Quispe" },
+];
+
+export async function obtenerHistorialPlaca(placa) {
+  await esperar();
+  const v = vehiculosAdmin[placa.trim().toUpperCase()];
+  if (!v) throw conEstado(`No existe un vehiculo con la placa ${placa.trim().toUpperCase()}`, 404);
+  return { ...copia(v), totalMantenimientos: v.mantenimientos.length };
+}
+
+export async function listarPorCobrar() {
+  await esperar();
+  return porCobrarPrueba
+    .filter((c) => c.estado === "FINALIZADA")
+    .map((c) => ({ ...c, id: c.idCita }));
+}
+
+export async function registrarCobroEfectivo({ idOrden, monto, fecha, observacion }) {
+  await esperar(450);
+  const vehiculo = Object.values(vehiculosAdmin).find((v) => v.mantenimientos.some((m) => m.idOrden === idOrden));
+  const mant = vehiculo?.mantenimientos.find((m) => m.idOrden === idOrden);
+  if (!mant) throw conEstado("Orden de trabajo no encontrada", 404);
+  if (mant.estado === "PAGADO") throw conEstado("La orden ya fue pagada", 409);
+  const total = totalesOrden[idOrden] ?? 0;
+  if (monto < total) throw conEstado(`El monto recibido es menor al total de la orden (S/ ${total.toFixed(2)})`, 400);
+  mant.estado = "PAGADO";
+  const cita = porCobrarPrueba.find((c) => c.idCita === mant.idCita);
+  if (cita) cita.estado = "PAGADO";
+  const idPago = Math.max(...pagosPrueba.map((p) => p.idPago)) + 1;
+  const pago = {
+    idPago,
+    codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+    fecha: fecha || enHora(0, "12:00"),
+    ticket: mant.ticket,
+    cliente: vehiculo.propietario.nombre,
+    placa: vehiculo.placa,
+    metodo: "EFECTIVO",
+    estado: "APROBADO",
+    monto: total,
+    registradoPor: "admin@autosmart.com",
+    observacion,
+  };
+  pagosPrueba.unshift(pago);
+  return { ...pago, idOrden, motivoRechazo: null, comprobanteUrl: `/payments/${idPago}/receipt` };
+}
