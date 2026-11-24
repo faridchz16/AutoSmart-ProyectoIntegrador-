@@ -1120,3 +1120,36 @@ export async function editarMaterial(id, datos) {
   Object.assign(material, datos, { codigo: datos.codigo.trim().toUpperCase(), unidad: datos.unidad.trim().toLowerCase() });
   return copiaMaterial(material);
 }
+
+/* ---------- Calificaciones del mecánico (T67.2, contrato de T67.1) ---------- */
+
+const RESENAS_PRUEBA = [
+  [5, "Lucía F.", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!"],
+  [4, "José H.", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto."],
+  [5, "Andrea S.", null],
+  [3, "Diego M.", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo."],
+  [5, "Camila F.", "Excelente atención, el auto quedó como nuevo."],
+  [5, "Rosa P.", null],
+  [2, "Jorge R.", null],
+  [4, "Paola M.", "Amable y ordenado. Volvería."],
+];
+
+const calificacionesMecanico = RESENAS_PRUEBA.map(([estrellas, cliente, comentario], i) => ({
+  idCalificacion: 40 - i,
+  ticket: `AS-${fechaRelativa(-(i * 4 + 1)).replaceAll("-", "").slice(2)}-${String(14 + i * 3).padStart(4, "0")}`,
+  cliente,
+  estrellas,
+  comentario,
+  fecha: `${fechaRelativa(-(i * 4 + 1))}T${dosCifras(9 + (i % 8))}:${dosCifras((i * 13) % 60)}:00`,
+}));
+
+export async function obtenerMisCalificaciones() {
+  await esperar();
+  const total = calificacionesMecanico.length;
+  const suma = calificacionesMecanico.reduce((s, c) => s + c.estrellas, 0);
+  return {
+    promedio: total ? Math.round((suma / total) * 10) / 10 : null,
+    total,
+    calificaciones: copia(calificacionesMecanico),
+  };
+}

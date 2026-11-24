@@ -1,0 +1,160 @@
+/* ===== Mis calificaciones del mecánico (T67.2) ===== */
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.8fr) minmax(0, 1.7fr);
+  gap: 18px;
+  align-items: start;
+  transition: opacity 0.2s;
+}
+.cal-grid.actualizando { opacity: 0.6; }
+
+.cal-resumen,
+.cal-lista-caja {
+  padding: 20px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+}
+
+/* ---------- Resumen ---------- */
+.cal-resumen {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 16px;
+  background: linear-gradient(160deg, #fffbeb 0%, #fff 55%);
+}
+
+.cal-etiqueta {
+  margin: 0;
+  color: #7a8aa6;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cal-promedio { display: flex; align-items: center; gap: 14px; }
+.cal-promedio strong {
+  color: #0b1b3a;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cal-promedio > div { display: grid; gap: 6px; }
+.cal-promedio span:not(.estrellas, .estrella, .estrella-lleno) { color: #5b6b88; font-size: 0.88rem; font-weight: 600; }
+
+.cal-barras { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+
+.cal-barra {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #3b4a66;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.cal-barra:hover:not(:disabled) { background: #f7f9fd; }
+.cal-barra:focus-visible { outline: 3px solid #93b4ff; outline-offset: 1px; }
+.cal-barra:disabled { cursor: default; opacity: 0.55; }
+.cal-barra.activa { border-color: #f59e0b; background: #fffbeb; }
+
+.cal-barra-nota { font-weight: 700; white-space: nowrap; }
+.cal-barra-nota span[aria-hidden] { color: #f59e0b; }
+.cal-barra-pista { height: 8px; overflow: hidden; border-radius: 999px; background: #eef2f9; }
+.cal-barra-pista span { display: block; height: 100%; border-radius: 999px; background: #f59e0b; transition: width 0.4s; }
+.cal-barra-cant { color: #5b6b88; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+.cal-nota-pie { margin: 0; color: #7a8aa6; font-size: 0.8rem; line-height: 1.5; }
+
+/* ---------- Reseñas ---------- */
+.cal-lista-caja { display: grid; gap: 14px; }
+
+.cal-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cal-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #3b4a66;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cal-check input { width: 16px; height: 16px; accent-color: #1150e8; }
+
+.cal-filtro-activo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  color: #5b6b88;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+.cal-filtro-activo button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1150e8;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cal-filtro-activo button:hover { text-decoration: underline; }
+
+.cal-lista { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.cal-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #e3e9f5;
+  border-left: 4px solid #f59e0b;
+  border-radius: 12px;
+}
+.cal-item.nota-3 { border-left-color: #fbbf24; }
+.cal-item.nota-2,
+.cal-item.nota-1 { border-left-color: #f43f5e; }
+
+.cal-item-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.cal-item-cab strong { color: #0b1b3a; font-size: 0.94rem; }
+.cal-fecha { margin-left: auto; color: #7a8aa6; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+.cal-comentario { margin: 0; color: #3b4a66; font-size: 0.92rem; line-height: 1.5; overflow-wrap: anywhere; }
+.cal-sin-comentario { margin: 0; color: #9aa8c0; font-size: 0.88rem; font-style: italic; }
+.cal-ticket { color: #7a8aa6; font-size: 0.78rem; font-weight: 600; }
+
+.cal-vacio,
+.cal-cargando { margin: 0; padding: 24px 0; color: #7a8aa6; text-align: center; }
+
+@media (max-width: 860px) {
+  .cal-grid { grid-template-columns: 1fr; }
+  .cal-resumen { position: static; }
+}
+
+@media (max-width: 480px) {
+  .cal-resumen,
+  .cal-lista-caja { padding: 16px; }
+  .cal-promedio strong { font-size: 2.5rem; }
+  .cal-filtros .segmentos { width: 100%; }
+  .cal-filtros .segmentos button { flex: 1; }
+}

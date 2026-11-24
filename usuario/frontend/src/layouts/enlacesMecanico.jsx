@@ -66,6 +66,16 @@ export const ENLACES_MECANICO = [
     ),
   },
   {
+    to: "/mecanico/calificaciones",
+    texto: "Mis calificaciones",
+    descripcion: "Las estrellas y comentarios que te dejan los clientes.",
+    icono: (
+      <Icono>
+        <path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" />
+      </Icono>
+    ),
+  },
+  {
     to: "/mecanico/perfil",
     texto: "Mi perfil",
     descripcion: "Tus especialidades y años de experiencia.",
