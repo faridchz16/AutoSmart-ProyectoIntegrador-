@@ -1722,3 +1722,84 @@ export async function reprogramarMiCita(id, { fecha, horaInicio }) {
   Object.assign(c, { fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos), estado: "PENDIENTE" });
   return citaParaCliente(c);
 }
+
+/* ---------- Seguimiento y presupuesto del cliente (CLI-05) ---------- */
+
+// Orden de trabajo de las citas de la demo que ya se atendieron o se están atendiendo
+const ordenesCliente = {
+  128: { idOrden: 98, inicio: enHora(0, "08:05"), diagnostico: enHora(0, "08:40"), fin: null, avance: 40 },
+  125: { idOrden: 95, inicio: enHora(-1, "15:02"), diagnostico: enHora(-1, "15:15"), fin: enHora(-1, "15:52"), avance: 100 },
+  124: { idOrden: 80, inicio: enHora(-48, "08:31"), diagnostico: enHora(-48, "08:45"), fin: enHora(-48, "09:20"), avance: 100 },
+};
+const presupuestosCliente = {
+  98: {
+    idPresupuesto: 31, idOrden: 98, idCita: 128, estado: "PENDIENTE", fechaCreacion: enHora(0, "09:10"), fechaDecision: null,
+    descripcion: "Al revisar los frenos encontramos las pastillas delanteras casi gastadas y los discos con rayas. Recomendamos cambiarlas hoy para que frene con seguridad.",
+    items: [
+      { tipo: "REPUESTO", descripcion: "Pastillas de freno delanteras (juego)", cantidad: 1, precioUnitario: 145, subtotal: 145 },
+      { tipo: "MANO_OBRA", descripcion: "Rectificado de discos delanteros", cantidad: 2, precioUnitario: 30, subtotal: 60 },
+      { tipo: "REPUESTO", descripcion: "Líquido de frenos DOT 4 (500 ml)", cantidad: 1, precioUnitario: 35, subtotal: 35 },
+    ],
+    total: 240,
+    deficiencias: [
+      { idDeficiencia: 61, idOrden: 98, categoria: "FRENOS", severidad: "CRITICA", descripcion: "Pastillas delanteras con 10 % de vida útil; rozan el disco al frenar.", fechaRegistro: enHora(0, "08:35"), fotos: [{ idFoto: 91, src: fotoEjemplo("Pastillas delanteras", ["#7c2d12", "#ea580c"]) }, { idFoto: 92, src: fotoEjemplo("Disco con rayas", ["#1e293b", "#64748b"]) }] },
+      { idDeficiencia: 62, idOrden: 98, categoria: "FLUIDOS", severidad: "MODERADA", descripcion: "Líquido de frenos oscuro; le toca cambio.", fechaRegistro: enHora(0, "08:38"), fotos: [] },
+    ],
+  },
+  95: {
+    idPresupuesto: 29, idOrden: 95, idCita: 125, estado: "APROBADO", fechaCreacion: enHora(-1, "15:20"), fechaDecision: enHora(-1, "15:24"),
+    descripcion: "El escáner marcó una falla en el sensor de oxígeno. Se reemplazó para corregir el consumo de combustible.",
+    items: [
+      { tipo: "REPUESTO", descripcion: "Sensor de oxígeno", cantidad: 1, precioUnitario: 180, subtotal: 180 },
+      { tipo: "MANO_OBRA", descripcion: "Cambio del sensor", cantidad: 1, precioUnitario: 40, subtotal: 40 },
+    ],
+    total: 220,
+    deficiencias: [{ idDeficiencia: 55, idOrden: 95, categoria: "MOTOR", severidad: "MODERADA", descripcion: "Código P0134: sensor de oxígeno sin respuesta.", fechaRegistro: enHora(-1, "15:14"), fotos: [] }],
+  },
+};
+
+
+export async function seguimientoCita(idCita) {
+  await esperar();
+  const c = citaDelCliente(idCita);
+  const o = ordenesCliente[c.idCita] ?? null;
+  const p = o ? presupuestosCliente[o.idOrden] : null;
+  const linea = [{ clave: "RESERVADA", titulo: "Cita reservada", completado: true, fecha: null, detalle: `Turno del ${c.fecha} a las ${c.horaInicio}` }];
+  if (c.estado === "CANCELADA" || c.estado === "RECHAZADA") {
+    linea.push({ clave: c.estado, titulo: c.estado === "RECHAZADA" ? "Cita rechazada" : "Cita cancelada", completado: true, fecha: null, detalle: c.estado === "RECHAZADA" ? "El mecánico tiene una capacitación ese día." : null });
+  } else {
+    const terminada = c.estado === "FINALIZADA" || c.estado === "PAGADO";
+    linea.push({ clave: "CONFIRMADA", titulo: "Cita confirmada por el mecánico", completado: c.estado !== "PENDIENTE", fecha: null, detalle: null });
+    linea.push({ clave: "RECIBIDO", titulo: "Vehículo recibido en el taller", completado: !!o, fecha: o?.inicio ?? null, detalle: null });
+    linea.push({ clave: "DIAGNOSTICO", titulo: "Diagnóstico registrado", completado: !!o?.diagnostico, fecha: o?.diagnostico ?? null, detalle: null });
+    if (p) {
+      const decidido = !!p.fechaDecision;
+      linea.push({ clave: "PRESUPUESTO", titulo: decidido ? "Presupuesto respondido" : "Presupuesto enviado (espera tu aprobación)", completado: decidido, fecha: decidido ? p.fechaDecision : p.fechaCreacion, detalle: `Total S/ ${p.total.toFixed(2)} - ${p.estado}` });
+    }
+    linea.push({ clave: "EN_REPARACION", titulo: "Reparación en curso", completado: terminada, fecha: null, detalle: o ? `Avance: ${o.avance} %` : null });
+    linea.push({ clave: "FINALIZADA", titulo: "Vehículo listo para recoger", completado: terminada, fecha: o?.fin ?? null, detalle: null });
+    linea.push({ clave: "PAGADO", titulo: "Servicio pagado", completado: c.estado === "PAGADO", fecha: null, detalle: null });
+  }
+
+  return { idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, placa: c.placa, mecanico: c.mecanico, fecha: c.fecha, horaInicio: c.horaInicio, porcentajeAvance: o?.avance ?? 0, lineaDeTiempo: linea };
+}
+
+export async function presupuestoCita(idCita) {
+  await esperar();
+  const c = citaDelCliente(idCita);
+  const o = ordenesCliente[c.idCita];
+  if (!o) throw conEstado("La cita aun no tiene presupuesto", 404);
+  const p = presupuestosCliente[o.idOrden];
+  if (!p) throw conEstado("La orden aun no tiene presupuesto", 404);
+  return copia(p);
+}
+
+export async function decidirPresupuesto(idPresupuesto, { decision }) {
+  await esperar(450);
+  const p = Object.values(presupuestosCliente).find((x) => x.idPresupuesto === Number(idPresupuesto));
+  if (!p) throw conEstado("Presupuesto no encontrado", 404);
+  if (p.estado !== "PENDIENTE") throw conEstado(`El presupuesto ya fue ${p.estado}`, 409);
+  Object.assign(p, { estado: decision, fechaDecision: ahoraLima() });
+  citaDelCliente(p.idCita).estado = "EN_PROCESO";
+  return copia(p);
+}

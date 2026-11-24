@@ -270,3 +270,6 @@
 @media (prefers-reduced-motion: reduce) {
   .chat-panel, .chat-typing span, .chat-launcher { animation: none; }
 }
+
+/* En el panel del cliente el botón del asistente comparte la esquina con los avisos: los avisos suben */
+body:has(.chat-launcher-wrap) .aviso-zona { bottom: 92px; }

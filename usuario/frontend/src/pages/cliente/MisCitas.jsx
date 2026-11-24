@@ -27,6 +27,7 @@ import "./MisCitas.css";
    - Próximas y en curso (de la más cercana a la más lejana) e Historial (de la más reciente a la más antigua)
    - Cada cita muestra su estado explicado para el cliente
    - Cancelar (hasta 2 horas antes) y reprogramar con los turnos libres del mismo mecánico (hasta 24 horas antes)
+   - "Ver seguimiento" / "Revisar presupuesto" abren el detalle de la atención (CLI-05)
    ?nueva=ID resalta la cita recién reservada. */
 
 const PESTANAS = [
@@ -107,27 +108,37 @@ function TarjetaCita({ cita, nueva, alCancelar, alReprogramar }) {
           {sinAtender ? "La hora de esta cita ya pasó y no llegó a atenderse. Si aún lo necesitas, reserva una nueva." : estado.detalle}
         </p>
 
-        {activa && !sinAtender && (
-          <div className="cit-acciones">
-            {reprogramable && (
-              <button type="button" className="btn btn-sec" onClick={() => alReprogramar(cita)}>
-                Cambiar fecha u hora
-              </button>
-            )}
-            {cancelable && (
-              <button type="button" className="btn btn-sec cit-cancelar" onClick={() => alCancelar(cita)}>
-                Cancelar cita
-              </button>
-            )}
-            {!reprogramable && (
-              <p className="cit-regla">
-                {cancelable
-                  ? `Faltan menos de ${HORAS_REPROGRAMAR} horas: ya no se puede cambiar el horario, pero aún puedes cancelarla.`
-                  : `Faltan menos de ${HORAS_CANCELAR} horas: ya no se puede cancelar ni cambiar. Si no puedes venir, avisa al taller.`}
-              </p>
-            )}
-          </div>
-        )}
+        <div className="cit-acciones">
+          {cita.estado === "ESPERA_APROBACION" && (
+            <Link to={`/cliente/citas/${cita.id}#presupuesto`} className="btn btn-pri">
+              Revisar presupuesto
+            </Link>
+          )}
+          <Link to={`/cliente/citas/${cita.id}`} className="btn btn-sec">
+            {cita.estado === "EN_PROCESO" || cita.estado === "ESPERA_APROBACION" ? "Ver avance" : "Ver seguimiento"}
+          </Link>
+          {activa && !sinAtender && (
+            <>
+              {reprogramable && (
+                <button type="button" className="btn btn-sec" onClick={() => alReprogramar(cita)}>
+                  Cambiar fecha u hora
+                </button>
+              )}
+              {cancelable && (
+                <button type="button" className="btn btn-sec cit-cancelar" onClick={() => alCancelar(cita)}>
+                  Cancelar cita
+                </button>
+              )}
+              {!reprogramable && (
+                <p className="cit-regla">
+                  {cancelable
+                    ? `Faltan menos de ${HORAS_REPROGRAMAR} horas: ya no se puede cambiar el horario, pero aún puedes cancelarla.`
+                    : `Faltan menos de ${HORAS_CANCELAR} horas: ya no se puede cancelar ni cambiar. Si no puedes venir, avisa al taller.`}
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </li>
   );
