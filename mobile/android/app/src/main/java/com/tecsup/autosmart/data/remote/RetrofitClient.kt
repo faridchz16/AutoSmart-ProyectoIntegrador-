@@ -123,6 +123,16 @@ object RetrofitClient {
             .create(MecanicoApi::class.java)
     }
 
+    // Sprint 4 · T75.2: chatbot del taller (POST /chatbot/messages)
+    val chatbotApi: ChatbotApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ChatbotApi::class.java)
+    }
+
     val fotoApi: FotoApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)

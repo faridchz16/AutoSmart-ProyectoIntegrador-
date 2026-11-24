@@ -5,12 +5,27 @@ import com.tecsup.autosmart.data.remote.RetrofitClient
 import com.tecsup.autosmart.data.remote.VehiculoApi
 import com.google.gson.JsonParser
 import com.tecsup.autosmart.data.remote.mensajeDeError
+import com.tecsup.autosmart.model.CalificacionDto
+import com.tecsup.autosmart.model.CalificacionRequest
 import com.tecsup.autosmart.model.CostoOrdenDto
 import com.tecsup.autosmart.model.MetodoPagoDto
 import com.tecsup.autosmart.model.PagoDto
 import com.tecsup.autosmart.model.PagoRequest
 import kotlinx.coroutines.CancellationException
 import java.io.IOException
+
+/** Toma el nombre del PDF de Content-Disposition (filename="...") o arma uno por defecto. */
+fun nombreDeArchivo(disposicion: String?, idPago: Long): String {
+    val nombre = disposicion?.let { Regex("filename\\*?=(?:UTF-8'')?\"?([^\";]+)\"?").find(it)?.groupValues?.get(1) }
+        ?.substringAfterLast('/')?.trim()
+    return nombre?.takeIf { it.endsWith(".pdf", ignoreCase = true) } ?: "comprobante-$idPago.pdf"
+}
+
+/** Comprobante PDF descargado (T64.2). */
+class ComprobantePdf(val nombre: String, val bytes: ByteArray)
+
+/** El servicio ya tenía una calificación (409 del backend). */
+class YaCalificadoException(mensaje: String) : Exception(mensaje)
 
 /** Error de red al pagar: el cobro pudo hacerse, hay que comprobar antes de reintentar. */
 class PagoSinConfirmarException(causa: Throwable) :
@@ -89,6 +104,35 @@ class PagoRepository(
             json.get(clave)?.takeIf { it.isJsonPrimitive }?.asString?.takeIf { it.isNotBlank() }
         }
     }.getOrNull() ?: mensajeDeError(cuerpo, codigo)
+
+    /** T64.2: GET /payments/{id}/receipt devuelve el PDF del pago aprobado. */
+    suspend fun comprobante(idPago: Long): Result<ComprobantePdf> = consultar("No se pudo descargar el comprobante. Revisa tu conexión.") {
+        require(idPago > 0) { "El pago no es válido." }
+        val r = api.comprobante(idPago)
+        if (!r.isSuccessful) throw Exception(errorDe(r.errorBody()?.string(), r.code()))
+        val bytes = r.body()?.bytes() ?: ByteArray(0)
+        require(bytes.size > 4 && String(bytes, 0, 4, Charsets.US_ASCII) == "%PDF") {
+            "El servidor no devolvió un comprobante válido."
+        }
+        ComprobantePdf(nombreDeArchivo(r.headers()["Content-Disposition"], idPago), bytes)
+    }
+
+    /** T65.2: POST /work-orders/{id}/rating. Un 409 significa que ya se calificó. */
+    suspend fun calificar(idOrden: Long, estrellas: Int, comentario: String): Result<CalificacionDto> =
+        consultar("No se pudo enviar tu calificación. Revisa tu conexión.") {
+            require(idOrden > 0) { "La orden no es válida." }
+            require(estrellas in 1..5) { "Elige de 1 a 5 estrellas." }
+            val texto = comentario.trim().takeIf { it.isNotEmpty() }
+            require((texto?.length ?: 0) <= 500) { "El comentario puede tener hasta 500 caracteres." }
+            val r = api.calificar(idOrden, CalificacionRequest(estrellas, texto))
+            if (r.code() == 409) throw YaCalificadoException(errorDe(r.errorBody()?.string(), r.code()))
+            if (!r.isSuccessful) throw Exception(errorDe(r.errorBody()?.string(), r.code()))
+            val body = r.body()
+            require(body != null && body.idOrden == idOrden && body.estrellas == estrellas) {
+                "El servidor no confirmó tu calificación."
+            }
+            body
+        }
 
     private suspend fun <T> consultar(mensajeRed: String, bloque: suspend () -> T): Result<T> = try {
         Result.success(bloque())

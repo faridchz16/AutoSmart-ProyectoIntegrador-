@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -672,6 +674,33 @@ fun MecanicoCard(
                     text = mecanico.nombre,
                     fontWeight = FontWeight.Bold
                 )
+                // T66.1: estrellas y número de reseñas
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val promedio = mecanico.calificacionPromedio
+                    if (promedio != null && mecanico.totalResenas > 0) {
+                        (1..5).forEach { n ->
+                            Icon(
+                                imageVector = if (n <= Math.round(promedio).toInt()) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = null,
+                                tint = Color(0xFFF59E0B),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = String.format(java.util.Locale.US, "%.1f", promedio) +
+                                " (${mecanico.totalResenas} " + (if (mecanico.totalResenas == 1L) "reseña)" else "reseñas)"),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else {
+                        Text(
+                            text = "Nuevo · sin reseñas aún",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Text(
                     text = "Experiencia: " +
                             "${mecanico.aniosExperiencia} años",

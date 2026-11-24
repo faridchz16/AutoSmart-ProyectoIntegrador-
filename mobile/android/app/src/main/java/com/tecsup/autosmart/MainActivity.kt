@@ -456,7 +456,8 @@ class MainActivity : ComponentActivity() {
                                 AsistenteScreen(
                                     viewModel = asistenteVm,
                                     onBack = { currentScreen = "vehiculos" },
-                                    onReservar = { currentScreen = "servicios" }
+                                    onReservar = { currentScreen = "servicios" },
+                                    onMisCitas = { currentScreen = "mis_citas" }
                                 )
                             }
 

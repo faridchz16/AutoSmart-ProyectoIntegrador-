@@ -2,7 +2,10 @@ package com.tecsup.autosmart.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tecsup.autosmart.data.repository.ComprobantePdf
 import com.tecsup.autosmart.data.repository.PagoRepository
+import com.tecsup.autosmart.data.repository.YaCalificadoException
+import com.tecsup.autosmart.model.CalificacionDto
 import com.tecsup.autosmart.data.repository.PagoSinConfirmarException
 import com.tecsup.autosmart.model.CostoOrdenDto
 import com.tecsup.autosmart.model.MetodoPagoDto
@@ -47,8 +50,27 @@ data class PagoUiState(
     /** Último intento: APROBADO o RECHAZADO (con motivo). */
     val resultado: PagoDto? = null,
     /** La red falló al pagar: hay que comprobar antes de reintentar (evita doble cobro). */
-    val sinConfirmar: String? = null
+    val sinConfirmar: String? = null,
+    // T64.2: comprobante en PDF
+    val descargando: Boolean = false,
+    val pdfListo: ComprobantePdf? = null,
+    val mensajeComprobante: String? = null,
+    // T65.2: calificación al mecánico
+    val estrellas: Int = 0,
+    val comentario: String = "",
+    val calificando: Boolean = false,
+    val calificacion: CalificacionDto? = null,
+    val yaCalificado: Boolean = false,
+    val errorCalificacion: String? = null
 ) {
+    /** Id del pago aprobado (recién hecho o ya registrado) para pedir su comprobante. */
+    val idPagoAprobado: Long?
+        get() = resultado?.takeIf { it.estado == "APROBADO" }?.idPago ?: costo?.pago?.idPago
+
+    /** Se puede calificar un servicio finalizado o pagado (una sola vez). */
+    val puedeCalificar: Boolean
+        get() = costo != null && (costo.estadoCita in setOf("FINALIZADA", "PAGADO") || pagado)
+
     val metodo: MetodoPagoDto? get() = metodos.firstOrNull { it.codigo == metodoElegido }
     val pagado: Boolean get() = costo?.pago != null || resultado?.estado == "APROBADO"
 }
@@ -185,6 +207,52 @@ class PagoViewModel(private val repositorio: PagoRepository = PagoRepository()) 
 
     private fun error(mensaje: String) {
         _estado.update { it.copy(errorDatos = mensaje) }
+    }
+
+    /** T64.2: descarga el PDF; la pantalla lo guarda en Descargas y lo abre. */
+    fun descargarComprobante() {
+        val idPago = _estado.value.idPagoAprobado ?: return
+        if (_estado.value.descargando) return
+        viewModelScope.launch {
+            _estado.update { it.copy(descargando = true, mensajeComprobante = null) }
+            repositorio.comprobante(idPago)
+                .onSuccess { pdf -> _estado.update { it.copy(descargando = false, pdfListo = pdf) } }
+                .onFailure { e -> _estado.update { it.copy(descargando = false, mensajeComprobante = e.message) } }
+        }
+    }
+
+    fun comprobanteGuardado(mensaje: String) = _estado.update { it.copy(pdfListo = null, mensajeComprobante = mensaje) }
+
+    // T65.2: calificación con estrellas y comentario
+    fun elegirEstrellas(n: Int) {
+        if (!_estado.value.calificando) _estado.update { it.copy(estrellas = n.coerceIn(1, 5), errorCalificacion = null) }
+    }
+
+    fun editarComentario(texto: String) {
+        if (!_estado.value.calificando) _estado.update { it.copy(comentario = texto.take(500), errorCalificacion = null) }
+    }
+
+    fun marcarYaCalificado() = _estado.update { it.copy(yaCalificado = true) }
+
+    fun calificar() {
+        val actual = _estado.value
+        val costo = actual.costo ?: return
+        if (actual.calificando || actual.calificacion != null || actual.yaCalificado) return
+        if (actual.estrellas !in 1..5) {
+            _estado.update { it.copy(errorCalificacion = "Elige de 1 a 5 estrellas.") }
+            return
+        }
+        viewModelScope.launch {
+            _estado.update { it.copy(calificando = true, errorCalificacion = null) }
+            repositorio.calificar(costo.idOrden, actual.estrellas, actual.comentario)
+                .onSuccess { c -> _estado.update { it.copy(calificando = false, calificacion = c) } }
+                .onFailure { e ->
+                    _estado.update {
+                        if (e is YaCalificadoException) it.copy(calificando = false, yaCalificado = true)
+                        else it.copy(calificando = false, errorCalificacion = e.message ?: "No se pudo enviar tu calificación.")
+                    }
+                }
+        }
     }
 
     fun limpiar() {

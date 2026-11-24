@@ -15,6 +15,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Info
@@ -83,6 +86,20 @@ fun PagoScreen(
         if (idOrden > 0) viewModel.iniciar(idOrden) else viewModel.iniciarDesdeCita(idCita, placa)
     }
     BackHandler(enabled = estado.pagando) { }
+
+    // T64.2: cuando llega el PDF, se guarda en Descargas y se abre
+    val contexto = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(estado.pdfListo) {
+        estado.pdfListo?.let { pdf -> viewModel.comprobanteGuardado(ComprobanteArchivo.guardarYAbrir(contexto, pdf)) }
+    }
+    // T65.2: no volver a pedir la calificación de un servicio ya calificado en este celular
+    LaunchedEffect(estado.costo?.idOrden) {
+        estado.costo?.idOrden?.let { if (CalificacionesLocales.contiene(contexto, it)) viewModel.marcarYaCalificado() }
+    }
+    LaunchedEffect(estado.calificacion, estado.yaCalificado) {
+        val id = estado.costo?.idOrden
+        if (id != null && (estado.calificacion != null || estado.yaCalificado)) CalificacionesLocales.guardar(contexto, id)
+    }
 
     val c = coloresCliente()
     val horizontal = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -292,7 +309,10 @@ private fun SeccionPago(
                 metodo = aprobado?.metodo ?: costo.pago?.metodo,
                 fecha = aprobado?.fecha ?: costo.pago?.fecha,
                 monto = aprobado?.monto ?: costo.total,
-                onBack = onBack
+                onBack = onBack,
+                descargando = estado.descargando,
+                mensajeComprobante = estado.mensajeComprobante,
+                onComprobante = viewModel::descargarComprobante
             )
 
             estado.sinConfirmar != null -> Aviso(
@@ -336,6 +356,71 @@ private fun SeccionPago(
                     }
                 }
             }
+        }
+        // T65.2: calificar al mecánico cuando el servicio ya terminó
+        if (estado.puedeCalificar) TarjetaCalificacion(estado, viewModel)
+    }
+}
+
+/** T65.2: estrellas de 1 a 5 y comentario opcional; solo se califica una vez por servicio. */
+@Composable
+private fun TarjetaCalificacion(estado: PagoUiState, viewModel: PagoViewModel) {
+    val c = coloresCliente()
+    val textos = listOf("", "Muy malo", "Malo", "Regular", "Bueno", "¡Excelente!")
+    Tarjeta {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val hecha = estado.calificacion
+            when {
+                hecha != null -> {
+                    Text("¡Gracias por tu calificación!", color = c.texto, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Estrellas(hecha.estrellas, tamano = 30, onElegir = null)
+                    hecha.comentario?.takeIf { it.isNotBlank() }?.let { Text("“$it”", color = c.textoSecundario, fontSize = 14.sp) }
+                    hecha.mecanico?.let { Text("Se la enviamos a $it.", color = c.textoSecundario, fontSize = 13.sp) }
+                }
+                estado.yaCalificado -> {
+                    Text("Ya calificaste este servicio", color = c.texto, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("Solo se puede calificar una vez por servicio. ¡Gracias por tu opinión!", color = c.textoSecundario, fontSize = 14.sp)
+                }
+                else -> {
+                    Text("¿Cómo te atendió el mecánico?", color = c.texto, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Tu calificación ayuda a otros clientes a elegir.", color = c.textoSecundario, fontSize = 13.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Estrellas(estado.estrellas, tamano = 36, onElegir = if (estado.calificando) null else viewModel::elegirEstrellas)
+                        Spacer(Modifier.width(10.dp))
+                        Text(textos[estado.estrellas.coerceIn(0, 5)], color = c.azul, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedTextField(
+                        value = estado.comentario,
+                        onValueChange = viewModel::editarComentario,
+                        label = { Text("Comentario (opcional)") },
+                        enabled = !estado.calificando,
+                        minLines = 2, maxLines = 4,
+                        supportingText = { Text("${estado.comentario.length}/500") },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    estado.errorCalificacion?.let { Text(it, color = c.rojo, fontSize = 14.sp) }
+                    BotonPrincipal(if (estado.calificando) "Enviando..." else "Enviar calificación",
+                        enabled = !estado.calificando && estado.estrellas > 0, onClick = viewModel::calificar)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Estrellas(valor: Int, tamano: Int, onElegir: ((Int) -> Unit)?) {
+    Row {
+        (1..5).forEach { n ->
+            val llena = n <= valor
+            Icon(
+                if (llena) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                contentDescription = "$n estrellas",
+                tint = if (llena) Color(0xFFF59E0B) else Color(0xFF94A3B8),
+                modifier = Modifier
+                    .size(tamano.dp)
+                    .then(if (onElegir != null) Modifier.clickable { onElegir(n) } else Modifier)
+            )
         }
     }
 }
@@ -490,7 +575,10 @@ private fun PagoRechazado(pago: PagoDto, onReintentar: () -> Unit) {
 }
 
 @Composable
-private fun PagoExitoso(codigo: String?, metodo: String?, fecha: String?, monto: BigDecimal?, onBack: () -> Unit) {
+private fun PagoExitoso(
+    codigo: String?, metodo: String?, fecha: String?, monto: BigDecimal?, onBack: () -> Unit,
+    descargando: Boolean = false, mensajeComprobante: String? = null, onComprobante: () -> Unit = {}
+) {
     val c = coloresCliente()
     Tarjeta {
         Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -503,6 +591,20 @@ private fun PagoExitoso(codigo: String?, metodo: String?, fecha: String?, monto:
             DatoPago("Método", nombreMetodo(metodo))
             DatoPago("Fecha", fecha?.replace('T', ' ') ?: "-")
             Spacer(Modifier.height(16.dp))
+            // T64.2: comprobante en PDF
+            OutlinedButton(
+                onClick = onComprobante, enabled = !descargando, shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                if (descargando) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                else Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (descargando) "Descargando..." else "Descargar comprobante (PDF)")
+            }
+            mensajeComprobante?.let {
+                Text(it, color = c.textoSecundario, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+            Spacer(Modifier.height(10.dp))
             BotonPrincipal("Listo", onClick = onBack)
         }
     }

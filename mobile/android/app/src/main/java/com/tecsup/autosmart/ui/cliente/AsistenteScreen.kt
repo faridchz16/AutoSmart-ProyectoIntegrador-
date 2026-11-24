@@ -23,7 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.RequestQuote
+import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Refresh
@@ -45,7 +52,8 @@ import com.tecsup.autosmart.R
 import com.tecsup.autosmart.ui.auth.fondoAuth
 import com.tecsup.autosmart.viewmodel.AsistenteViewModel
 import com.tecsup.autosmart.viewmodel.MensajeChat
-import com.tecsup.autosmart.viewmodel.OPCIONES_RAPIDAS
+import com.tecsup.autosmart.viewmodel.OPCION_MIS_CITAS
+import com.tecsup.autosmart.viewmodel.TarjetaChat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,7 +68,8 @@ private val MarcaFuerte = Color(0xFF1150E8)
 fun AsistenteScreen(
     viewModel: AsistenteViewModel,
     onBack: () -> Unit,
-    onReservar: () -> Unit
+    onReservar: () -> Unit,
+    onMisCitas: () -> Unit = {}
 ) {
     val estado by viewModel.estado.collectAsState()
     val c = coloresCliente()
@@ -110,6 +119,10 @@ fun AsistenteScreen(
                     Text(if (estado.escribiendo) "Escribiendo…" else "En línea · con IA", color = Color(0xFFDCE6F8), fontSize = 13.sp)
                 }
             }
+            // T79.2: botón "Hablar con un asesor"
+            IconButton(onClick = viewModel::pedirAsesor, enabled = !estado.escribiendo) {
+                Icon(Icons.Outlined.SupportAgent, contentDescription = "Hablar con un asesor", tint = Color.White)
+            }
             IconButton(onClick = viewModel::limpiar, enabled = !estado.escribiendo) {
                 Icon(Icons.Outlined.Refresh, contentDescription = "Nueva conversación", tint = Color.White)
             }
@@ -122,20 +135,20 @@ fun AsistenteScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(estado.mensajes, key = { it.id }) { m ->
-                Burbuja(m, onReservar = onReservar, onReintentar = viewModel::reintentar)
+                Burbuja(m, onReservar = onReservar, onMisCitas = onMisCitas, onReintentar = viewModel::reintentar)
             }
             if (estado.escribiendo) item(key = "escribiendo") { Escribiendo() }
         }
 
-        // Opciones rápidas (T75.2)
+        // Opciones rápidas (T75.2): las que propone el asistente en su último mensaje
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(bottom = 6.dp)
         ) {
-            items(OPCIONES_RAPIDAS) { opcion ->
+            items(estado.opcionesActuales) { opcion ->
                 SuggestionChip(
-                    onClick = { viewModel.enviar(opcion) },
+                    onClick = { if (opcion == OPCION_MIS_CITAS) onMisCitas() else viewModel.enviar(opcion) },
                     enabled = !estado.escribiendo,
                     label = { Text(opcion, fontSize = 13.sp) },
                     shape = RoundedCornerShape(16.dp)
@@ -216,7 +229,7 @@ private fun AvatarAuto(tamano: androidx.compose.ui.unit.Dp, borde: Boolean = fal
 }
 
 @Composable
-private fun Burbuja(m: MensajeChat, onReservar: () -> Unit, onReintentar: () -> Unit) {
+private fun Burbuja(m: MensajeChat, onReservar: () -> Unit, onMisCitas: () -> Unit, onReintentar: () -> Unit) {
     val c = coloresCliente()
     Row(
         Modifier.fillMaxWidth(),
@@ -248,6 +261,15 @@ private fun Burbuja(m: MensajeChat, onReservar: () -> Unit, onReintentar: () -> 
                         modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp).clip(RoundedCornerShape(12.dp))
                     )
                 }
+                if (m.conIA) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = c.azulSuave) {
+                        Row(Modifier.padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = c.azul, modifier = Modifier.size(12.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Respuesta con IA · referencial", color = c.azul, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
                 Text(
                     m.texto,
                     color = when {
@@ -257,19 +279,81 @@ private fun Burbuja(m: MensajeChat, onReservar: () -> Unit, onReintentar: () -> 
                     },
                     fontSize = 15.sp, lineHeight = 21.sp
                 )
-                if (m.reservar) {
-                    Button(
-                        onClick = onReservar, shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MarcaFuerte, contentColor = Color.White)
-                    ) {
-                        Icon(Icons.Outlined.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Reservar cita")
-                    }
-                }
+                m.tarjeta?.let { Tarjeta(it, onReservar = onReservar, onMisCitas = onMisCitas) }
                 if (m.error) TextButton(onClick = onReintentar) { Text("Reintentar") }
             }
         }
+    }
+}
+
+/** Tarjetas del chat: estado (T76.2), cotización (T77.1), agendar (T78.2) y asesor (T79.2). */
+@Composable
+private fun Tarjeta(t: TarjetaChat, onReservar: () -> Unit, onMisCitas: () -> Unit) {
+    val c = coloresCliente()
+    Surface(shape = RoundedCornerShape(14.dp), color = c.azulSuave, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            when (t) {
+                is TarjetaChat.Estado -> {
+                    FilaTarjeta(Icons.Outlined.DirectionsCar, "Ticket ${t.ticket ?: "-"} · ${t.placa ?: ""}")
+                    Text((t.estado ?: "-").replace('_', ' '), color = c.azul, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    t.avance?.let { avance ->
+                        LinearProgressIndicator(
+                            progress = { (avance.coerceIn(0, 100)) / 100f },
+                            color = MarcaFuerte, trackColor = c.borde,
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                        )
+                        Text("$avance % de avance", color = c.textoSecundario, fontSize = 12.sp)
+                    }
+                    TextButton(onClick = onMisCitas, contentPadding = PaddingValues(0.dp)) { Text("Ver seguimiento en Mis citas") }
+                }
+                is TarjetaChat.Cotizacion -> {
+                    FilaTarjeta(Icons.Outlined.RequestQuote, t.servicio ?: "Servicio")
+                    Text(rango(t.desde, t.hasta), color = c.texto, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+                    Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFB45309).copy(alpha = 0.14f)) {
+                        Text("Precio referencial: el costo final se confirma en el taller.", color = Color(0xFFB45309),
+                            fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+                    }
+                    TextButton(onClick = onReservar, contentPadding = PaddingValues(0.dp)) { Text("Reservar desde la app") }
+                }
+                is TarjetaChat.Resumen -> {
+                    Text("Resumen de tu cita", color = c.texto, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    FilaTarjeta(Icons.Outlined.Build, t.servicio ?: "-")
+                    FilaTarjeta(Icons.Outlined.DirectionsCar, t.placa ?: "-")
+                    FilaTarjeta(Icons.Outlined.CalendarMonth, listOfNotNull(t.fecha, t.hora).joinToString(" · "))
+                    t.mecanico?.let { FilaTarjeta(Icons.Outlined.Person, it) }
+                    Text("Toca Confirmar para registrar la cita o Cancelar para salir.", color = c.textoSecundario, fontSize = 12.sp)
+                }
+                is TarjetaChat.CitaCreada -> {
+                    FilaTarjeta(Icons.Outlined.EventAvailable, "Cita ${t.ticket ?: ""} registrada")
+                    Text("Estado: ${(t.estado ?: "PENDIENTE").replace('_', ' ')}", color = c.textoSecundario, fontSize = 13.sp)
+                    TextButton(onClick = onMisCitas, contentPadding = PaddingValues(0.dp)) { Text(OPCION_MIS_CITAS) }
+                }
+                is TarjetaChat.Derivacion -> {
+                    FilaTarjeta(Icons.Outlined.SupportAgent, "Solicitud N.° ${t.numero ?: "-"}")
+                    Text("Un asesor del taller te contactará en horario de atención.", color = c.textoSecundario, fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilaTarjeta(icono: androidx.compose.ui.graphics.vector.ImageVector, texto: String) {
+    val c = coloresCliente()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icono, contentDescription = null, tint = c.azul, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(texto, color = c.texto, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun rango(desde: Double?, hasta: Double?): String {
+    fun s(v: Double) = "S/ " + String.format(java.util.Locale.US, "%.2f", v)
+    return when {
+        desde != null && hasta != null && hasta > desde -> "${s(desde)} – ${s(hasta)}"
+        desde != null -> s(desde)
+        hasta != null -> s(hasta)
+        else -> "Consultar en el taller"
     }
 }
 

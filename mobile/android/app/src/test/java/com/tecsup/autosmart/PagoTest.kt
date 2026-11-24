@@ -119,6 +119,9 @@ class PagoTest {
             override suspend fun costo(idOrden: Long) = costo(idOrden)
             override suspend fun metodos() = metodos()
             override suspend fun pagar(request: PagoRequest) = pagar(request)
+            override suspend fun comprobante(idPago: Long): Response<okhttp3.ResponseBody> = error("no usado")
+            override suspend fun calificar(idOrden: Long, request: com.tecsup.autosmart.model.CalificacionRequest):
+                Response<com.tecsup.autosmart.model.CalificacionDto> = error("no usado")
         },
         vehiculos = object : VehiculoApi {
             override suspend fun historial(id: Long) = historial(id)

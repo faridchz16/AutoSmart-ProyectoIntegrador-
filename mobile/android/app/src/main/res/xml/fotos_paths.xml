@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <cache-path name="evidencias" path="fotos_deficiencias/" />
+    <!-- T64.2: comprobantes de pago en Android 9 o menos -->
+    <external-files-path name="comprobantes" path="Download/" />
 </paths>

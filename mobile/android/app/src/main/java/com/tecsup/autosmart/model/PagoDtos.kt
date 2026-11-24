@@ -40,6 +40,18 @@ data class MetodoPagoDto(val codigo: String, val nombre: String?, val enLinea: B
 /** POST /payments (T63.1) */
 data class PagoRequest(val idOrden: Long, val metodo: String, val tokenPago: String)
 
+/** POST /work-orders/{id}/rating (T65.1): 1 a 5 estrellas, una vez por servicio */
+data class CalificacionRequest(val estrellas: Int, val comentario: String?)
+
+data class CalificacionDto(
+    val idCalificacion: Long,
+    val idOrden: Long,
+    val mecanico: String?,
+    val estrellas: Int,
+    val comentario: String?,
+    val fecha: String?
+)
+
 data class PagoDto(
     val idPago: Long,
     val codigo: String?,
