@@ -1187,3 +1187,33 @@ export async function listarHistorialMecanico({ desde, hasta }) {
   const fin = hasta || fechaRelativa(0);
   return copia(historialMecanico.filter((o) => (!desde || o.fechaFin.slice(0, 10) >= desde) && o.fechaFin.slice(0, 10) <= fin));
 }
+
+/* ---------- Indicadores del taller (T73.2, contrato de T73.1) ---------- */
+
+export async function obtenerMetricas(mes) {
+  await esperar(250);
+  const actual = fechaRelativa(0).slice(0, 7);
+  const vacio = mes > actual || mes < "2026-08";
+  const k = vacio ? 0 : mes === actual ? 1 : 0.55 + ((Number(mes.slice(5)) * 37) % 40) / 100;
+  const n = (x) => Math.round(x * k);
+  const s = (x) => Math.round(x * k * 100) / 100;
+  return {
+    mes,
+    totalCitas: n(42),
+    citasPorEstado: {
+      PENDIENTE: n(4),
+      CONFIRMADA: n(6),
+      RECHAZADA: n(1),
+      CANCELADA: n(3),
+      EN_PROCESO: n(2),
+      ESPERA_APROBACION: n(1),
+      FINALIZADA: n(5),
+      PAGADO: n(20),
+    },
+    ingresos: s(1820) + s(1090.5) + s(540),
+    ingresosPorMetodo: { TARJETA: s(1820), YAPE_PLIN: s(1090.5), EFECTIVO: s(540) },
+    tiempoPromedioMinutos: n(84),
+    calificacionPromedio: vacio ? null : mes === actual ? 4.3 : 4.1,
+    totalCalificaciones: vacio ? 0 : n(6),
+  };
+}

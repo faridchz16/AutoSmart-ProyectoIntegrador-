@@ -68,11 +68,22 @@ function Resumen() {
     <>
       <div className="adm-intro">
         <h2>Hola, {nombre}</h2>
-        <p>Desde aquí administras las reservas, las cuentas, los servicios, el inventario y el horario de AutoSmart.</p>
+        <p>Desde aquí supervisas los indicadores y administras las reservas, las cuentas, los servicios, el inventario y el horario de AutoSmart.</p>
       </div>
 
       <div className="adm-cards">
         <AlertasStock />
+
+        <Link to="/admin/indicadores" className="adm-card">
+          <span className="adm-card-icono">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
+            </svg>
+          </span>
+          <h3>Indicadores</h3>
+          <p>Citas, ingresos, tiempos de atención y satisfacción de cada mes.</p>
+          <span className="adm-mas">Abrir indicadores <Flecha /></span>
+        </Link>
 
         <Link to="/admin/reservas" className="adm-card">
           <span className="adm-card-icono">

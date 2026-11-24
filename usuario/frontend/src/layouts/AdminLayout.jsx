@@ -20,6 +20,15 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/indicadores",
+    texto: "Indicadores",
+    icono: (
+      <Icono>
+        <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/reservas",
     texto: "Reservas",
     icono: (
