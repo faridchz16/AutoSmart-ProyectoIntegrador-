@@ -1489,7 +1489,7 @@ export async function mensajeChatbot({ mensaje, idConversacion }) {
     .sort((a, b) => b.puntos - a.puntos)[0];
   if (faq) return r("faq", faq.f.respuesta, ["Preguntas frecuentes", "Ver servicios"], { idFaq: faq.f.idFaq });
   if (/horario|hora|abren|atienden/.test(texto)) return r("horario", "Nuestro horario de atención:\nLunes a viernes: 08:00 a 18:00\nSábado: 08:00 a 13:00\nDomingo: cerrado", ["Agendar una cita"]);
-  if (/precio|cotiz|cuanto|costo/.test(texto)) return r("cotizar", "Cambio de aceite y filtro cuesta entre S/ 90.00 y S/ 103.50. Es un precio referencial: el monto final depende del diagnóstico.", ["Agendar una cita", "Ver servicios"], { servicio: "Cambio de aceite y filtro", precioDesde: 90, precioHasta: 103.5, referencial: true });
+  if (/precio|cotiz|cuanto (cuesta|sale|vale)|costo/.test(texto)) return r("cotizar", "Cambio de aceite y filtro cuesta entre S/ 90.00 y S/ 103.50. Es un precio referencial: el monto final depende del diagnóstico.", ["Agendar una cita", "Ver servicios"], { servicio: "Cambio de aceite y filtro", precioDesde: 90, precioHasta: 103.5, referencial: true });
   if (/servicio/.test(texto)) return r("servicios", "Estos son nuestros servicios:\n• Cambio de aceite y filtro – desde S/ 90.00 (45 min)\n• Revisión de frenos – desde S/ 80.00 (60 min)\n• Alineamiento y balanceo – desde S/ 70.00 (60 min)", ["Cotizar un servicio", "Agendar una cita"]);
   if (/estado|mi (auto|carro|vehiculo)|como va/.test(texto)) return r("consultar_estado", "Para consultar el estado de tu vehículo necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
   if (/agendar|reservar|cita/.test(texto)) return r("agendar", "Para agendar una cita necesitas iniciar sesión.", ["Iniciar sesión"], null, true);

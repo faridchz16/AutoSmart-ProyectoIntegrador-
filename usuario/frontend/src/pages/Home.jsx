@@ -289,10 +289,11 @@ const CONFIANZA = [
 ];
 
 const PREGUNTAS = [
+  "¿Qué servicios ofrecen?",
+  "¿Cuánto cuesta un cambio de aceite?",
+  "¿Cuál es su horario?",
   "¿Cada cuánto cambio el aceite?",
-  "¿Cuándo reviso los frenos?",
-  "¿Cada cuánto alineo y balanceo?",
-  "¿Cómo creo mi cuenta?",
+  "Quiero hablar con un asesor",
 ];
 
 function Home() {
@@ -595,8 +596,8 @@ function Home() {
                 <span className="asistente-icono">{ICONOS.chat}</span>
                 <h2>Resuelve tus dudas sin esperar</h2>
                 <p className="section-lead">
-                  El asistente integrado responde sobre servicios, kilometraje y el uso de la plataforma, a cualquier hora.
-                  Elige una pregunta o escribe la tuya.
+                  El asistente responde a cualquier hora sobre servicios y precios referenciales, el horario, las preguntas
+                  frecuentes y el estado de tu vehículo. Si necesitas a una persona, te deriva con un asesor.
                 </p>
               </div>
               <ul className="asistente-chips">
