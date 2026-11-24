@@ -6,6 +6,7 @@ import { Icono } from "./PanelLayout";
 export const TITULOS_CLIENTE = [
   { patron: /^\/cliente\/citas\/[^/]+\/?$/, texto: "Seguimiento de la cita" },
   { patron: /^\/cliente\/citas\/[^/]+\/pago\/?$/, texto: "Pago del servicio" },
+  { patron: /^\/cliente\/citas\/[^/]+\/detalle\/?$/, texto: "Detalle del mantenimiento" },
 ];
 
 export const ENLACES_CLIENTE = [

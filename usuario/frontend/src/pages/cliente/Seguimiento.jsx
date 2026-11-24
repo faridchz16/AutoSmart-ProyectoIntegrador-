@@ -10,7 +10,8 @@ import {
   EN_CURSO,
 } from "../../services/seguimientoService";
 import { ESTADOS_CITA_CLIENTE } from "../../services/citasClienteService";
-import { SEVERIDADES, textoCategoria, cargarFoto } from "../../services/ordenesService";
+import { SEVERIDADES, textoCategoria } from "../../services/ordenesService";
+import FotoCliente from "./FotoCliente";
 import { fechaLarga, hora12 } from "../../services/reservaService";
 import { formatoPrecio } from "../../services/serviciosService";
 import { fechaHora, hoyLima } from "../../utils/fechas";
@@ -33,23 +34,6 @@ const cuando = (f) => {
   const h = hora12(f.slice(11, 16));
   return f.slice(0, 10) === hoyLima() ? `Hoy, ${h}` : `${fechaHora(f).slice(0, 10)}, ${h}`;
 };
-
-/* ---------- Foto protegida (se descarga con el token) ---------- */
-function Foto({ foto, alt }) {
-  const [estado, setEstado] = useState({ clave: null, url: "", error: false });
-  useEffect(() => {
-    let vigente = true;
-    cargarFoto(foto)
-      .then((url) => vigente && setEstado({ clave: foto.clave, url, error: false }))
-      .catch(() => vigente && setEstado({ clave: foto.clave, url: "", error: true }));
-    return () => {
-      vigente = false;
-    };
-  }, [foto]);
-  if (estado.clave !== foto.clave) return <span className="seg-foto-img esq" aria-hidden="true" />;
-  if (estado.error) return <span className="seg-foto-img seg-foto-falla">Sin imagen</span>;
-  return <img className="seg-foto-img" src={estado.url} alt={alt} />;
-}
 
 /* ---------- Línea de tiempo ---------- */
 function LineaDeTiempo({ seguimiento, presupuesto }) {
@@ -122,7 +106,7 @@ function Presupuesto({ presupuesto, alDecidir, alVerFoto }) {
                   <div className="seg-fotos">
                     {d.fotos.map((f, i) => (
                       <button key={f.clave} type="button" className="seg-foto" onClick={() => alVerFoto({ foto: f, titulo: `${textoCategoria(d.categoria)}: ${d.descripcion}` })}>
-                        <Foto foto={f} alt={`Foto ${i + 1} de ${textoCategoria(d.categoria)}`} />
+                        <FotoCliente foto={f} alt={`Foto ${i + 1} de ${textoCategoria(d.categoria)}`} />
                       </button>
                     ))}
                   </div>
@@ -328,6 +312,11 @@ function Seguimiento() {
         </div>
         <div className="seg-cab-der">
           <span className={`cit-estado est-${seguimiento.estado}`}>{estado.texto}</span>
+          {CON_ORDEN.includes(seguimiento.estado) && (
+            <Link to={`/cliente/citas/${id}/detalle`} className="btn btn-sec">
+              Detalle del trabajo
+            </Link>
+          )}
           <button type="button" className="btn btn-sec" onClick={() => setRecarga((n) => n + 1)} disabled={cargando}>
             {cargando && <span className="btn-spinner" aria-hidden="true" />}
             Actualizar
@@ -426,7 +415,7 @@ function Seguimiento() {
       <Modal abierto={!!visor} alCerrar={() => setVisor(null)} titulo="Foto del mecánico">
         {visor && (
           <figure className="seg-visor">
-            <Foto foto={visor.foto} alt={visor.titulo} />
+            <FotoCliente foto={visor.foto} alt={visor.titulo} />
             <figcaption>{visor.titulo}</figcaption>
           </figure>
         )}

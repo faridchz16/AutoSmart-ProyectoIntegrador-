@@ -1880,3 +1880,53 @@ export async function pagarOrdenCliente({ idOrden, metodo, tokenPago }) {
   }
   return pago;
 }
+
+/* ---------- Detalle del mantenimiento y calificación del cliente (CLI-07) ---------- */
+
+const trabajoCliente = {
+  98: {
+    diagnostico: "Pastillas delanteras al límite y discos con rayas leves. Líquido de frenos oscuro.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OBSERVADO", "Pastillas delanteras al 10 %"], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OBSERVADO", "Líquido de frenos oscuro"], ["CARROCERIA", "OK", ""]],
+    tareas: [["Revisar sistema de frenos", true], ["Cambiar pastillas delanteras", false], ["Rectificar discos", false], ["Purgar líquido de frenos", false], ["Prueba de manejo", false]],
+  },
+  95: {
+    diagnostico: "El escáner marcó P0134 (sensor de oxígeno sin respuesta). Se reemplazó el sensor y se borraron los códigos.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OBSERVADO", "Presión baja en la llanta trasera derecha; se calibró"], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Lectura de códigos con escáner", true], ["Cambio del sensor de oxígeno", true], ["Borrado de códigos y prueba de manejo", true]],
+  },
+  80: {
+    diagnostico: "Aceite con 5 000 km de uso. Cambio de aceite y filtro según el plan de mantenimiento.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Drenar aceite usado", true], ["Cambiar filtro de aceite", true], ["Llenar con aceite 10W-30", true]],
+  },
+};
+const calificadasCliente = { 80: { estrellas: 5, comentario: "Muy puntual y me explicó todo lo que le hizo al auto.", fecha: enHora(-47, "10:00") } };
+
+export async function detalleMantenimientoCliente(idOrden) {
+  await esperar();
+  const { c, o } = ordenClientePorId(idOrden);
+  const t = trabajoCliente[o.idOrden];
+  const p = presupuestosCliente[o.idOrden];
+  const v = vehiculosCliente.find((x) => x.placa === c.placa);
+  const hechas = t.tareas.filter(([, h]) => h).length;
+  return {
+    idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, precioServicio: c.precio, placa: c.placa,
+    vehiculo: v ? `${v.marca} ${v.modelo}` : "", mecanico: c.mecanico, fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: t.diagnostico,
+    checklist: t.checklist.map(([elemento, estado, observacion]) => ({ elemento, estado, observacion })),
+    deficiencias: copia(p?.deficiencias ?? []),
+    tareas: { idOrden: o.idOrden, totalTareas: t.tareas.length, completadas: hechas, porcentajeAvance: Math.round((hechas * 100) / t.tareas.length), tareas: t.tareas.map(([descripcion, completada], i) => ({ idTarea: i + 1, descripcion, completada, fechaCompletada: completada ? o.inicio : null })) },
+    presupuesto: p ? { idPresupuesto: p.idPresupuesto, estado: p.estado, descripcion: p.descripcion, total: p.total, items: copia(p.items) } : null,
+    repuestosConsumidos: (repuestosCliente[o.idOrden] ?? []).map((r, i) => ({ idMovimiento: i + 1, codigoMaterial: r.material, tipo: "SALIDA", cantidad: r.cantidad, referencia: null })),
+    costoRepuestos: 0, totalEstimado: c.precio,
+  };
+}
+
+export async function calificarServicio(idOrden, { estrellas, comentario }) {
+  await esperar(400);
+  const { c, o } = ordenClientePorId(idOrden);
+  if (!(c.estado === "FINALIZADA" || c.estado === "PAGADO")) throw conEstado("Solo puedes calificar un servicio finalizado", 409);
+  if (calificadasCliente[o.idOrden]) throw conEstado("Este servicio ya fue calificado", 409);
+  if (!(estrellas >= 1 && estrellas <= 5)) throw conEstado("Las estrellas deben estar entre 1 y 5", 400);
+  calificadasCliente[o.idOrden] = { estrellas, comentario, fecha: ahoraLima() };
+  return { idCalificacion: Date.now(), idOrden: o.idOrden, mecanico: c.mecanico, estrellas, comentario, fecha: calificadasCliente[o.idOrden].fecha };
+}

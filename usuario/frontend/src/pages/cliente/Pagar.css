@@ -66,6 +66,8 @@
 .pag-hecho .res-resumen { width: 100%; padding: 14px; border-radius: 14px; background: #f8faff; text-align: left; }
 .pag-hecho .btn { width: 100%; justify-content: center; }
 .pag-gracias { margin: 0; color: #5b6b88; font-size: 0.88rem; }
+.pag-calificar { color: #92600a; font-weight: 800; text-decoration: none; }
+.pag-calificar:hover { text-decoration: underline; }
 .pag-espera { display: grid; gap: 10px; justify-items: start; }
 .pag-espera p { margin: 0; color: #5b6b88; line-height: 1.5; }
 

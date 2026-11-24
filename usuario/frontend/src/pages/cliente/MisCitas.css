@@ -78,6 +78,8 @@
 .cit-acciones .btn { padding-top: 8px; padding-bottom: 8px; }
 .cit-acciones .cit-cancelar { color: #be123c; }
 .cit-acciones .cit-cancelar:hover:not(:disabled) { border-color: #fda4af; background: #fff1f2; }
+.cit-acciones .cit-calificar { border-color: #fcd34d; background: #fffbeb; color: #92600a; }
+.cit-acciones .cit-calificar:hover { border-color: #f59e0b; }
 .cit-regla { flex: 1 1 260px; margin: 0; color: #7a8aa6; font-size: 0.82rem; line-height: 1.45; }
 
 /* Reprogramar */

@@ -38,6 +38,7 @@ import ReservarCita from "./pages/cliente/Reservar";
 import MisCitas from "./pages/cliente/MisCitas";
 import SeguimientoCita from "./pages/cliente/Seguimiento";
 import PagarServicio from "./pages/cliente/Pagar";
+import DetalleMantenimiento from "./pages/cliente/DetalleMantenimiento";
 import Historial from "./pages/mecanico/Historial";
 
 function App() {
@@ -94,6 +95,7 @@ function App() {
             <Route path="citas" element={<MisCitas />} />
             <Route path="citas/:id" element={<SeguimientoCita />} />
             <Route path="citas/:id/pago" element={<PagarServicio />} />
+            <Route path="citas/:id/detalle" element={<DetalleMantenimiento />} />
             <Route path="vehiculos" element={<VehiculosCliente />} />
             <Route path="perfil" element={<PerfilCliente />} />
           </Route>

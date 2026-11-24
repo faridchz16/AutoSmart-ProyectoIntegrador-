@@ -15,6 +15,7 @@ import {
 import { fechaLarga, hora12, diaSemana, mesCorto } from "../../services/reservaService";
 import { formatoPrecio } from "../../services/serviciosService";
 import { hoyLima } from "../../utils/fechas";
+import { calificacionGuardada } from "../../services/mantenimientoClienteService";
 import ReprogramarCita from "./ReprogramarCita";
 import Modal from "../../components/admin/Modal";
 import Aviso from "../../components/admin/Aviso";
@@ -29,6 +30,7 @@ import "./MisCitas.css";
    - Cancelar (hasta 2 horas antes) y reprogramar con los turnos libres del mismo mecánico (hasta 24 horas antes)
    - "Ver seguimiento" / "Revisar presupuesto" abren el detalle de la atención (CLI-05)
    - "Pagar servicio" y "Comprobante de pago" abren el pago (CLI-06)
+   - Las terminadas abren el detalle del trabajo y piden calificar la atención (CLI-07)
    ?nueva=ID resalta la cita recién reservada. */
 
 const PESTANAS = [
@@ -62,6 +64,7 @@ function TarjetaCita({ cita, nueva, alCancelar, alReprogramar }) {
   const activa = cita.estado === "PENDIENTE" || cita.estado === "CONFIRMADA";
   const cancelable = puedeCancelar(cita);
   const reprogramable = puedeReprogramar(cita);
+  const terminada = cita.estado === "FINALIZADA" || cita.estado === "PAGADO";
   const falta = activa && !sinAtender ? cuandoEs(cita) : "";
 
   return (
@@ -125,9 +128,20 @@ function TarjetaCita({ cita, nueva, alCancelar, alReprogramar }) {
               Revisar presupuesto
             </Link>
           )}
-          <Link to={`/cliente/citas/${cita.id}`} className="btn btn-sec">
-            {cita.estado === "EN_PROCESO" || cita.estado === "ESPERA_APROBACION" ? "Ver avance" : "Ver seguimiento"}
-          </Link>
+          {terminada ? (
+            <Link to={`/cliente/citas/${cita.id}/detalle`} className="btn btn-sec">
+              Ver detalle del trabajo
+            </Link>
+          ) : (
+            <Link to={`/cliente/citas/${cita.id}`} className="btn btn-sec">
+              {cita.estado === "EN_PROCESO" || cita.estado === "ESPERA_APROBACION" ? "Ver avance" : "Ver seguimiento"}
+            </Link>
+          )}
+          {terminada && !calificacionGuardada(cita.id) && (
+            <Link to={`/cliente/citas/${cita.id}/detalle#calificar`} className="btn btn-sec cit-calificar">
+              ★ Calificar atención
+            </Link>
+          )}
           {activa && !sinAtender && (
             <>
               {reprogramable && (

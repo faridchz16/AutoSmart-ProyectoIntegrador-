@@ -7,6 +7,7 @@ import { nombreMetodo } from "../../services/indicadoresService";
 import { fechaLarga, hora12 } from "../../services/reservaService";
 import { formatoPrecio } from "../../services/serviciosService";
 import { fechaHora } from "../../utils/fechas";
+import { calificacionGuardada } from "../../services/mantenimientoClienteService";
 import FormPago from "./FormPago";
 import "../../components/admin/admin-ui.css";
 import "./MisCitas.css";
@@ -71,7 +72,7 @@ function Cuenta({ costo }) {
   );
 }
 
-function Pagado({ pago, monto, titulo, alDescargar, descargando, errorDescarga }) {
+function Pagado({ pago, monto, titulo, alDescargar, descargando, errorDescarga, calificar }) {
   const ref = useRef(null);
   useEffect(() => {
     if (titulo) ref.current?.focus();
@@ -114,6 +115,11 @@ function Pagado({ pago, monto, titulo, alDescargar, descargando, errorDescarga }
         {descargando ? "Descargando..." : "Descargar comprobante (PDF)"}
       </button>
       <p className="pag-gracias">Gracias por confiar en AutoSmart. Ya puedes recoger tu vehículo.</p>
+      {calificar && (
+        <Link to={calificar} className="pag-calificar">
+          ★ Califica la atención que recibiste →
+        </Link>
+      )}
     </section>
   );
 }
@@ -236,6 +242,7 @@ function Pagar() {
               alDescargar={descargar}
               descargando={descargando}
               errorDescarga={errorDescarga}
+              calificar={calificacionGuardada(cita.id ?? Number(id)) ? "" : `/cliente/citas/${id}/detalle#calificar`}
             />
           ) : costo.puedePagar ? (
             <section className="seg-caja" aria-labelledby="pag-metodo-titulo">
