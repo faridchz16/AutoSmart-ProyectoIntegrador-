@@ -1,0 +1,289 @@
+/* ===== Reservar cita (CLI-03) ===== */
+
+/* Pasos */
+.res-pasos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+  counter-reset: paso;
+}
+.res-pasos button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e3e9f5;
+  border-radius: 12px;
+  background: #fff;
+  color: #7a8aa6;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.res-pasos button:disabled { cursor: default; }
+.res-pasos button:not(:disabled):hover { border-color: #c9d6f0; background: #f8faff; }
+.res-paso-num {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #eef2f9;
+  color: #5b6b88;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.res-pasos .hecho button { color: #0b1b3a; }
+.res-pasos .hecho .res-paso-num { background: #dcfce7; color: #15803d; }
+.res-pasos .actual button { border-color: #1150e8; background: #f4f8ff; color: #0b1b3a; }
+.res-pasos .actual .res-paso-num { background: #1150e8; color: #fff; }
+
+/* Cuerpo: contenido + resumen lateral */
+.res-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 20px; align-items: start; }
+.res-principal { min-width: 0; }
+.res-titulo { margin-bottom: 14px; }
+.res-titulo h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.12rem; outline: none; }
+.res-titulo p { margin: 4px 0 0; color: #5b6b88; font-size: 0.92rem; }
+.res-nota { margin: 12px 0 0; color: #5b6b88; font-size: 0.86rem; line-height: 1.5; }
+.res-volver { margin-top: 18px; }
+
+.res-lateral {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 60%);
+}
+.res-lateral h4,
+.res-confirmar-resumen h4 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 0.98rem; }
+
+.res-resumen { display: grid; gap: 10px; margin: 0; font-size: 0.88rem; }
+.res-resumen > div { display: grid; gap: 1px; }
+.res-resumen dt { color: #7a8aa6; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.res-resumen dd { margin: 0; color: #0b1b3a; font-weight: 700; overflow-wrap: anywhere; }
+.res-resumen dd::first-letter { text-transform: uppercase; }
+.res-resumen-total { display: flex !important; align-items: baseline; justify-content: space-between; padding-top: 10px; border-top: 1px solid #e3e9f5; }
+.res-resumen-total dd { font-size: 1.05rem; color: #1150e8; }
+
+/* Reloj del bloqueo */
+.res-reloj {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #e8efff;
+  color: #1150e8;
+  font-size: 0.86rem;
+}
+.res-reloj strong { font-variant-numeric: tabular-nums; }
+.res-reloj.urgente { background: #fff1f2; color: #be123c; }
+.res-reloj-movil { display: none; }
+
+/* Opciones (servicios y mecánicos) */
+.res-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.2s;
+}
+.res-opciones.actualizando, .res-turnos.actualizando { opacity: 0.6; }
+.res .filtros { margin-bottom: 14px; }
+
+.res-opcion {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+  border: 1.5px solid #e3e9f5;
+  border-radius: 16px;
+  background: #fff;
+  color: #3b4a66;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.res-opcion:hover { border-color: #9db6f5; box-shadow: 0 8px 22px rgba(17, 80, 232, 0.08); transform: translateY(-1px); }
+.res-opcion:focus-visible { outline: 3px solid rgba(17, 80, 232, 0.35); outline-offset: 2px; }
+.res-opcion.elegida { border-color: #1150e8; background: #f4f8ff; box-shadow: 0 0 0 3px rgba(17, 80, 232, 0.12); }
+.res-opcion-titulo { color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 0.98rem; }
+.res-opcion-texto { font-size: 0.86rem; line-height: 1.45; color: #5b6b88; }
+.res-opcion-pie { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; padding-top: 8px; border-top: 1px solid #eef2f9; font-size: 0.86rem; }
+.res-opcion-pie strong { color: #1150e8; font-size: 1.02rem; }
+
+.res-cat { justify-self: start; padding: 3px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
+.res-cat-PREVENTIVO { background: #dcfce7; color: #15803d; }
+.res-cat-CORRECTIVO { background: #fff1db; color: #a35a00; }
+
+.res-mec-cab { display: flex; align-items: center; gap: 12px; }
+.res-mec-cab > span:last-child { display: grid; gap: 2px; }
+.res-mec-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1150e8;
+  color: #fff;
+  font-weight: 800;
+}
+.res-mec-exp { font-size: 0.84rem; color: #5b6b88; }
+.res-mec-calif { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.86rem; }
+.res-mec-calif strong { color: #0b1b3a; }
+.res-sin-resenas { color: #7a8aa6; font-style: italic; }
+.res-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.res-chip { padding: 3px 9px; border-radius: 999px; background: #eef2f9; color: #3b4a66; font-size: 0.74rem; font-weight: 700; }
+.res-chip.destacada { background: #e6f0ff; color: #1150e8; }
+
+/* Días y horas */
+.res-dias {
+  display: flex;
+  gap: 8px;
+  margin: 0 -4px 14px;
+  padding: 4px 4px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.res-dia {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  gap: 1px;
+  width: 70px;
+  padding: 9px 4px;
+  border: 1.5px solid #e3e9f5;
+  border-radius: 14px;
+  background: #fff;
+  color: #5b6b88;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+.res-dia strong { color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.2rem; }
+.res-dia:hover { border-color: #9db6f5; }
+.res-dia.elegido { border-color: #1150e8; background: #1150e8; color: #dbe6ff; }
+.res-dia.elegido strong { color: #fff; }
+
+.res-turnos { min-height: 120px; padding: 16px; border: 1px solid #e3e9f5; border-radius: 16px; background: #fff; transition: opacity 0.2s; }
+.res-turnos .tabla-caja { border: 0; }
+.res-turnos-vacio { display: grid; justify-items: start; gap: 12px; margin: 0; color: #5b6b88; }
+.res-turnos-vacio p { margin: 0; line-height: 1.5; }
+.res-turnos-vacio strong { color: #0b1b3a; }
+.res-grupo + .res-grupo { margin-top: 16px; }
+.res-grupo h4 { margin: 0 0 8px; color: #7a8aa6; font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.res-horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.res-hora {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border: 1.5px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  color: #0b1b3a;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.res-hora:hover:not(:disabled) { border-color: #1150e8; background: #f4f8ff; }
+.res-hora:disabled { cursor: wait; opacity: 0.7; }
+.res-hora.elegida,
+.res-hora.elegida:hover:not(:disabled) { border-color: #1150e8; background: #1150e8; color: #fff; opacity: 1; }
+.res-hora .btn-spinner { border-color: rgba(17, 80, 232, 0.25); border-top-color: #1150e8; }
+
+/* Confirmar */
+.res-confirmar { display: grid; gap: 18px; }
+.res-vehiculos { margin: 0; padding: 0; border: 0; }
+.res-vehiculos legend { margin-bottom: 10px; padding: 0; color: #0b1b3a; font-weight: 800; }
+.res-vehiculos-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.res-vehiculo {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 12px 14px;
+  border: 1.5px solid #e3e9f5;
+  border-radius: 14px;
+  background: #fff;
+  color: #5b6b88;
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.res-vehiculo input { grid-row: span 2; width: 18px; height: 18px; margin: 0; accent-color: #1150e8; }
+.res-vehiculo-placa { color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-weight: 800; letter-spacing: 0.06em; }
+.res-vehiculo:hover { border-color: #9db6f5; }
+.res-vehiculo.elegido { border-color: #1150e8; background: #f4f8ff; }
+.res-vehiculo:has(input:focus-visible) { outline: 3px solid rgba(17, 80, 232, 0.35); outline-offset: 2px; }
+.res-vehiculo-nuevo { display: flex; justify-content: center; border-style: dashed; color: #1150e8; font-weight: 800; }
+.res-vehiculo-nuevo span { font-size: 1.1rem; }
+
+.res-confirmar-resumen { display: none; gap: 12px; padding: 16px; border: 1px solid #e3e9f5; border-radius: 16px; background: #fff; }
+.res-confirmar-resumen .res-nota { margin: 0; }
+.res-enlace { padding: 0; border: 0; background: none; color: #1150e8; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+/* Reserva registrada */
+.res-exito {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 560px;
+  margin: 10px auto;
+  padding: 30px 24px;
+  border: 1px solid #e3e9f5;
+  border-radius: 20px;
+  background: #fff;
+  text-align: center;
+}
+.res-exito h2 { margin: 6px 0 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.35rem; outline: none; }
+.res-exito > p { margin: 0; color: #5b6b88; }
+.res-exito-check { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; color: #15803d; }
+.res-ticket { display: inline-block; margin-left: 4px; padding: 3px 10px; border-radius: 8px; background: #e8efff; color: #1150e8; font-family: "Sora", "Manrope", sans-serif; letter-spacing: 0.04em; }
+.res-exito .res-resumen { width: 100%; margin: 10px 0 4px; padding: 16px; border-radius: 14px; background: #f8faff; text-align: left; grid-template-columns: 1fr 1fr; }
+.res-exito .res-resumen-total { grid-column: 1 / -1; }
+.res-exito .res-exito-nota { font-size: 0.88rem; line-height: 1.55; }
+.res-exito .form-acciones { width: 100%; justify-content: center; margin-top: 6px; }
+.res-pendiente { display: inline-block; padding: 2px 9px; border-radius: 999px; background: #fff7e0; color: #a35a00; font-size: 0.8rem; }
+
+@media (max-width: 1000px) {
+  .res-cuerpo { grid-template-columns: 1fr; }
+  .res-lateral { display: none; }
+  .res-confirmar-resumen { display: grid; }
+  .res-reloj-movil { display: block; position: sticky; top: 8px; z-index: 5; margin-bottom: 14px; }
+  .res-reloj-movil .res-reloj { box-shadow: 0 6px 18px rgba(11, 27, 58, 0.12); }
+}
+
+@media (max-width: 720px) {
+  .res-pasos { gap: 6px; }
+  .res-pasos button { flex-direction: column; gap: 4px; padding: 8px 4px; font-size: 0.72rem; text-align: center; }
+  .res-opciones, .res-vehiculos-lista { grid-template-columns: 1fr; }
+  .res-exito .res-resumen { grid-template-columns: 1fr; }
+}

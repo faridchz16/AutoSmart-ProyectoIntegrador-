@@ -30,6 +30,16 @@ import Bloqueos from "./pages/mecanico/Bloqueos";
 import Perfil from "./pages/mecanico/Perfil";
 import OrdenTrabajo from "./pages/mecanico/OrdenTrabajo";
 import Calificaciones from "./pages/mecanico/Calificaciones";
+import ClienteLayout from "./layouts/ClienteLayout";
+import InicioCliente from "./pages/cliente/Inicio";
+import PerfilCliente from "./pages/cliente/Perfil";
+import VehiculosCliente from "./pages/cliente/Vehiculos";
+import ReservarCita from "./pages/cliente/Reservar";
+import MisCitas from "./pages/cliente/MisCitas";
+import SeguimientoCita from "./pages/cliente/Seguimiento";
+import PagarServicio from "./pages/cliente/Pagar";
+import DetalleMantenimiento from "./pages/cliente/DetalleMantenimiento";
+import HistorialVehiculo from "./pages/cliente/HistorialVehiculo";
 import Historial from "./pages/mecanico/Historial";
 
 function App() {
@@ -75,6 +85,21 @@ function App() {
             <Route path="historial" element={<Historial />} />
             <Route path="calificaciones" element={<Calificaciones />} />
             <Route path="citas/:idCita/orden" element={<OrdenTrabajo />} />
+          </Route>
+        </Route>
+
+        {/* Panel del cliente: solo con sesión iniciada y rol CLIENTE (Sprint 4) */}
+        <Route element={<RutaProtegida roles={["CLIENTE"]} />}>
+          <Route path="/cliente" element={<ClienteLayout />}>
+            <Route index element={<InicioCliente />} />
+            <Route path="reservar" element={<ReservarCita />} />
+            <Route path="citas" element={<MisCitas />} />
+            <Route path="citas/:id" element={<SeguimientoCita />} />
+            <Route path="citas/:id/pago" element={<PagarServicio />} />
+            <Route path="citas/:id/detalle" element={<DetalleMantenimiento />} />
+            <Route path="vehiculos" element={<VehiculosCliente />} />
+            <Route path="vehiculos/:id/historial" element={<HistorialVehiculo />} />
+            <Route path="perfil" element={<PerfilCliente />} />
           </Route>
         </Route>
 
