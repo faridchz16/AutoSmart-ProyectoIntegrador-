@@ -1369,3 +1369,42 @@ export async function reportePrueba(tipo, formato, filtros) {
   const csv = "\ufeff" + filas.map((f) => f.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\r\n");
   return { blob: new Blob([csv], { type: "text/csv;charset=utf-8" }), nombre: `reporte-${tipo}-${periodo}.csv` };
 }
+
+/* ---------- Moderación de calificaciones (T71.2, contrato de T71.1) ---------- */
+
+const calificacionesAdmin = [
+  [41, 5, "Lucía Fernández", "Carlos Quispe", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!", -1],
+  [40, 1, "Diego Mendoza", "Miguel Rojas", "Un idiota me atendió, son unos estafadores. No vuelvo más.", -2],
+  [39, 4, "José Huamán", "Carlos Quispe", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto.", -4],
+  [38, 2, "Jorge Ramírez", "Luis Chávez", "Llámenme al 987 654 321 para reclamar, el auto sigue sonando.", -6],
+  [37, 5, "Andrea Salazar", "Carlos Quispe", null, -8],
+  [36, 3, "Camila Flores", "Miguel Rojas", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo.", -11],
+  [35, 1, "Paola Medina", "Luis Chávez", "Visiten mitallerbarato.com, ahí sí atienden bien.", -15],
+].map(([idCalificacion, estrellas, cliente, mecanico, comentario, dias], i) => ({
+  idCalificacion,
+  ticket: `AS-2026-${String(160 - i).padStart(5, "0")}`,
+  cliente,
+  mecanico,
+  estrellas,
+  comentario,
+  fecha: enHora(dias, `${dosCifras(10 + i)}:${dosCifras((i * 17) % 60)}`),
+  oculto: idCalificacion === 35,
+  motivoOcultado: idCalificacion === 35 ? "Publicidad o spam" : null,
+  ocultadoPor: idCalificacion === 35 ? "admin@autosmart.com" : null,
+  fechaOcultado: idCalificacion === 35 ? enHora(-14, "09:30") : null,
+}));
+
+export async function listarCalificacionesAdmin(oculto) {
+  await esperar();
+  return copia(calificacionesAdmin.filter((c) => !oculto || String(c.oculto) === oculto));
+}
+
+export async function ocultarComentario(id, { motivo }) {
+  await esperar(400);
+  const c = calificacionesAdmin.find((x) => x.idCalificacion === Number(id));
+  if (!c) throw conEstado("Calificación no encontrada", 404);
+  if (c.oculto) throw conEstado("La calificación ya está oculta", 409);
+  if (!motivo) throw conEstado("El motivo es obligatorio", 400);
+  Object.assign(c, { oculto: true, motivoOcultado: motivo, ocultadoPor: "admin@autosmart.com", fechaOcultado: enHora(0, "12:00") });
+  return copia(c);
+}

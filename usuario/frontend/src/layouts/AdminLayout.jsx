@@ -81,6 +81,15 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/calificaciones",
+    texto: "Calificaciones",
+    icono: (
+      <Icono>
+        <path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/inventario",
     texto: "Inventario",
     icono: (
