@@ -17,6 +17,7 @@ export default defineConfig({
       "/materials": BACKEND, // materiales del almacén para el presupuesto y las solicitudes (T46.2, T50.2)
       "/payments": BACKEND, // comprobante PDF de un pago (T70.2)
       "/payment-methods": BACKEND, // métodos de pago habilitados (T70.2)
+      "/chatbot": BACKEND, // chatbot de la página de inicio y prueba desde el panel (T80.2, TEC4.1)
       // /admin también es una página del frontend: si el navegador pide HTML
       // (abrir o recargar la página), se sirve React; si es una llamada de datos, va al backend.
       "/admin": {

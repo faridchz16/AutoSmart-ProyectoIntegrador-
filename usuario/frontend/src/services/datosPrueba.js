@@ -1430,3 +1430,69 @@ export async function atenderDerivacion(id, { nota }) {
   Object.assign(d, { estado: "ATENDIDA", nota, atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(0, "12:00") });
   return copia(d);
 }
+
+/* ---------- Base de conocimiento y respuestas del chatbot (T80.2, TEC4.1; contratos de T80.1 y T75.1) ---------- */
+
+let faqPrueba = [
+  [1, "¿Aceptan Yape o Plin?", "Sí. Puedes pagar con Yape o Plin desde la app, además de tarjeta o en efectivo en el taller.", "yape, plin, pago, pagar", true],
+  [2, "¿Los trabajos tienen garantía?", "Sí. Todos nuestros servicios tienen 30 días de garantía en mano de obra.", "garantia, garantía, reclamo", true],
+  [3, "¿Me avisan antes de hacer un trabajo adicional?", "Sí. Si el mecánico encuentra algo más, te enviamos un presupuesto a la app y solo se hace si lo apruebas.", "adicional, presupuesto, aprobar", true],
+  [4, "¿Dónde están ubicados?", "Estamos en Av. Cascanueces 2221, Santa Anita, Lima.", "ubicacion, ubicación, direccion, dirección, donde", false],
+].map(([idFaq, pregunta, respuesta, palabrasClave, activa]) => ({
+  idFaq, pregunta, respuesta, palabrasClave, activa, fechaCreacion: enHora(-30, "10:00"), fechaActualizacion: activa ? null : enHora(-3, "16:20"),
+}));
+let siguienteFaq = 5;
+
+export async function listarFaq() {
+  await esperar();
+  return copia(faqPrueba);
+}
+
+export async function crearFaq(datos) {
+  await esperar(400);
+  const faq = { idFaq: siguienteFaq++, ...datos, activa: true, fechaCreacion: enHora(0, "12:00"), fechaActualizacion: null };
+  faqPrueba = [...faqPrueba, faq];
+  return copia(faq);
+}
+
+export async function editarFaq(id, datos) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  Object.assign(faq, datos, { fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+export async function desactivarFaq(id) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  if (!faq.activa) throw conEstado("La pregunta frecuente ya está desactivada", 409);
+  Object.assign(faq, { activa: false, fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+const OPCIONES_CHAT = ["Ver servicios", "Horario de atención", "Cotizar un servicio", "Preguntas frecuentes", "Hablar con un asesor"];
+
+// Respuestas de ejemplo con las mismas intenciones que el chatbot real
+export async function mensajeChatbot({ mensaje, idConversacion }) {
+  await esperar(450);
+  const texto = sinTildes(String(mensaje).toLowerCase());
+  const id = idConversacion || `prueba-${Date.now()}`;
+  const r = (intencion, respuesta, opciones = [], datos = null, requiereLogin = false) => ({ idConversacion: id, intencion, respuesta, opciones, datos, requiereLogin });
+  if (/(hola|buen(os|as)|saludos)/.test(texto)) return r("saludo", "¡Hola! Soy el asistente de AutoSmart. ¿En qué te ayudo?", OPCIONES_CHAT);
+  if (/preguntas frecuentes|faq/.test(texto)) return r("faq", "Estas son las preguntas más frecuentes. Toca una para ver la respuesta.", faqPrueba.filter((f) => f.activa).map((f) => f.pregunta));
+  const faq = faqPrueba
+    .filter((f) => f.activa)
+    .map((f) => ({ f, puntos: sinTildes(f.pregunta.toLowerCase()) === texto ? 100 : String(f.palabrasClave ?? "").split(",").filter((p) => p.trim() && texto.includes(sinTildes(p.trim()))).length }))
+    .filter((x) => x.puntos > 0)
+    .sort((a, b) => b.puntos - a.puntos)[0];
+  if (faq) return r("faq", faq.f.respuesta, ["Preguntas frecuentes", "Ver servicios"], { idFaq: faq.f.idFaq });
+  if (/horario|hora|abren|atienden/.test(texto)) return r("horario", "Nuestro horario de atención:\nLunes a viernes: 08:00 a 18:00\nSábado: 08:00 a 13:00\nDomingo: cerrado", ["Agendar una cita"]);
+  if (/precio|cotiz|cuanto|costo/.test(texto)) return r("cotizar", "Cambio de aceite y filtro cuesta entre S/ 90.00 y S/ 103.50. Es un precio referencial: el monto final depende del diagnóstico.", ["Agendar una cita", "Ver servicios"], { servicio: "Cambio de aceite y filtro", precioDesde: 90, precioHasta: 103.5, referencial: true });
+  if (/servicio/.test(texto)) return r("servicios", "Estos son nuestros servicios:\n• Cambio de aceite y filtro – desde S/ 90.00 (45 min)\n• Revisión de frenos – desde S/ 80.00 (60 min)\n• Alineamiento y balanceo – desde S/ 70.00 (60 min)", ["Cotizar un servicio", "Agendar una cita"]);
+  if (/estado|mi (auto|carro|vehiculo)|como va/.test(texto)) return r("consultar_estado", "Para consultar el estado de tu vehículo necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/agendar|reservar|cita/.test(texto)) return r("agendar", "Para agendar una cita necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/asesor|humano|persona/.test(texto)) return r("hablar_asesor", "Listo, registré tu solicitud. Un asesor te contactará en horario de atención.", [], { idDerivacion: 9 });
+  return r("no_entendido", "No entendí tu consulta. Puedo ayudarte con estas opciones:", OPCIONES_CHAT);
+}

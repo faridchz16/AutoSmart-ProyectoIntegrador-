@@ -1,0 +1,95 @@
+/* ===== Base de conocimiento del chatbot (T80.2) ===== */
+
+.faq-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 18px; align-items: start; }
+.faq-buscador { flex: 1 1 200px; }
+
+/* ---------- Lista ---------- */
+.faq-lista { display: grid; gap: 10px; margin: 0; padding: 12px; list-style: none; }
+.faq-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e3e9f5;
+  border-left: 4px solid #1150e8;
+  border-radius: 12px;
+  background: #fff;
+}
+.faq-item.inactiva { border-left-color: #94a3b8; background: #f8fafc; }
+.faq-item.inactiva .faq-cab strong,
+.faq-item.inactiva .faq-respuesta { color: #94a3b8; }
+
+.faq-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.faq-cab strong { color: #0b1b3a; font-size: 0.98rem; }
+.faq-insignia { background: #e2e8f0; color: #475569; }
+.faq-respuesta { margin: 0; color: #3b4a66; font-size: 0.9rem; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+.faq-sin-palabras { margin: 0; color: #b45309; font-size: 0.82rem; }
+
+.faq-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.faq-chips li {
+  padding: 2px 10px;
+  border: 1px solid #d6e0f2;
+  border-radius: 999px;
+  background: #f4f8ff;
+  color: #1e3a8a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.faq-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f4fa;
+  color: #7a8aa6;
+  font-size: 0.8rem;
+}
+.faq-pie > div { display: flex; gap: 6px; }
+.faq-desactivar { color: #be123c; }
+.faq-desactivar:hover { background: #fff1f2; }
+
+/* ---------- Formulario ---------- */
+.faq-form .faq-chips { margin-top: 6px; }
+.faq-previa { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: #f7f9fd; }
+.faq-previa > span { color: #7a8aa6; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* ---------- Probar el chatbot ---------- */
+.faq-probar {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 60%);
+}
+.faq-probar h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1rem; }
+.faq-probar > p { margin: 0; color: #5b6b88; font-size: 0.86rem; }
+.faq-probar-form { display: flex; gap: 8px; }
+.faq-probar-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6e0f2;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #0b1b3a;
+}
+.faq-probar-form input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+.faq-probar-chat { background: #fff; border: 1px solid #e3e9f5; }
+.faq-intencion { color: #7a8aa6; font-size: 0.78rem; }
+.faq-intencion strong { color: #3b4a66; }
+
+@media (max-width: 960px) {
+  .faq-grid { grid-template-columns: 1fr; }
+  .faq-probar { position: static; }
+}
+
+@media (max-width: 520px) {
+  .faq-lista { padding: 8px; }
+}
