@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import ChatBot from "../components/ChatBot";
+import { sesionActiva, obtenerUsuario, panelDeRol } from "../services/sesion";
 import "./Home.css";
 
 /* ---------- Utilidades ---------- */
@@ -298,6 +299,8 @@ const PREGUNTAS = [
 
 function Home() {
   const chatRef = useRef(null);
+  // Con la sesión iniciada, el encabezado lleva al panel del usuario en lugar de "Iniciar sesión"
+  const panel = sesionActiva() ? panelDeRol(obtenerUsuario()?.rol) : null;
   const heroRef = useRef(null);
   const fichaRef = useRef(null);
   const progresoRef = useRef(null);
@@ -368,8 +371,14 @@ function Home() {
           </nav>
 
           <div className="home-actions">
-            <Link to="/login" className="btn btn-ghost">Iniciar sesión</Link>
-            <Link to="/registro" className="btn btn-solid">Crear cuenta</Link>
+            {panel ? (
+              <Link to={panel} className="btn btn-solid">Ir a mi panel</Link>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-ghost">Iniciar sesión</Link>
+                <Link to="/registro" className="btn btn-solid">Crear cuenta</Link>
+              </>
+            )}
           </div>
         </div>
       </header>

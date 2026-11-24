@@ -1496,3 +1496,19 @@ export async function mensajeChatbot({ mensaje, idConversacion }) {
   if (/asesor|humano|persona/.test(texto)) return r("hablar_asesor", "Listo, registré tu solicitud. Un asesor te contactará en horario de atención.", [], { idDerivacion: 9 });
   return r("no_entendido", "No entendí tu consulta. Puedo ayudarte con estas opciones:", OPCIONES_CHAT);
 }
+
+/* ---------- Panel del cliente: perfil (CLI-01, contrato de T05.1) ---------- */
+
+let perfilCliente = { idUsuario: 3, nombre: "Lucía Fernández", correo: "lucia.fernandez@correo.com", telefono: null, rol: "CLIENTE" };
+
+export async function obtenerPerfilCliente() {
+  await esperar();
+  return { ...perfilCliente, telefono: perfilCliente.telefono ?? "" };
+}
+
+export async function guardarPerfilCliente({ nombre, telefono }) {
+  await esperar(400);
+  if (telefono && !/^\+?[0-9]{7,15}$/.test(telefono)) throw conEstado("El telefono debe tener entre 7 y 15 digitos", 400);
+  perfilCliente = { ...perfilCliente, nombre, telefono: telefono || null };
+  return { ...perfilCliente, telefono: perfilCliente.telefono ?? "" };
+}

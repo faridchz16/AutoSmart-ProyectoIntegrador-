@@ -1,0 +1,72 @@
+/* ===== Panel del cliente: estilos comunes (CLI-01) ===== */
+
+/* ---------- Inicio ---------- */
+.cli-aviso {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #fde68a;
+  border-radius: 14px;
+  background: #fffbeb;
+  color: #92600a;
+  text-decoration: none;
+  transition: border-color 0.2s;
+}
+.cli-aviso:hover { border-color: #f59e0b; }
+.cli-aviso strong { color: #78350f; }
+.cli-aviso span { font-size: 0.88rem; }
+
+/* ---------- Mi perfil ---------- */
+.cli-perfil {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.cli-tarjeta,
+.cli-form {
+  padding: 20px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.cli-tarjeta {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 55%);
+}
+.cli-tarjeta h3 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.1rem; overflow-wrap: anywhere; }
+.cli-tarjeta > div > p { margin: 2px 0 0; color: #5b6b88; font-size: 0.9rem; overflow-wrap: anywhere; }
+.cli-tarjeta dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; width: 100%; margin: 0; padding-top: 12px; border-top: 1px solid #e3e9f5; font-size: 0.88rem; }
+.cli-tarjeta dt { color: #7a8aa6; font-weight: 700; }
+.cli-tarjeta dd { margin: 0; color: #0b1b3a; font-weight: 600; }
+.cli-vacio { color: #9aa8c0; font-style: italic; font-weight: 500; }
+
+.cli-avatar {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #1150e8;
+  color: #fff;
+  font-family: "Sora", "Manrope", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.cli-nota { margin: 0; color: #5b6b88; font-size: 0.84rem; line-height: 1.5; }
+.cli-nota a { color: #1150e8; font-weight: 700; }
+
+.cli-form input:disabled { background: #f7f9fd; color: #5b6b88; }
+
+@media (max-width: 860px) {
+  .cli-perfil { grid-template-columns: 1fr; }
+  .cli-tarjeta { position: static; }
+}

@@ -30,6 +30,9 @@ import Bloqueos from "./pages/mecanico/Bloqueos";
 import Perfil from "./pages/mecanico/Perfil";
 import OrdenTrabajo from "./pages/mecanico/OrdenTrabajo";
 import Calificaciones from "./pages/mecanico/Calificaciones";
+import ClienteLayout from "./layouts/ClienteLayout";
+import InicioCliente from "./pages/cliente/Inicio";
+import PerfilCliente from "./pages/cliente/Perfil";
 import Historial from "./pages/mecanico/Historial";
 
 function App() {
@@ -75,6 +78,14 @@ function App() {
             <Route path="historial" element={<Historial />} />
             <Route path="calificaciones" element={<Calificaciones />} />
             <Route path="citas/:idCita/orden" element={<OrdenTrabajo />} />
+          </Route>
+        </Route>
+
+        {/* Panel del cliente: solo con sesión iniciada y rol CLIENTE (Sprint 4) */}
+        <Route element={<RutaProtegida roles={["CLIENTE"]} />}>
+          <Route path="/cliente" element={<ClienteLayout />}>
+            <Route index element={<InicioCliente />} />
+            <Route path="perfil" element={<PerfilCliente />} />
           </Route>
         </Route>
 
