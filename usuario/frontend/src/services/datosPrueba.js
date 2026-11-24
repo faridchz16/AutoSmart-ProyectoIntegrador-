@@ -1803,3 +1803,80 @@ export async function decidirPresupuesto(idPresupuesto, { decision }) {
   citaDelCliente(p.idCita).estado = "EN_PROCESO";
   return copia(p);
 }
+
+/* ---------- Pago del cliente (CLI-06) ---------- */
+
+const repuestosCliente = {
+  95: [{ material: "Sensor de oxígeno", cantidad: 1, unidad: "unidad" }],
+  80: [{ material: "Aceite de motor 10W-30", cantidad: 4, unidad: "litros" }, { material: "Filtro de aceite", cantidad: 1, unidad: "unidad" }],
+};
+const pagosCliente = { 80: { idPago: 77, codigo: "PAG-2026-00077", metodo: "TARJETA", fecha: enHora(-48, "09:35"), monto: 120 } };
+let siguientePagoCliente = 150;
+const TOKENS_TARJETA = {
+  pm_card_visa: null, pm_card_mastercard: null, pm_card_chargeDeclined: "La tarjeta fue rechazada",
+  pm_card_chargeDeclinedInsufficientFunds: "Fondos insuficientes", pm_card_chargeDeclinedExpiredCard: "La tarjeta esta vencida",
+};
+
+export async function historialVehiculoCliente(idVehiculo) {
+  await esperar();
+  const v = vehiculoDelCliente(idVehiculo);
+  const mantenimientos = Object.entries(ordenesCliente)
+    .map(([idCita, o]) => ({ c: citaDelCliente(idCita), o }))
+    .filter(({ c }) => c.placa === v.placa)
+    .sort((a, b) => b.o.inicio.localeCompare(a.o.inicio))
+    .map(({ c, o }) => ({
+      idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, mecanico: c.mecanico,
+      fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: o.diagnostico ? "Revisión completa registrada por el mecánico." : null, costoRepuestos: 0,
+    }));
+  return { idVehiculo: v.idVehiculo, placa: v.placa, marca: v.marca, modelo: v.modelo, anio: v.anio, kilometraje: v.kilometraje, totalMantenimientos: mantenimientos.length, mantenimientos };
+}
+
+function ordenClientePorId(idOrden) {
+  const par = Object.entries(ordenesCliente).find(([, o]) => o.idOrden === Number(idOrden));
+  if (!par) throw conEstado("Orden de trabajo no encontrada", 404);
+  return { c: citaDelCliente(par[0]), o: par[1] };
+}
+
+export async function costoOrdenCliente(idOrden) {
+  await esperar();
+  const { c, o } = ordenClientePorId(idOrden);
+  const p = presupuestosCliente[o.idOrden];
+  const adicionales = p?.estado === "APROBADO" ? copia(p.items) : [];
+  const totalAdicionales = adicionales.reduce((s, a) => s + a.subtotal, 0);
+  const pago = pagosCliente[o.idOrden] ?? null;
+  return {
+    idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estadoCita: c.estado, servicio: { nombre: c.servicio, precio: c.precio },
+    adicionales, totalAdicionales, repuestosUtilizados: copia(repuestosCliente[o.idOrden] ?? []), total: c.precio + totalAdicionales, moneda: "PEN",
+    puedePagar: c.estado === "FINALIZADA" && !pago, pago: pago && { idPago: pago.idPago, codigo: pago.codigo, metodo: pago.metodo, fecha: pago.fecha },
+  };
+}
+
+export async function metodosPagoCliente() {
+  await esperar(150);
+  return [
+    { codigo: "TARJETA", nombre: "Tarjeta de crédito o débito", enLinea: true },
+    { codigo: "YAPE_PLIN", nombre: "Yape / Plin", enLinea: true },
+    { codigo: "EFECTIVO", nombre: "Efectivo en el taller", enLinea: false },
+  ];
+}
+
+export async function pagarOrdenCliente({ idOrden, metodo, tokenPago }) {
+  await esperar(900);
+  const { c, o } = ordenClientePorId(idOrden);
+  if (metodo === "EFECTIVO") throw conEstado("El pago en efectivo se registra en el taller", 400);
+  let motivo;
+  if (metodo === "TARJETA") {
+    if (!(tokenPago in TOKENS_TARJETA)) throw conEstado("El tokenPago no es valido para la pasarela", 400);
+    motivo = TOKENS_TARJETA[tokenPago];
+  } else motivo = tokenPago === "123456" ? null : "Codigo de aprobacion invalido";
+  if (pagosCliente[o.idOrden]) throw conEstado("La orden ya fue pagada", 409);
+  if (c.estado !== "FINALIZADA") throw conEstado(`Solo se puede pagar una orden FINALIZADA (estado: ${c.estado})`, 409);
+  const { total } = await costoOrdenCliente(idOrden);
+  const idPago = siguientePagoCliente++;
+  const pago = { idPago, codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`, idOrden: o.idOrden, ticket: c.ticket, metodo, estado: motivo ? "RECHAZADO" : "APROBADO", monto: total, fecha: ahoraLima(), motivoRechazo: motivo, comprobanteUrl: motivo ? null : `/payments/${idPago}/receipt`, registradoPor: null };
+  if (!motivo) {
+    pagosCliente[o.idOrden] = pago;
+    c.estado = "PAGADO";
+  }
+  return pago;
+}

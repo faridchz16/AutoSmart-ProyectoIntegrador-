@@ -3,14 +3,16 @@ import { Link } from "react-router-dom";
 import { obtenerPerfil, primerNombre } from "../../services/perfilClienteService";
 import { obtenerUsuario } from "../../services/sesion";
 import { ENLACES_CLIENTE } from "../../layouts/enlacesCliente";
-import { proximaCita, ESTADOS_CITA_CLIENTE } from "../../services/citasClienteService";
+import { proximaCita, listarMisCitas, ESTADOS_CITA_CLIENTE } from "../../services/citasClienteService";
 import { fechaLarga, hora12 } from "../../services/reservaService";
 import "./Cliente.css";
 
-/* Inicio del panel del cliente: saludo, aviso si falta el teléfono, su próxima cita y accesos a cada sección. */
+/* Inicio del panel del cliente: saludo, lo que necesita su respuesta (presupuesto por aprobar o servicio por pagar),
+   aviso si falta el teléfono, su próxima cita y accesos a cada sección. */
 function Inicio() {
   const [perfil, setPerfil] = useState(null);
   const [proxima, setProxima] = useState({ cargada: false, cita: null });
+  const [pendientes, setPendientes] = useState([]);
   const secciones = ENLACES_CLIENTE.filter((e) => !e.fin);
 
   useEffect(() => {
@@ -21,6 +23,9 @@ function Inicio() {
     proximaCita()
       .then((cita) => vigente && setProxima({ cargada: true, cita }))
       .catch(() => vigente && setProxima({ cargada: true, cita: null }));
+    listarMisCitas()
+      .then((lista) => vigente && setPendientes(lista.filter((c) => c.estado === "ESPERA_APROBACION" || c.estado === "FINALIZADA")))
+      .catch(() => vigente && setPendientes([]));
     return () => {
       vigente = false;
     };
@@ -34,6 +39,24 @@ function Inicio() {
         <h2>Hola, {nombre}</h2>
         <p>Desde aquí gestionas tus vehículos, tus citas y el mantenimiento de tu auto.</p>
       </div>
+
+      {pendientes.map((c) =>
+        c.estado === "FINALIZADA" ? (
+          <Link key={c.id} to={`/cliente/citas/${c.id}/pago`} className="cli-accion lista">
+            <strong>¡Tu {c.placa} está listo!</strong>
+            <span>
+              {c.servicio}: paga el servicio en línea y recógelo. Pagar ahora →
+            </span>
+          </Link>
+        ) : (
+          <Link key={c.id} to={`/cliente/citas/${c.id}#presupuesto`} className="cli-accion presupuesto">
+            <strong>El mecánico espera tu aprobación</strong>
+            <span>
+              {c.servicio} ({c.placa}): revisa el presupuesto adicional para que continúe. Revisar →
+            </span>
+          </Link>
+        ),
+      )}
 
       {perfil && !perfil.telefono && (
         <Link to="/cliente/perfil" className="cli-aviso">

@@ -28,6 +28,7 @@ import "./MisCitas.css";
    - Cada cita muestra su estado explicado para el cliente
    - Cancelar (hasta 2 horas antes) y reprogramar con los turnos libres del mismo mecánico (hasta 24 horas antes)
    - "Ver seguimiento" / "Revisar presupuesto" abren el detalle de la atención (CLI-05)
+   - "Pagar servicio" y "Comprobante de pago" abren el pago (CLI-06)
    ?nueva=ID resalta la cita recién reservada. */
 
 const PESTANAS = [
@@ -109,6 +110,16 @@ function TarjetaCita({ cita, nueva, alCancelar, alReprogramar }) {
         </p>
 
         <div className="cit-acciones">
+          {cita.estado === "FINALIZADA" && (
+            <Link to={`/cliente/citas/${cita.id}/pago`} className="btn btn-pri">
+              Pagar servicio
+            </Link>
+          )}
+          {cita.estado === "PAGADO" && (
+            <Link to={`/cliente/citas/${cita.id}/pago`} className="btn btn-sec">
+              Comprobante de pago
+            </Link>
+          )}
           {cita.estado === "ESPERA_APROBACION" && (
             <Link to={`/cliente/citas/${cita.id}#presupuesto`} className="btn btn-pri">
               Revisar presupuesto

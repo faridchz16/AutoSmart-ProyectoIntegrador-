@@ -3,7 +3,10 @@ import { Icono } from "./PanelLayout";
 /* Secciones del panel del cliente: las usa el menú lateral y la pantalla de inicio. */
 
 // Pantallas que no están en el menú, pero necesitan su título en el encabezado
-export const TITULOS_CLIENTE = [{ patron: /^\/cliente\/citas\/[^/]+\/?$/, texto: "Seguimiento de la cita" }];
+export const TITULOS_CLIENTE = [
+  { patron: /^\/cliente\/citas\/[^/]+\/?$/, texto: "Seguimiento de la cita" },
+  { patron: /^\/cliente\/citas\/[^/]+\/pago\/?$/, texto: "Pago del servicio" },
+];
 
 export const ENLACES_CLIENTE = [
   {

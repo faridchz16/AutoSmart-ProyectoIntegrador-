@@ -1,0 +1,75 @@
+/* ===== Pago del servicio (CLI-06) ===== */
+
+.pag-cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.pag-ticket { color: #7a8aa6; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; }
+
+.pag-lineas { display: grid; margin: 6px 0 0; padding: 0; list-style: none; }
+.pag-lineas li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #eef2f9; color: #0b1b3a; font-size: 0.92rem; }
+.pag-lineas li > span { display: grid; gap: 1px; }
+.pag-lineas strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pag-cant { color: #7a8aa6; font-size: 0.8rem; }
+.pag-total { display: flex; align-items: baseline; justify-content: space-between; padding-top: 14px; color: #0b1b3a; font-weight: 800; }
+.pag-total strong { color: #1150e8; font-family: "Sora", "Manrope", sans-serif; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.pag-repuestos { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #f8faff; }
+.pag-repuestos h4 { margin: 0 0 6px; }
+.pag-repuestos ul { margin: 0; padding-left: 18px; color: #3b4a66; font-size: 0.88rem; line-height: 1.6; }
+.pag-repuestos p { margin: 6px 0 0; color: #7a8aa6; font-size: 0.8rem; }
+
+/* Formulario */
+.pag-form { display: grid; gap: 16px; }
+.pag-metodos { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.pag-metodos legend { margin-bottom: 8px; padding: 0; color: #0b1b3a; font-weight: 800; }
+.pag-metodo {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid #e3e9f5;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pag-metodo:hover { border-color: #9db6f5; }
+.pag-metodo.elegido { border-color: #1150e8; background: #f4f8ff; }
+.pag-metodo:has(input:focus-visible) { outline: 3px solid rgba(17, 80, 232, 0.35); outline-offset: 2px; }
+.pag-metodo input { width: 18px; height: 18px; margin: 0; accent-color: #1150e8; }
+.pag-metodo-icono { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #eef2f9; color: #1150e8; }
+.pag-metodo > span:last-child { display: grid; gap: 1px; }
+.pag-metodo strong { color: #0b1b3a; font-size: 0.94rem; }
+.pag-metodo > span:last-child > span { color: #7a8aa6; font-size: 0.82rem; }
+
+.pag-campos { display: grid; gap: 14px; }
+.pag-campos .campo { align-content: start; }
+.pag-campos input { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.pag-marca { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: #e6f0ff; color: #1150e8; font-size: 0.72rem; font-weight: 800; }
+
+.pag-prueba { border: 1px dashed #fcd34d; border-radius: 12px; background: #fffbeb; color: #92600a; font-size: 0.84rem; }
+.pag-prueba summary { padding: 10px 12px; cursor: pointer; font-weight: 700; }
+.pag-prueba ul { display: grid; gap: 6px; margin: 0; padding: 0 12px 12px; list-style: none; }
+.pag-prueba li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; }
+.pag-prueba code, .pag-prueba-nota code { font-size: 0.82rem; color: #78350f; }
+.pag-prueba-nota { margin: 0; padding: 10px 12px; border: 1px dashed #fcd34d; border-radius: 12px; background: #fffbeb; color: #92600a; font-size: 0.84rem; }
+
+.pag-efectivo { padding: 14px; border-radius: 12px; background: #f4f8ff; color: #3b4a66; font-size: 0.9rem; line-height: 1.55; }
+.pag-efectivo p { margin: 0; }
+.pag-efectivo p + p { margin-top: 6px; font-weight: 800; color: #0b1b3a; }
+
+.pag-boton { width: 100%; justify-content: center; padding-top: 13px; padding-bottom: 13px; font-size: 1rem; }
+.pag-seguro { display: flex; gap: 8px; margin: -4px 0 0; color: #7a8aa6; font-size: 0.8rem; line-height: 1.45; }
+.pag-seguro svg { flex: none; margin-top: 2px; }
+
+/* Pagado */
+.pag-hecho { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.pag-hecho h3 { margin: 0; font-size: 1.2rem; outline: none; }
+.pag-hecho .res-resumen { width: 100%; padding: 14px; border-radius: 14px; background: #f8faff; text-align: left; }
+.pag-hecho .btn { width: 100%; justify-content: center; }
+.pag-gracias { margin: 0; color: #5b6b88; font-size: 0.88rem; }
+.pag-espera { display: grid; gap: 10px; justify-items: start; }
+.pag-espera p { margin: 0; color: #5b6b88; line-height: 1.5; }
+
+@media (max-width: 960px) {
+  .pag-cuerpo { grid-template-columns: 1fr; }
+}
+.pag-campos .campo-doble { grid-template-columns: 1fr 1fr; }

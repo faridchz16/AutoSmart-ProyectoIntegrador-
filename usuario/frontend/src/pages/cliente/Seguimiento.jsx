@@ -335,6 +335,16 @@ function Seguimiento() {
         </div>
       </div>
 
+      {seguimiento.estado === "FINALIZADA" && (
+        <Link to={`/cliente/citas/${id}/pago`} className="seg-alerta seg-alerta-lista">
+          <strong>¡Tu vehículo está listo!</strong> Paga el servicio en línea y recógelo. Ver cuenta y pagar →
+        </Link>
+      )}
+      {seguimiento.estado === "PAGADO" && (
+        <Link to={`/cliente/citas/${id}/pago`} className="seg-alerta seg-alerta-pagada">
+          <strong>Servicio pagado.</strong> Descarga tu comprobante de pago →
+        </Link>
+      )}
       {presupuesto?.estado === "PENDIENTE" && (
         <a href="#presupuesto" className="seg-alerta">
           <strong>El mecánico necesita tu aprobación.</strong> Revisa el presupuesto adicional de {formatoPrecio(presupuesto.total)} para que continúe.

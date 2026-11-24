@@ -17,6 +17,15 @@
 .cli-aviso strong { color: #78350f; }
 .cli-aviso span { font-size: 0.88rem; }
 
+.cli-accion { display: grid; gap: 2px; margin: 0 0 12px; padding: 14px 16px; border: 1px solid; border-radius: 14px; text-decoration: none; transition: border-color 0.2s; }
+.cli-accion span { font-size: 0.88rem; }
+.cli-accion.lista { border-color: #5eead4; background: #f0fdfa; color: #115e59; }
+.cli-accion.lista strong { color: #134e4a; }
+.cli-accion.lista:hover { border-color: #14b8a6; }
+.cli-accion.presupuesto { border-color: #d8b4fe; background: #faf5ff; color: #6b21a8; }
+.cli-accion.presupuesto strong { color: #581c87; }
+.cli-accion.presupuesto:hover { border-color: #a855f7; }
+
 .cli-proxima {
   display: grid;
   gap: 4px;
