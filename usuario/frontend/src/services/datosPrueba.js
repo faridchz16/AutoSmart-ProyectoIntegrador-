@@ -1592,6 +1592,9 @@ let citasReservadas = [
   [124, -48, "08:30", 45, "PAGADO", 1, 2, "ABC-123", "AS-2026-00080"],
   [110, -20, "11:00", 60, "CANCELADA", 2, 6, "ABC-123", "AS-2026-00110"],
   [105, -12, "16:00", 60, "RECHAZADA", 3, 2, "BKR-482", "AS-2026-00105"],
+  [90, -170, "09:00", 120, "PAGADO", 7, 6, "ABC-123", "AS-2026-00042"],
+  [70, -330, "10:00", 45, "PAGADO", 1, 2, "ABC-123", "AS-2025-00318"],
+  [72, -300, "15:00", 60, "PAGADO", 2, 6, "BKR-482", "AS-2025-00351"],
 ].map(([idCita, dias, horaInicio, duracion, estado, idServicio, idMecanico, placa, ticket]) => {
   const s = servicios.find((x) => x.id === idServicio);
   const fin = Number(horaInicio.slice(0, 2)) * 60 + Number(horaInicio.slice(3, 5)) + duracion;
@@ -1730,6 +1733,9 @@ const ordenesCliente = {
   128: { idOrden: 98, inicio: enHora(0, "08:05"), diagnostico: enHora(0, "08:40"), fin: null, avance: 40 },
   125: { idOrden: 95, inicio: enHora(-1, "15:02"), diagnostico: enHora(-1, "15:15"), fin: enHora(-1, "15:52"), avance: 100 },
   124: { idOrden: 80, inicio: enHora(-48, "08:31"), diagnostico: enHora(-48, "08:45"), fin: enHora(-48, "09:20"), avance: 100 },
+  90: { idOrden: 60, inicio: enHora(-170, "09:05"), diagnostico: enHora(-170, "09:30"), fin: enHora(-170, "11:10"), avance: 100 },
+  70: { idOrden: 45, inicio: enHora(-330, "10:02"), diagnostico: enHora(-330, "10:10"), fin: enHora(-330, "10:50"), avance: 100 },
+  72: { idOrden: 47, inicio: enHora(-300, "15:04"), diagnostico: enHora(-300, "15:15"), fin: enHora(-300, "16:00"), avance: 100 },
 };
 const presupuestosCliente = {
   98: {
@@ -1810,7 +1816,12 @@ const repuestosCliente = {
   95: [{ material: "Sensor de oxígeno", cantidad: 1, unidad: "unidad" }],
   80: [{ material: "Aceite de motor 10W-30", cantidad: 4, unidad: "litros" }, { material: "Filtro de aceite", cantidad: 1, unidad: "unidad" }],
 };
-const pagosCliente = { 80: { idPago: 77, codigo: "PAG-2026-00077", metodo: "TARJETA", fecha: enHora(-48, "09:35"), monto: 120 } };
+const pagosCliente = {
+  80: { idPago: 77, codigo: "PAG-2026-00077", metodo: "TARJETA", fecha: enHora(-48, "09:35"), monto: 120 },
+  60: { idPago: 41, codigo: "PAG-2026-00041", metodo: "YAPE_PLIN", fecha: enHora(-170, "11:20"), monto: 220 },
+  45: { idPago: 12, codigo: "PAG-2025-00012", metodo: "EFECTIVO", fecha: enHora(-330, "11:00"), monto: 120 },
+  47: { idPago: 15, codigo: "PAG-2025-00015", metodo: "TARJETA", fecha: enHora(-300, "16:10"), monto: 90 },
+};
 let siguientePagoCliente = 150;
 const TOKENS_TARJETA = {
   pm_card_visa: null, pm_card_mastercard: null, pm_card_chargeDeclined: "La tarjeta fue rechazada",
@@ -1826,7 +1837,7 @@ export async function historialVehiculoCliente(idVehiculo) {
     .sort((a, b) => b.o.inicio.localeCompare(a.o.inicio))
     .map(({ c, o }) => ({
       idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, mecanico: c.mecanico,
-      fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: o.diagnostico ? "Revisión completa registrada por el mecánico." : null, costoRepuestos: 0,
+      fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: o.diagnostico ? trabajoCliente[o.idOrden]?.diagnostico ?? null : null, costoRepuestos: (repuestosCliente[o.idOrden] ?? []).length ? 45 : 0,
     }));
   return { idVehiculo: v.idVehiculo, placa: v.placa, marca: v.marca, modelo: v.modelo, anio: v.anio, kilometraje: v.kilometraje, totalMantenimientos: mantenimientos.length, mantenimientos };
 }
@@ -1894,13 +1905,33 @@ const trabajoCliente = {
     checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OBSERVADO", "Presión baja en la llanta trasera derecha; se calibró"], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
     tareas: [["Lectura de códigos con escáner", true], ["Cambio del sensor de oxígeno", true], ["Borrado de códigos y prueba de manejo", true]],
   },
+  60: {
+    diagnostico: "Motor con fallas de encendido en frío. Bujías gastadas e inyectores sucios.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OBSERVADO", "Rayón en la puerta trasera izquierda (ya existía)"]],
+    tareas: [["Cambio de bujías", true], ["Cambio de filtros de aire y combustible", true], ["Limpieza de inyectores", true]],
+  },
+  45: {
+    diagnostico: "Mantenimiento de los 50 000 km: cambio de aceite y filtro.",
+    checklist: [["LUCES", "OBSERVADO", "Luz de placa quemada; se cambió"], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Drenar aceite usado", true], ["Cambiar filtro de aceite", true], ["Llenar con aceite 10W-30", true]],
+  },
+  47: {
+    diagnostico: "Desgaste irregular en las llantas delanteras por desalineación.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OBSERVADO", "Desgaste irregular adelante"], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Alineamiento", true], ["Balanceo de las cuatro ruedas", true]],
+  },
   80: {
     diagnostico: "Aceite con 5 000 km de uso. Cambio de aceite y filtro según el plan de mantenimiento.",
     checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
     tareas: [["Drenar aceite usado", true], ["Cambiar filtro de aceite", true], ["Llenar con aceite 10W-30", true]],
   },
 };
-const calificadasCliente = { 80: { estrellas: 5, comentario: "Muy puntual y me explicó todo lo que le hizo al auto.", fecha: enHora(-47, "10:00") } };
+const calificadasCliente = {
+  80: { estrellas: 5, comentario: "Muy puntual y me explicó todo lo que le hizo al auto.", fecha: enHora(-47, "10:00") },
+  60: { estrellas: 4, comentario: null, fecha: enHora(-169, "09:00") },
+  45: { estrellas: 5, comentario: null, fecha: enHora(-329, "09:00") },
+  47: { estrellas: 4, comentario: null, fecha: enHora(-299, "09:00") },
+};
 
 export async function detalleMantenimientoCliente(idOrden) {
   await esperar();

@@ -71,3 +71,30 @@ export async function eliminarVehiculo(id) {
 }
 
 export const formatoKm = (n) => `${Number(n || 0).toLocaleString("es-PE")} km`;
+
+/* ---------- Historial de mantenimiento del vehículo (CLI-08) ----------
+   GET /vehicles/{id}/history -> { idVehiculo, placa, marca, modelo, anio, kilometraje, propietario: { nombre, correo },
+        totalMantenimientos, mantenimientos: [{ idOrden, idCita, ticket, estado, servicio, mecanico, fechaInicio,
+        fechaFin (null si sigue en el taller), diagnostico, costoRepuestos }] } (del más reciente al más antiguo)
+   Solo el dueño del vehículo (403). Incluye las atenciones en curso. */
+
+export async function obtenerHistorial(idVehiculo) {
+  const h = prueba.DATOS_PRUEBA ? await prueba.historialVehiculoCliente(idVehiculo) : await apiFetch(`/vehicles/${idVehiculo}/history`);
+  return {
+    vehiculo: normalizar(h),
+    mantenimientos: (h.mantenimientos ?? [])
+      .map((m) => ({
+        idOrden: m.idOrden,
+        idCita: m.idCita,
+        ticket: m.ticket ?? "",
+        estado: String(m.estado ?? "").toUpperCase(),
+        servicio: m.servicio ?? "",
+        mecanico: m.mecanico ?? "",
+        inicio: m.fechaInicio ?? "",
+        fin: m.fechaFin ?? "",
+        diagnostico: m.diagnostico ?? "",
+        costoRepuestos: numero(m.costoRepuestos),
+      }))
+      .sort((a, b) => b.inicio.localeCompare(a.inicio)),
+  };
+}

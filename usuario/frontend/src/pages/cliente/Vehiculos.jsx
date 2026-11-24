@@ -12,7 +12,8 @@ import "./Vehiculos.css";
    - Tarjeta por vehículo con su placa, marca, modelo, año y kilometraje
    - Registrar y editar en una ventana con las mismas validaciones del backend
    - Eliminar con confirmación (el taller conserva su historial; la placa queda registrada)
-   - "Reservar cita" abre la reserva con ese vehículo ya elegido (CLI-03) */
+   - "Reservar cita" abre la reserva con ese vehículo ya elegido (CLI-03)
+   - "Historial" muestra sus mantenimientos (CLI-08) */
 
 function Placa({ placa }) {
   return (
@@ -179,6 +180,9 @@ function Vehiculos() {
               <div className="veh-acciones">
                 <Link to={`/cliente/reservar?vehiculo=${v.id}`} className="btn btn-pri veh-reservar">
                   Reservar cita
+                </Link>
+                <Link to={`/cliente/vehiculos/${v.id}/historial`} className="btn btn-sec" aria-label={`Historial de ${v.placa}`}>
+                  Historial
                 </Link>
                 <button type="button" className="btn btn-sec" onClick={() => setFormulario({ vehiculo: v })} aria-label={`Editar ${v.placa}`}>
                   Editar

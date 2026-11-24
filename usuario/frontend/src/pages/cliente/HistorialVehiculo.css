@@ -1,0 +1,75 @@
+/* ===== Historial del vehículo (CLI-08) ===== */
+
+.hist-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+  margin-bottom: 16px;
+  padding: 18px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f4f8ff 0%, #fff 60%);
+}
+.hist-vehiculo { flex: 1 1 200px; }
+.hist-vehiculo h2 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.3rem; }
+.hist-vehiculo p { margin: 2px 0 0; color: #5b6b88; font-variant-numeric: tabular-nums; }
+.hist-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.hist-solo-impresion { display: none; }
+
+.hist-resumen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 18px; }
+.hist-resumen > div { display: grid; align-content: start; gap: 2px; padding: 14px 16px; border: 1px solid #e3e9f5; border-radius: 16px; background: #fff; }
+.hist-resumen dt { color: #7a8aa6; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
+.hist-resumen dd { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.1rem; font-weight: 700; }
+.hist-resumen > div:first-child dd { font-size: 1.6rem; color: #1150e8; }
+.hist-resumen span { color: #5b6b88; font-size: 0.84rem; }
+.hist-ver { color: #1150e8; font-size: 0.84rem; font-weight: 700; text-decoration: none; }
+.hist-ver:hover { text-decoration: underline; }
+.hist .filtros { margin-bottom: 12px; }
+
+.hist-anio + .hist-anio { margin-top: 22px; }
+.hist-anio h3 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 10px; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1.05rem; }
+.hist-anio h3 span { color: #7a8aa6; font-family: inherit; font-size: 0.82rem; font-weight: 700; }
+
+.hist-lista { position: relative; display: grid; gap: 12px; margin: 0; padding: 0 0 0 0; list-style: none; }
+.hist-item {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e3e9f5;
+  border-radius: 18px;
+  background: #fff;
+  break-inside: avoid;
+}
+.hist-cuerpo { display: grid; gap: 8px; min-width: 0; }
+.hist-cuerpo h4 { margin: 0; color: #0b1b3a; font-family: "Sora", "Manrope", sans-serif; font-size: 1rem; }
+.hist-diag {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #3b4a66;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.hist-item .cit-fecha { background: #f4f8ff; }
+
+@media (max-width: 720px) {
+  .hist-resumen { grid-template-columns: 1fr; }
+  .hist-acciones { width: 100%; }
+  .hist-acciones .btn { flex: 1; }
+  .hist-item { grid-template-columns: 1fr; gap: 12px; }
+  .hist-item .cit-fecha { display: flex; justify-content: flex-start; gap: 8px; height: auto; padding: 8px 12px; align-items: baseline; }
+  .hist-item .cit-fecha strong { font-size: 1.15rem; }
+}
+
+/* Impresión: solo el historial, sin el menú ni los botones */
+@media print {
+  .adm-side, .adm-header, .chat-launcher-wrap, .seg-volver, .hist-acciones, .hist .filtros, .hist-botones, .hist-ver { display: none !important; }
+  .adm-main, .adm-contenido { margin: 0 !important; padding: 0 !important; }
+  .hist-solo-impresion { display: block; margin: 0 0 12px; font-size: 1rem; color: #0b1b3a; }
+  .hist-diag { -webkit-line-clamp: unset; display: block; }
+  .hist-item, .hist-resumen > div, .hist-cabecera { border-color: #cbd5e1; box-shadow: none; }
+}

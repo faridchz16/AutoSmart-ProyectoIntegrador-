@@ -7,6 +7,7 @@ export const TITULOS_CLIENTE = [
   { patron: /^\/cliente\/citas\/[^/]+\/?$/, texto: "Seguimiento de la cita" },
   { patron: /^\/cliente\/citas\/[^/]+\/pago\/?$/, texto: "Pago del servicio" },
   { patron: /^\/cliente\/citas\/[^/]+\/detalle\/?$/, texto: "Detalle del mantenimiento" },
+  { patron: /^\/cliente\/vehiculos\/[^/]+\/historial\/?$/, texto: "Historial del vehículo" },
 ];
 
 export const ENLACES_CLIENTE = [
@@ -50,7 +51,7 @@ export const ENLACES_CLIENTE = [
   {
     to: "/cliente/vehiculos",
     texto: "Mis vehículos",
-    descripcion: "Registra tus autos con su placa, año y kilometraje.",
+    descripcion: "Tus autos y el historial de mantenimiento de cada uno.",
     icono: (
       <Icono>
         <path d="M5 16v-4.5l1.8-4.2A2 2 0 0 1 8.6 6h6.8a2 2 0 0 1 1.8 1.3L19 11.5V16" />
