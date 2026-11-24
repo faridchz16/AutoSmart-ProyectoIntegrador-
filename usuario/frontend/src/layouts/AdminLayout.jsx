@@ -40,6 +40,16 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/pagos",
+    texto: "Pagos",
+    icono: (
+      <Icono>
+        <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+        <path d="M2.5 10h19M6.5 14.5h4" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/usuarios",
     texto: "Usuarios",
     icono: (

@@ -17,6 +17,7 @@ import Taller from "./pages/admin/Taller";
 import Inventario from "./pages/admin/Inventario";
 import Solicitudes from "./pages/admin/Solicitudes";
 import Indicadores from "./pages/admin/Indicadores";
+import Pagos from "./pages/admin/Pagos";
 import InicioMecanico from "./pages/mecanico/Inicio";
 import Agenda from "./pages/mecanico/Agenda";
 import CitasHoy from "./pages/mecanico/CitasHoy";
@@ -45,6 +46,7 @@ function App() {
             <Route index element={<Resumen />} />
             <Route path="indicadores" element={<Indicadores />} />
             <Route path="reservas" element={<Reservas />} />
+            <Route path="pagos" element={<Pagos />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="servicios" element={<Servicios />} />
             <Route path="inventario" element={<Inventario />} />

@@ -1217,3 +1217,51 @@ export async function obtenerMetricas(mes) {
     totalCalificaciones: vacio ? 0 : n(6),
   };
 }
+
+/* ---------- Pagos del taller (T70.2, contrato de T70.1) ---------- */
+
+const pagosPrueba = [
+  [12, 0, "11:20", "Lucía Fernández", "ABC-123", "AS-2026-00112", "TARJETA", "APROBADO", 185.5, null],
+  [11, -1, "17:05", "Rosa Paredes", "GHI-246", "AS-2026-00108", "YAPE_PLIN", "APROBADO", 120, null],
+  [10, -2, "09:40", "Diego Mendoza", "DEF-321", "AS-2026-00104", "TARJETA", "RECHAZADO", 240, null],
+  [9, -2, "10:02", "Diego Mendoza", "DEF-321", "AS-2026-00104", "YAPE_PLIN", "APROBADO", 240, null],
+  [8, -4, "16:30", "Andrea Salazar", "CDE-789", "AS-2026-00099", "EFECTIVO", "APROBADO", 140, "admin@autosmart.com"],
+  [7, -6, "12:15", "Camila Flores", "HIJ-135", "AS-2026-00095", "TARJETA", "APROBADO", 95, null],
+  [6, -9, "15:45", "José Huamán", "BCD-456", "AS-2026-00090", "EFECTIVO", "APROBADO", 230, "admin@autosmart.com"],
+  [5, -12, "10:10", "Paola Medina", "GHI-246", "AS-2026-00086", "YAPE_PLIN", "APROBADO", 70, null],
+  [4, -26, "14:00", "Jorge Ramírez", "FGH-987", "AS-2026-00078", "TARJETA", "APROBADO", 310, null],
+  [3, -33, "09:30", "Daniela Vargas", "JKL-482", "AS-2026-00071", "TARJETA", "APROBADO", 150, null],
+].map(([idPago, dias, hora, cliente, placa, ticket, metodo, estado, monto, registradoPor]) => ({
+  idPago,
+  codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+  fecha: enHora(dias, hora),
+  ticket,
+  cliente,
+  placa,
+  metodo,
+  estado,
+  monto,
+  registradoPor,
+}));
+
+export async function listarPagosAdmin({ desde, hasta, metodo, estado }) {
+  await esperar();
+  const hoy = fechaRelativa(0);
+  const inicio = desde || `${hoy.slice(0, 8)}01`;
+  const fin = hasta || hoy;
+  if (inicio > fin) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const lista = pagosPrueba
+    .filter((p) => p.fecha.slice(0, 10) >= inicio && p.fecha.slice(0, 10) <= fin)
+    .filter((p) => (!metodo || p.metodo === metodo) && (!estado || p.estado === estado))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const total = lista.filter((p) => p.estado === "APROBADO").reduce((s, p) => s + p.monto, 0);
+  return { desde: inicio, hasta: fin, cantidad: lista.length, totalAprobado: Math.round(total * 100) / 100, pagos: copia(lista) };
+}
+
+// Comprobante de ejemplo: un PDF de una página con el código del pago
+export async function comprobantePrueba(pago) {
+  await esperar(250);
+  const texto = `Comprobante ${pago.codigo} - ${pago.cliente} - S/ ${pago.monto.toFixed(2)} (datos de prueba)`;
+  const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 420 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${texto.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${texto}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
