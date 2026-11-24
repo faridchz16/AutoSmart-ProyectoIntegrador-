@@ -17,6 +17,8 @@
 .ind-mes input:focus { outline: 3px solid #93b4ff; outline-offset: 1px; border-color: #1150e8; }
 .ind-mes .btn { margin-left: 6px; }
 
+.ind-exportar { display: flex; justify-content: flex-end; margin: -8px 0 14px; }
+
 .ind-panel { display: grid; gap: 16px; transition: opacity 0.2s; }
 .ind-panel.actualizando { opacity: 0.6; }
 

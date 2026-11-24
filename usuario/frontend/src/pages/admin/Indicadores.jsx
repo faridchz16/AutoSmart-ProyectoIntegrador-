@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   obtenerMetricas,
   mesActual,
@@ -13,6 +13,8 @@ import { ESTADOS_CITA } from "../../services/agendaService";
 import { textoDuracion } from "../../services/historialMecanicoService";
 import { formatoPromedio } from "../../services/calificacionesService";
 import Estrellas from "../../components/Estrellas";
+import BotonesExportar from "../../components/admin/BotonesExportar";
+import Aviso from "../../components/admin/Aviso";
 import "../../components/admin/admin-ui.css";
 import "./Indicadores.css";
 
@@ -20,7 +22,8 @@ import "./Indicadores.css";
    - Selector de mes (por defecto el actual) con flechas para ir al anterior o al siguiente
    - Citas, ingresos, tiempo promedio de atención y satisfacción, comparados con el mes anterior
    - Ingresos de los últimos 6 meses (al hacer clic en una columna se abre ese mes),
-     ingresos por método de pago y citas por estado */
+     ingresos por método de pago y citas por estado
+   T74.2 – Exportar a Excel o PDF las métricas del mes elegido */
 
 const MESES_TENDENCIA = 6;
 // Orden del flujo de una cita: así se leen los estados en el gráfico
@@ -49,6 +52,14 @@ function Indicadores() {
   const [mes, setMes] = useState(hoy);
   const [recarga, setRecarga] = useState(0);
   const [resultado, setResultado] = useState({ clave: null, meses: [], error: "" });
+  const [aviso, setAviso] = useState(null);
+
+  const contadorAvisos = useRef(0);
+  const avisar = (tipo, texto) => {
+    contadorAvisos.current += 1;
+    setAviso({ tipo, texto, id: contadorAvisos.current });
+  };
+  const cerrarAviso = useCallback(() => setAviso(null), []);
 
   const clave = `${mes}|${recarga}`;
   const cargando = resultado.clave !== clave;
@@ -122,6 +133,10 @@ function Indicadores() {
             Actualizar
           </button>
         </div>
+      </div>
+
+      <div className="ind-exportar">
+        <BotonesExportar tipo="metricas" filtros={{ mes }} alResultado={avisar} />
       </div>
 
       {resultado.error ? (
@@ -279,6 +294,7 @@ function Indicadores() {
           </section>
         </div>
       )}
+      <Aviso aviso={aviso} alCerrar={cerrarAviso} />
     </section>
   );
 }

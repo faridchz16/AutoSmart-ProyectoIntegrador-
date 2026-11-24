@@ -12,6 +12,7 @@ import Paginacion from "../../components/admin/Paginacion";
 import Aviso from "../../components/admin/Aviso";
 import Modal from "../../components/admin/Modal";
 import FormCobroEfectivo from "./FormCobroEfectivo";
+import BotonesExportar from "../../components/admin/BotonesExportar";
 import "../../components/admin/admin-ui.css";
 import "./Reservas.css";
 import "./Pagos.css";
@@ -21,7 +22,8 @@ import "./Pagos.css";
    - Total aprobado del periodo, cuántos pagos se aprobaron o rechazaron y cuánto entró por cada método
    - Tabla con código, fecha, cliente, placa, método, estado y monto; búsqueda por código, ticket, cliente o placa
    - Descarga del comprobante PDF de los pagos aprobados
-   T69.2 – Botón "Cobro en efectivo" para registrar el pago de un servicio finalizado en el taller */
+   T69.2 – Botón "Cobro en efectivo" para registrar el pago de un servicio finalizado en el taller
+   T74.2 – Exportar a Excel o PDF los pagos con el mismo periodo, método y estado (la búsqueda no aplica) */
 
 const TAMANO = 10;
 
@@ -136,6 +138,12 @@ function Pagos() {
           </p>
         </div>
         <div className="pg-acciones">
+          <BotonesExportar
+            tipo="pagos"
+            filtros={{ desde: rango.desde, hasta: rango.hasta, metodo, estado }}
+            deshabilitado={!!errorRango}
+            alResultado={avisar}
+          />
           <button type="button" className="btn btn-sec" onClick={() => setRecarga((n) => n + 1)} disabled={cargando}>
             Actualizar
           </button>

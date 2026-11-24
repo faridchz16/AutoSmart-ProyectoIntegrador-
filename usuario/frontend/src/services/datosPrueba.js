@@ -1258,12 +1258,17 @@ export async function listarPagosAdmin({ desde, hasta, metodo, estado }) {
   return { desde: inicio, hasta: fin, cantidad: lista.length, totalAprobado: Math.round(total * 100) / 100, pagos: copia(lista) };
 }
 
-// Comprobante de ejemplo: un PDF de una página con el código del pago
+// PDF de una página con una línea de texto (para los archivos de ejemplo)
+function pdfDeTexto(texto) {
+  const limpio = texto.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[()\\]/g, "");
+  const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 520 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${limpio.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${limpio}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+// Comprobante de ejemplo con el código del pago
 export async function comprobantePrueba(pago) {
   await esperar(250);
-  const texto = `Comprobante ${pago.codigo} - ${pago.cliente} - S/ ${pago.monto.toFixed(2)} (datos de prueba)`;
-  const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 420 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${texto.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${texto}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
-  return new Blob([pdf], { type: "application/pdf" });
+  return pdfDeTexto(`Comprobante ${pago.codigo} - ${pago.cliente} - S/ ${pago.monto.toFixed(2)} (datos de prueba)`);
 }
 
 /* ---------- Historial por placa (T72.2) y cobro en efectivo (T69.2), contratos de T72.1 y T69.1 ---------- */
@@ -1340,4 +1345,27 @@ export async function registrarCobroEfectivo({ idOrden, monto, fecha, observacio
   };
   pagosPrueba.unshift(pago);
   return { ...pago, idOrden, motivoRechazo: null, comprobanteUrl: `/payments/${idPago}/receipt` };
+}
+
+/* ---------- Reportes en Excel y PDF (T74.2, contrato de T74.1) ---------- */
+
+// Sin backend no se puede armar un .xlsx real: el "Excel" de prueba es un CSV que Excel abre igual
+export async function reportePrueba(tipo, formato, filtros) {
+  await esperar(400);
+  const periodo = filtros.mes || `${filtros.desde || "inicio"}_${filtros.hasta || "hoy"}`;
+  let filas;
+  if (tipo === "pagos") {
+    const { pagos } = await listarPagosAdmin(filtros);
+    filas = [["Codigo", "Fecha", "Ticket", "Cliente", "Placa", "Metodo", "Estado", "Monto"], ...pagos.map((p) => [p.codigo, p.fecha, p.ticket, p.cliente, p.placa, p.metodo, p.estado, p.monto])];
+  } else if (tipo === "metricas") {
+    const m = await obtenerMetricas(filtros.mes || fechaRelativa(0).slice(0, 7));
+    filas = [["Indicador", "Valor"], ["Citas", m.totalCitas], ["Ingresos (S/)", m.ingresos], ["Tiempo promedio (min)", m.tiempoPromedioMinutos], ["Calificacion promedio", m.calificacionPromedio ?? "-"]];
+  } else {
+    filas = [["Ticket", "Fecha", "Estado", "Cliente", "Placa"], ...reservasPrueba.filter((r) => (!filtros.desde || r.fecha >= filtros.desde) && (!filtros.hasta || r.fecha <= filtros.hasta) && (!filtros.estado || r.estado === filtros.estado)).map((r) => [r.ticket, r.fecha, r.estado, r.cliente, r.placa])];
+  }
+  if (formato === "pdf") {
+    return { blob: pdfDeTexto(`Reporte de ${tipo} ${periodo}: ${filas.length - 1} filas (datos de prueba)`), nombre: `reporte-${tipo}-${periodo}.pdf` };
+  }
+  const csv = "\ufeff" + filas.map((f) => f.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\r\n");
+  return { blob: new Blob([csv], { type: "text/csv;charset=utf-8" }), nombre: `reporte-${tipo}-${periodo}.csv` };
 }
