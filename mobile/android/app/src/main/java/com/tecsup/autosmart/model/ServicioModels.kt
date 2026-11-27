@@ -10,5 +10,7 @@ data class Servicio(
     @SerializedName(value = "precioBase", alternate = ["precio", "precio_base"])
     val precioBase: Double = 0.0,
     @SerializedName(value = "duracionMinutos", alternate = ["duracion", "duracion_minutos"])
-    val duracionMinutos: Int = 0
+    val duracionMinutos: Int = 0,
+    // PREVENTIVO o CORRECTIVO (lo envía el backend); se usa para filtrar el catálogo
+    val categoria: String? = null
 )

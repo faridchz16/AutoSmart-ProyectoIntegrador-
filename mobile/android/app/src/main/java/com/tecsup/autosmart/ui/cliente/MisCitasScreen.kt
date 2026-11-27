@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.compose.runtime.saveable.rememberSaveable
 import java.time.LocalTime
 import java.time.Instant
@@ -108,7 +109,7 @@ fun MisCitasScreen(
     val citaACancelar = cancelacion.cita
     Scaffold(
         topBar = {
-            TopAppBar(
+            BarraAutoSmart(
                 title = { Text("Mis Citas") },
                 actions = {
                     TextButton(

@@ -1,5 +1,10 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,9 +54,13 @@ fun HistorialVehiculoScreen(
     BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
-            TopAppBar(
+            BarraAutoSmart(
                 title = { Text("Historial de mantenimientos") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Volver") } }
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                }
             )
         }
     ) { padding ->
@@ -68,6 +77,10 @@ fun HistorialVehiculoScreen(
                             label = { Text(vehiculo.placa) }
                         )
                     }
+                }
+                // Foto y datos del vehículo elegido (se toca la foto para verla en grande)
+                estado.vehiculos.firstOrNull { it.idVehiculo == estado.seleccionado }?.let { vehiculo ->
+                    CabeceraVehiculoFoto(vehiculo, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 }
             }
             when {

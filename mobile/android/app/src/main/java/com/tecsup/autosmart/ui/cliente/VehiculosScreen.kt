@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.Speed
@@ -70,7 +71,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tecsup.autosmart.R
+import com.tecsup.autosmart.data.repository.CitaRepository
 import com.tecsup.autosmart.data.repository.PerfilRepository
+import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.PerfilResponse
 import com.tecsup.autosmart.model.VehiculoResponse
 import com.tecsup.autosmart.ui.auth.fondoAuth
@@ -130,6 +133,60 @@ fun VehiculosScreen(
     var perfil by remember { mutableStateOf<PerfilResponse?>(null) }
     LaunchedEffect(Unit) { perfil = PerfilRepository().obtenerPerfil().getOrNull() }
 
+    // Notificaciones (campanita): avisos armados con el estado de las citas del cliente
+    var citasAvisos by remember { mutableStateOf<List<CitaCreadaResponse>>(emptyList()) }
+    var cargandoAvisos by remember { mutableStateOf(false) }
+    var recargarAvisos by remember { mutableIntStateOf(0) }
+    var verAvisos by remember { mutableStateOf(false) }
+    var leidosAvisos by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(recargarAvisos) {
+        cargandoAvisos = true
+        CitaRepository().misCitas().onSuccess { citasAvisos = it }
+        cargandoAvisos = false
+    }
+    LaunchedEffect(perfil?.idUsuario) {
+        perfil?.idUsuario?.let { leidosAvisos = AvisosLeidos.leidos(contexto, it) }
+    }
+    val avisos = remember(citasAvisos) { avisosDe(citasAvisos) }
+    val avisosNuevos = avisos.count { it.clave !in leidosAvisos }
+    val marcarAvisosLeidos = {
+        perfil?.idUsuario?.let { id ->
+            AvisosLeidos.marcar(contexto, id, avisos.map { it.clave })
+            leidosAvisos = AvisosLeidos.leidos(contexto, id)
+        }
+    }
+    if (verAvisos) {
+        PanelAvisos(
+            avisos = avisos,
+            leidos = leidosAvisos,
+            cargando = cargandoAvisos,
+            onAbrir = { marcarAvisosLeidos(); verAvisos = false; onNavigateToMisCitas() },
+            onCerrar = { marcarAvisosLeidos(); verAvisos = false }
+        )
+    }
+
+    // Anuncio de ARI: se muestra solo la primera vez que cada cliente entra al inicio
+    var mostrarAnuncioAri by remember { mutableStateOf(false) }
+    LaunchedEffect(perfil?.idUsuario) {
+        val id = perfil?.idUsuario ?: return@LaunchedEffect
+        if (!AnuncioAri.visto(contexto, id)) mostrarAnuncioAri = true
+    }
+    perfil?.idUsuario?.let { id ->
+        if (mostrarAnuncioAri) {
+            AnuncioAriDialog(
+                onProbar = {
+                    AnuncioAri.marcarVisto(contexto, id)
+                    mostrarAnuncioAri = false
+                    onNavigateToAsistente()
+                },
+                onCerrar = {
+                    AnuncioAri.marcarVisto(contexto, id)
+                    mostrarAnuncioAri = false
+                }
+            )
+        }
+    }
+
     // Foto del vehículo elegida desde la galería (se guarda en el celular)
     val scope = rememberCoroutineScope()
     var vehiculoParaFoto by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -147,6 +204,18 @@ fun VehiculosScreen(
     val pedirFoto: (Long) -> Unit = { id ->
         vehiculoParaFoto = id
         elegirFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+    // Vehículo cuya foto se está viendo a pantalla completa
+    var fotoAbierta by remember { mutableStateOf<VehiculoResponse?>(null) }
+    fotoAbierta?.let { v ->
+        VisorFotoVehiculo(
+            idVehiculo = v.idVehiculo,
+            titulo = "${v.marca} ${v.modelo}",
+            subtitulo = v.placa.uppercase(),
+            version = versionFotos,
+            onCambiar = { pedirFoto(v.idVehiculo) },
+            onCerrar = { fotoAbierta = null }
+        )
     }
 
     estado.seleccionado?.let { vehiculo ->
@@ -174,7 +243,7 @@ fun VehiculosScreen(
     val destinos = listOf(
         Destino("Inicio", Icons.Filled.Home, seleccionado = true) {},
         // El catálogo de servicios sigue en la pestaña "Servicios" de arriba; aquí va el asistente con IA
-        Destino("Asistente", Icons.Outlined.SmartToy) { if (habilitado) onNavigateToAsistente() },
+        Destino("ARI", Icons.Outlined.SmartToy, imagen = R.drawable.img_ari_figura) { if (habilitado) onNavigateToAsistente() },
         Destino("Reservar", Icons.Outlined.EventAvailable) { if (habilitado) onNavigateToReserva() },
         Destino("Perfil", Icons.Outlined.Person) { if (habilitado) onNavigateToPerfil() }
     )
@@ -194,7 +263,9 @@ fun VehiculosScreen(
                         horizontal = horizontal,
                         habilitado = habilitado,
                         onPerfil = onNavigateToPerfil,
-                        onSalir = onLogout
+                        onSalir = onLogout,
+                        avisosNuevos = avisosNuevos,
+                        onAvisos = { recargarAvisos++; verAvisos = true }
                     )
                     PestanasCliente(
                         angosto = angosto,
@@ -273,6 +344,7 @@ fun VehiculosScreen(
                             angosto = angosto,
                             accionesActivas = accionesActivas,
                             onFoto = { pedirFoto(vehiculo.idVehiculo) },
+                            onVerFoto = { fotoAbierta = vehiculo },
                             onHistorial = { onHistorialVehiculo(vehiculo.idVehiculo) },
                             onEditar = { onEditarVehiculo(vehiculo) },
                             onEliminar = { viewModel.seleccionar(vehiculo) },
@@ -297,7 +369,7 @@ fun VehiculosScreen(
                     NavigationRailItem(
                         selected = d.seleccionado,
                         onClick = d.onClick,
-                        icon = { Icon(d.icono, contentDescription = null) },
+                        icon = { IconoDestino(d) },
                         label = { Text(d.texto, fontSize = 12.sp) },
                         colors = NavigationRailItemDefaults.colors(
                             selectedIconColor = AzulMarca,
@@ -329,7 +401,7 @@ fun VehiculosScreen(
                         NavigationBarItem(
                             selected = d.seleccionado,
                             onClick = d.onClick,
-                            icon = { Icon(d.icono, contentDescription = null) },
+                            icon = { IconoDestino(d) },
                             label = { Text(d.texto, fontSize = 12.sp) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = AzulMarca,
@@ -352,8 +424,26 @@ private class Destino(
     val texto: String,
     val icono: ImageVector,
     val seleccionado: Boolean = false,
+    val imagen: Int? = null, // si tiene imagen (ARI) se muestra en vez del ícono
     val onClick: () -> Unit
 )
+
+/** Ícono del menú: la figura de ARI o el ícono normal. */
+@Composable
+private fun IconoDestino(d: Destino) {
+    val imagen = d.imagen
+    if (imagen != null) {
+        // Figura completa de ARI (sin recortar en círculo) para que se reconozca
+        Image(
+            painterResource(imagen),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(width = 46.dp, height = 30.dp)
+        )
+    } else {
+        Icon(d.icono, contentDescription = null)
+    }
+}
 
 /** Ítem que ocupa todo el ancho de la grilla (encabezado, títulos, mensajes). */
 private fun LazyGridScope.filaCompleta(clave: String, contenido: @Composable () -> Unit) {
@@ -367,7 +457,9 @@ private fun EncabezadoCliente(
     horizontal: Boolean,
     habilitado: Boolean,
     onPerfil: () -> Unit,
-    onSalir: () -> Unit
+    onSalir: () -> Unit,
+    avisosNuevos: Int = 0,
+    onAvisos: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -424,7 +516,9 @@ private fun EncabezadoCliente(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            // Campanita de notificaciones con el número de avisos nuevos
+            CampanaAvisos(nuevos = avisosNuevos, habilitado = habilitado, onClick = onAvisos)
+            Spacer(Modifier.width(4.dp))
             MenuAvatar(perfil = perfil, habilitado = habilitado, onPerfil = onPerfil, onSalir = onSalir)
         }
     }
@@ -598,6 +692,7 @@ private fun TarjetaVehiculo(
     angosto: Boolean,
     accionesActivas: Boolean,
     onFoto: () -> Unit,
+    onVerFoto: () -> Unit,
     onHistorial: () -> Unit,
     onEditar: () -> Unit,
     onEliminar: () -> Unit,
@@ -617,6 +712,7 @@ private fun TarjetaVehiculo(
                     idVehiculo = vehiculo.idVehiculo,
                     version = versionFotos,
                     tamano = if (angosto) 112.dp else 128.dp,
+                    onVer = onVerFoto,
                     onCambiar = onFoto
                 )
                 Spacer(Modifier.width(12.dp))
@@ -636,6 +732,11 @@ private fun TarjetaVehiculo(
                                 Icon(Icons.Default.MoreVert, contentDescription = "Más opciones", tint = TextoPrincipal)
                             }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Ver foto") },
+                                    leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                                    onClick = { menu = false; onVerFoto() }
+                                )
                                 DropdownMenuItem(
                                     text = { Text("Cambiar foto") },
                                     leadingIcon = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
@@ -751,7 +852,7 @@ private fun BotonAccion(
 
 /** Foto del vehículo (guardada en el celular) o un dibujo si aún no tiene. */
 @Composable
-private fun FotoVehiculo(idVehiculo: Long, version: Int, tamano: Dp, onCambiar: () -> Unit) {
+private fun FotoVehiculo(idVehiculo: Long, version: Int, tamano: Dp, onVer: () -> Unit, onCambiar: () -> Unit) {
     val contexto = LocalContext.current
     val foto by produceState<ImageBitmap?>(initialValue = null, idVehiculo, version) {
         value = withContext(Dispatchers.IO) { FotoVehiculoLocal.cargar(contexto, idVehiculo)?.asImageBitmap() }
@@ -760,7 +861,8 @@ private fun FotoVehiculo(idVehiculo: Long, version: Int, tamano: Dp, onCambiar: 
         modifier = Modifier
             .size(tamano)
             .clip(RoundedCornerShape(18.dp))
-            .clickable(onClick = onCambiar)
+            // Con foto: se abre para verla; sin foto: se elige una
+            .clickable { if (foto != null) onVer() else onCambiar() }
     ) {
         val actual = foto
         if (actual != null) {
@@ -795,6 +897,8 @@ private fun FotoVehiculo(idVehiculo: Long, version: Int, tamano: Dp, onCambiar: 
                 .align(Alignment.BottomEnd)
                 .padding(6.dp)
                 .size(30.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onCambiar)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(

@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.mecanico
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -32,7 +33,7 @@ fun DeficienciasScreen(idOrden: Long, editable: Boolean, viewModel: Deficiencias
         dismissButton = { TextButton(onClick = { salir = false }) { Text("Continuar aquí") } })
     val habilitado = estado.editable && estado.cargado && !estado.guardando && !estado.cargando && !estado.verificar
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Deficiencias") }, navigationIcon = {
+        BarraAutoSmart(title = { Text("Deficiencias") }, navigationIcon = {
             IconButton(onClick = volver, enabled = !estado.guardando) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la orden")
             }

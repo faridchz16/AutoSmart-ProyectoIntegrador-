@@ -234,6 +234,28 @@ class MainActivity : ComponentActivity() {
                 // true cuando el cambio de contraseña se abrió desde "Mi perfil" (Seguridad)
                 var recuperacionDesdePerfil by rememberSaveable { mutableStateOf(false) }
 
+                // Sesión vencida (401 con token): se cierra la sesión y se pide ingresar de nuevo
+                val sesionExpirada by RetrofitClient.sesionExpirada.collectAsState()
+                LaunchedEffect(sesionExpirada) {
+                    if (!sesionExpirada || cerrandoSesion) return@LaunchedEffect
+                    android.widget.Toast.makeText(
+                        context, "Tu sesión expiró. Vuelve a iniciar sesión.", android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    cerrandoSesion = true
+                    try {
+                        NotificacionesFcm.cerrarSesion(applicationContext, tokenManager)
+                        asistenteVm.limpiar()
+                        mecanicoVm.limpiar()
+                        sesionCliente = false
+                        citaNotificada.value = null
+                        RetrofitClient.token = null
+                        currentScreen = "login"
+                    } finally {
+                        cerrandoSesion = false
+                        RetrofitClient.sesionExpirada.value = false
+                    }
+                }
+
 
                 LaunchedEffect(Unit) {
                     val savedToken = tokenManager.getToken.firstOrNull()

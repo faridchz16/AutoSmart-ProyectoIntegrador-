@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,7 @@ fun DetalleMantenimientoScreen(
     LaunchedEffect(idOrden) { viewModel.iniciar(idOrden) }
     BackHandler(onBack = onBack)
     Scaffold(topBar = {
-        TopAppBar(
+        BarraAutoSmart(
             title = { Text("Detalle del mantenimiento") },
             navigationIcon = {
                 IconButton(onClick = onBack) {

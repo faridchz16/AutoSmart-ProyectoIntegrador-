@@ -112,11 +112,11 @@ fun AsistenteScreen(
             AvatarAuto(46.dp, borde = true)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Asistente AutoSmart", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                Text("ARI", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4ADE80)))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (estado.escribiendo) "Escribiendo…" else "En línea · con IA", color = Color(0xFFDCE6F8), fontSize = 13.sp)
+                    Text(if (estado.escribiendo) "Escribiendo…" else "En línea · asistente con IA", color = Color(0xFFDCE6F8), fontSize = 13.sp)
                 }
             }
             // T79.2: botón "Hablar con un asesor"
@@ -220,8 +220,9 @@ private fun AvatarAuto(tamano: androidx.compose.ui.unit.Dp, borde: Boolean = fal
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painterResource(R.drawable.img_welcome_auto),
-            contentDescription = "Asistente AutoSmart",
+            // ARI: avatar del asistente con IA de AutoSmart
+            painterResource(R.drawable.img_ari_figura),
+            contentDescription = "ARI, asistente de AutoSmart",
             contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxSize().padding(3.dp)
         )

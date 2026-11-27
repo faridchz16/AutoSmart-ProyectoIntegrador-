@@ -16,6 +16,12 @@ object RetrofitClient {
 
     var token: String? = null
 
+    /**
+     * Se activa cuando el servidor responde 401 a una petición que sí llevaba token:
+     * la sesión venció (el JWT dura 60 min). MainActivity lo escucha y pide iniciar sesión otra vez.
+     */
+    val sesionExpirada = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     private var tokenManager: TokenManager? = null
 
     fun init(context: Context) {
@@ -27,16 +33,20 @@ object RetrofitClient {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            if (original.header("Authorization") == null) {
+            var conToken = original.header("Authorization") != null
+            if (!conToken) {
                 val activeToken = token ?: runBlocking {
                     tokenManager?.getToken?.firstOrNull()
                 }
                 if (!activeToken.isNullOrEmpty()) {
                     requestBuilder.header("Authorization", "Bearer $activeToken")
+                    conToken = true
                 }
             }
 
-            chain.proceed(requestBuilder.build())
+            val respuesta = chain.proceed(requestBuilder.build())
+            if (respuesta.code == 401 && conToken) sesionExpirada.value = true
+            respuesta
         }
         .build()
 

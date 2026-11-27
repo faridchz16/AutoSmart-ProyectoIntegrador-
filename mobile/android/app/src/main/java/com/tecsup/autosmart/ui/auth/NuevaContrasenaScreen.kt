@@ -62,7 +62,8 @@ fun NuevaContrasenaScreen(
     PantallaRecuperacion(
         titulo = "Nueva contraseña",
         subtitulo = "Ingresa el código que enviamos a $correo y elige tu nueva contraseña.",
-        onBack = onBack
+        onBack = onBack,
+        fondoAzul = true
     ) {
         OutlinedTextField(
             value = codigo,
@@ -75,7 +76,7 @@ fun NuevaContrasenaScreen(
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            colors = recuperacionFieldColors()
+            colors = authFieldColors()
         )
 
         Spacer(Modifier.height(12.dp))
@@ -85,7 +86,7 @@ fun NuevaContrasenaScreen(
             onValueChange = { nueva = it; limpiar() },
             label = { Text("Nueva contraseña") },
             visualTransformation = PasswordVisualTransformation(),
-            supportingText = { Text("Mínimo 8 caracteres, 1 mayúscula y 1 número", color = Color(0xFF94A3B8)) },
+            supportingText = { Text("Mínimo 8 caracteres, 1 mayúscula y 1 número", color = AuthEstilo.TextoSuave) },
             singleLine = true,
             isError = mensajeError != null,
             enabled = !estado.enviando,
@@ -93,7 +94,7 @@ fun NuevaContrasenaScreen(
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            colors = recuperacionFieldColors()
+            colors = authFieldColors()
         )
 
         Spacer(Modifier.height(4.dp))
@@ -110,12 +111,12 @@ fun NuevaContrasenaScreen(
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { guardar() }),
-            colors = recuperacionFieldColors()
+            colors = authFieldColors()
         )
 
         mensajeError?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = Color(0xFFF87171), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(it, color = AuthEstilo.Error, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
         estado.info?.let {
             Spacer(Modifier.height(8.dp))
@@ -130,13 +131,13 @@ fun NuevaContrasenaScreen(
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1D4ED8),
-                contentColor = Color.White,
-                disabledContainerColor = Color(0xFF1D4ED8).copy(alpha = 0.45f)
+                containerColor = Color.White,
+                contentColor = AuthEstilo.AzulWeb,
+                disabledContainerColor = Color.White.copy(alpha = 0.45f)
             )
         ) {
             if (estado.enviando) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(color = AuthEstilo.AzulWeb, modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
             } else {
                 Text("Cambiar contraseña", fontSize = 15.sp, fontWeight = FontWeight.Bold)
             }
@@ -149,7 +150,7 @@ fun NuevaContrasenaScreen(
             enabled = !estado.enviando,
             modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally)
         ) {
-            Text("¿No te llegó? Reenviar código", color = Color(0xFF60A5FA), fontWeight = FontWeight.SemiBold)
+            Text("¿No te llegó? Reenviar código", color = Color.White, fontWeight = FontWeight.SemiBold)
         }
     }
 }

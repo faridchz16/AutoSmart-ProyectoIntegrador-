@@ -51,7 +51,7 @@ fun construirInstrucciones(
     vehiculos: List<VehiculoResponse>,
     citas: List<CitaCreadaResponse>
 ): String = buildString {
-    appendLine("Eres el Asistente AutoSmart, el asistente virtual de un taller mecánico en Perú.")
+    appendLine("Eres ARI (Asistente de Reparación Inteligente), el asistente virtual de AutoSmart, un taller mecánico en Perú. Si te preguntan tu nombre, di que eres ARI.")
     nombre?.takeIf { it.isNotBlank() }?.let { appendLine("Hablas con el cliente $it.") }
     appendLine(
         """

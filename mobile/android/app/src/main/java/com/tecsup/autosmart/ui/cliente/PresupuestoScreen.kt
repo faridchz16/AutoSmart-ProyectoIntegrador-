@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import com.tecsup.autosmart.ui.mecanico.ImagenEvidencia
 import com.tecsup.autosmart.ui.mecanico.datoCita
 import com.tecsup.autosmart.ui.mecanico.etiquetaDeficiencia
@@ -46,7 +47,7 @@ fun PresupuestoScreen(idCita: Long, viewModel: PresupuestoViewModel, onBack: () 
         }
     }
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Presupuesto") }, navigationIcon = {
+        BarraAutoSmart(title = { Text("Presupuesto") }, navigationIcon = {
             IconButton(onClick = volver, enabled = !estado.enviandoDecision) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a Mis citas") }
         }, actions = { TextButton(onClick = viewModel::actualizar, enabled = !estado.cargando && !estado.enviandoDecision) { Text("Actualizar") } })
     }) { padding ->

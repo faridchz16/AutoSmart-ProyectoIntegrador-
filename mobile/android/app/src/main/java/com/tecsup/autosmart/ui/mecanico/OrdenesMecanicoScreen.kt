@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.mecanico
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,7 +30,7 @@ fun OrdenesMecanicoScreen(
     BackHandler(onBack = volver)
     LaunchedEffect(viewModel) { viewModel.cargarSiNecesario() }
     Scaffold(topBar = {
-        TopAppBar(title = { Text(if (seleccionada == null) "Órdenes de trabajo" else "Detalle de la orden") },
+        BarraAutoSmart(title = { Text(if (seleccionada == null) "Órdenes de trabajo" else "Detalle de la orden") },
             navigationIcon = { IconButton(onClick = volver) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
             } }, actions = {

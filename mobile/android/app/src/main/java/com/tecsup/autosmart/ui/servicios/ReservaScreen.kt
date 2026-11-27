@@ -1,6 +1,7 @@
 
 package com.tecsup.autosmart.ui.servicios
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -141,7 +142,7 @@ fun ReservaScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            BarraAutoSmart(
                 title = { Text("Reservar Cita") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

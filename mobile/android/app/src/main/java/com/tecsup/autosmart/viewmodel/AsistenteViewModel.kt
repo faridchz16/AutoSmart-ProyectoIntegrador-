@@ -63,7 +63,7 @@ data class AsistenteUiState(
     val mensajes: List<MensajeChat> = listOf(
         MensajeChat(
             0, false,
-            "¡Hola! Soy el Asistente AutoSmart. Te ayudo con servicios, precios, horarios, el estado de tu vehículo " +
+            "¡Hola! Soy ARI, el asistente de AutoSmart. Te ayudo con servicios, precios, horarios, el estado de tu vehículo " +
                 "y a agendar tu cita. También puedes enviarme una foto de tu auto y te digo qué veo.",
             opciones = OPCIONES_RAPIDAS
         )
