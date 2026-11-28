@@ -1,5 +1,10 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import android.app.Activity
 import android.content.ContextWrapper
 import androidx.activity.compose.BackHandler
@@ -35,8 +40,10 @@ fun EditarVehiculoScreen(
     BackHandler { if (!estado.guardando) onBack() }
     LaunchedEffect(estado.actualizado) { estado.actualizado?.let(onActualizado) }
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Editar vehículo") }, navigationIcon = {
-            TextButton(onClick = onBack, enabled = !estado.guardando) { Text("Volver") }
+        BarraAutoSmart(title = { Text("Editar vehículo") }, navigationIcon = {
+            IconButton(onClick = onBack, enabled = !estado.guardando) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+            }
         })
     }) { padding ->
         Column(

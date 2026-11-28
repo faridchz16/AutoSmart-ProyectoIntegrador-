@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.annotation.RequiresApi
@@ -37,6 +38,7 @@ import com.tecsup.autosmart.ui.cliente.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.cliente.EditarVehiculoScreen
 import com.tecsup.autosmart.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.cliente.HistorialVehiculoScreen
+import com.tecsup.autosmart.ui.cliente.NotificacionesScreen
 import com.tecsup.autosmart.viewmodel.HistorialVehiculoViewModel
 import com.tecsup.autosmart.ui.auth.LoginScreen
 import com.tecsup.autosmart.ui.mecanico.FotosDeficienciaScreen
@@ -62,9 +64,20 @@ import com.tecsup.autosmart.ui.cliente.SeguimientoScreen
 import com.tecsup.autosmart.viewmodel.SeguimientoViewModel
 import com.tecsup.autosmart.viewmodel.PresupuestoViewModel
 import com.tecsup.autosmart.ui.cliente.MisCitasScreen
+import com.tecsup.autosmart.ui.cliente.PagoScreen
+import com.tecsup.autosmart.ui.cliente.AsistenteScreen
+import com.tecsup.autosmart.viewmodel.AsistenteViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.appcheck.appCheck
+import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
+import com.tecsup.autosmart.ui.mecanico.PerfilMecanicoScreen
+import com.tecsup.autosmart.viewmodel.MecanicoViewModel
+import com.tecsup.autosmart.viewmodel.PagoViewModel
 import com.tecsup.autosmart.ui.cliente.VehiculosScreen
 import com.tecsup.autosmart.ui.auth.WelcomeScreen
 import com.tecsup.autosmart.ui.theme.AutoSmartAppTheme
+import com.tecsup.autosmart.ui.theme.Apariencia
+import androidx.compose.foundation.isSystemInDarkTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -109,12 +122,26 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // App Check protege la IA (Firebase AI Logic). En pruebas se usa el proveedor de depuración:
+        // su token aparece en Logcat y se registra en Firebase > App Check > Administrar tokens de depuración.
+        if (BuildConfig.DEBUG) {
+            Firebase.appCheck.installAppCheckProviderFactory(DebugAppCheckProviderFactory.getInstance())
+        }
         if (savedInstanceState == null) recibirAviso(intent)
         else citaNotificada.value = savedInstanceState.getLong("cita_notificada").takeIf { it > 0 }
         NotificacionesFcm.crearCanal(this)
         enableEdgeToEdge()
+        Apariencia.iniciar(this)
         setContent {
-            AutoSmartAppTheme {
+            val temaOscuro = Apariencia.modoOscuro ?: isSystemInDarkTheme()
+            // Íconos de la barra de estado claros u oscuros según el modo elegido en la app
+            LaunchedEffect(temaOscuro) {
+                val transparente = android.graphics.Color.TRANSPARENT
+                val estilo = if (temaOscuro) SystemBarStyle.dark(transparente)
+                else SystemBarStyle.light(transparente, transparente)
+                enableEdgeToEdge(statusBarStyle = estilo, navigationBarStyle = estilo)
+            }
+            AutoSmartAppTheme(darkTheme = temaOscuro) {
                 val context = LocalContext.current
                 val tokenManager = remember { TokenManager(context) }
                 val scope = rememberCoroutineScope()
@@ -173,6 +200,14 @@ class MainActivity : ComponentActivity() {
                 val ordenesMecanicoVm: OrdenesMecanicoViewModel = viewModel()
                 var mantenimientoOrdenId by rememberSaveable { mutableStateOf(0L) }
                 var mantenimientoDesdeHistorial by rememberSaveable { mutableStateOf(false) }
+                // Sprint 4 · pagos: orden a pagar (o cita + placa desde Mis citas) y pantalla de regreso
+                val pagoVm: PagoViewModel = viewModel()
+                var pagoOrdenId by rememberSaveable { mutableStateOf(0L) }
+                var pagoCitaId by rememberSaveable { mutableStateOf(0L) }
+                var pagoPlaca by rememberSaveable { mutableStateOf("") }
+                var pagoVolverA by rememberSaveable { mutableStateOf("mis_citas") }
+                // A dónde vuelven Presupuesto y Seguimiento (Mis citas o Notificaciones)
+                var detalleVolverA by rememberSaveable { mutableStateOf("mis_citas") }
                 val mantenimientoVm: DetalleMantenimientoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "detalle_mantenimiento") mantenimientoVm.limpiar()
@@ -183,6 +218,11 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 val agendaMecanicoVm: AgendaMecanicoViewModel = viewModel()
+                // Inicio y perfil profesional del mecánico; la agenda vuelve a donde se abrió
+                val mecanicoVm: MecanicoViewModel = viewModel()
+                // Asistente AutoSmart con IA (Sprint 4 · chatbot)
+                val asistenteVm: AsistenteViewModel = viewModel()
+                var agendaVolverA by rememberSaveable { mutableStateOf("ordenes_mecanico") }
                 val detalleMecanicoVm: CitaDetalleMecanicoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "agenda_mecanico" && currentScreen != "detalle_cita_mecanico") {
@@ -194,6 +234,30 @@ class MainActivity : ComponentActivity() {
                 val serviciosVm: ServiciosViewModel = viewModel()
                 val recuperacionVm: RecuperacionViewModel = viewModel()
                 var correoRecuperacion by rememberSaveable { mutableStateOf("") }
+                // true cuando el cambio de contraseña se abrió desde "Mi perfil" (Seguridad)
+                var recuperacionDesdePerfil by rememberSaveable { mutableStateOf(false) }
+
+                // Sesión vencida (401 con token): se cierra la sesión y se pide ingresar de nuevo
+                val sesionExpirada by RetrofitClient.sesionExpirada.collectAsState()
+                LaunchedEffect(sesionExpirada) {
+                    if (!sesionExpirada || cerrandoSesion) return@LaunchedEffect
+                    android.widget.Toast.makeText(
+                        context, "Tu sesión expiró. Vuelve a iniciar sesión.", android.widget.Toast.LENGTH_LONG
+                    ).show()
+                    cerrandoSesion = true
+                    try {
+                        NotificacionesFcm.cerrarSesion(applicationContext, tokenManager)
+                        asistenteVm.limpiar()
+                        mecanicoVm.limpiar()
+                        sesionCliente = false
+                        citaNotificada.value = null
+                        RetrofitClient.token = null
+                        currentScreen = "login"
+                    } finally {
+                        cerrandoSesion = false
+                        RetrofitClient.sesionExpirada.value = false
+                    }
+                }
 
 
                 LaunchedEffect(Unit) {
@@ -247,9 +311,20 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BackHandler(enabled = currentScreen == "servicios") { currentScreen = "vehiculos" }
+                // Perfil del mecánico: si hay cambios sin guardar, PerfilMecanicoScreen pregunta antes
+                BackHandler(enabled = currentScreen == "perfil_mecanico") { currentScreen = "mecanico" }
+                BackHandler(enabled = currentScreen == "asistente") { currentScreen = "vehiculos" }
+                // Mientras se procesa un pago, PagoScreen bloquea el botón atrás con su propio BackHandler
+                BackHandler(enabled = currentScreen == "pago") {
+                    pagoVm.limpiar()
+                    if (pagoVolverA == "historial_vehiculo") historialVehiculoVm.limpiar()
+                    currentScreen = pagoVolverA
+                }
                 BackHandler(enabled = currentScreen == "servicio_detalle") { currentScreen = "servicios" }
                 BackHandler(enabled = currentScreen == "reserva") { currentScreen = "servicio_detalle" }
-                BackHandler(enabled = currentScreen == "olvide") { currentScreen = "login" }
+                BackHandler(enabled = currentScreen == "olvide") {
+                    currentScreen = if (recuperacionDesdePerfil) "perfil" else "login"
+                }
                 BackHandler(enabled = currentScreen == "nueva_password") { currentScreen = "olvide" }
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -347,6 +422,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                             onForgotPasswordClick = {
                                         recuperacionVm.reiniciar()
+                                        recuperacionDesdePerfil = false
                                         currentScreen = "olvide"
                                     }
                                 )
@@ -385,7 +461,7 @@ class MainActivity : ComponentActivity() {
                                         editarVehiculoVm.iniciar(vehiculo)
                                         currentScreen = "editar_vehiculo"
                                     },
-                                    onLogout = cerrarSesion,
+                                    onLogout = { asistenteVm.limpiar(); cerrarSesion() },
                                     onNavigateToPerfil = {
                                         currentScreen = "perfil"
                                     },
@@ -397,7 +473,17 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToAgregarVehiculo = {
                                         currentScreen = "agregar_vehiculo"
-                                    }
+                                    },
+                                    onNavigateToAsistente = { currentScreen = "asistente" },
+                                    onNavigateToNotificaciones = { currentScreen = "notificaciones" }
+                                )
+                            }
+                            "asistente" -> {
+                                AsistenteScreen(
+                                    viewModel = asistenteVm,
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onReservar = { currentScreen = "servicios" },
+                                    onMisCitas = { currentScreen = "mis_citas" }
                                 )
                             }
 
@@ -413,6 +499,12 @@ class MainActivity : ComponentActivity() {
                                         mantenimientoOrdenId = idOrden
                                         mantenimientoDesdeHistorial = true
                                         currentScreen = "detalle_mantenimiento"
+                                    },
+                                    onPagar = { idOrden ->
+                                        pagoOrdenId = idOrden
+                                        pagoCitaId = 0L
+                                        pagoVolverA = "historial_vehiculo"
+                                        currentScreen = "pago"
                                     }
                                 )
                             }
@@ -450,23 +542,78 @@ class MainActivity : ComponentActivity() {
 
                             "perfil" -> {
                                 PerfilScreen(
-                                    onNavigateBack = { currentScreen = "vehiculos" }
+                                    onNavigateBack = { currentScreen = "vehiculos" },
+                                    onLogout = { asistenteVm.limpiar(); cerrarSesion() },
+                                    onCambiarContrasena = { correo ->
+                                        recuperacionVm.reiniciar()
+                                        correoRecuperacion = correo
+                                        recuperacionDesdePerfil = true
+                                        currentScreen = "olvide"
+                                    }
                                 )
                             }
 
                             "presupuesto" -> {
                                 PresupuestoScreen(presupuestoCitaId, presupuestoVm,
-                                    onBack = { currentScreen = "mis_citas" })
+                                    onBack = { currentScreen = detalleVolverA })
                             }
                             "seguimiento" -> {
                                 SeguimientoScreen(seguimientoCitaId, seguimientoVm,
-                                    onBack = { currentScreen = "mis_citas" })
+                                    onBack = { currentScreen = detalleVolverA })
+                            }
+                            // Notificaciones del cliente: cada aviso abre su pantalla y al volver regresa aquí
+                            "notificaciones" -> {
+                                NotificacionesScreen(
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onAbrir = { aviso ->
+                                        when (aviso.estado) {
+                                            "FINALIZADA", "PAGADO" -> {
+                                                pagoOrdenId = 0L
+                                                pagoCitaId = aviso.idCita
+                                                pagoPlaca = aviso.placa
+                                                pagoVolverA = "notificaciones"
+                                                currentScreen = "pago"
+                                            }
+                                            "ESPERA_APROBACION" -> {
+                                                presupuestoCitaId = aviso.idCita
+                                                detalleVolverA = "notificaciones"
+                                                currentScreen = "presupuesto"
+                                            }
+                                            "EN_PROCESO" -> {
+                                                seguimientoCitaId = aviso.idCita
+                                                detalleVolverA = "notificaciones"
+                                                currentScreen = "seguimiento"
+                                            }
+                                            else -> currentScreen = "mis_citas"
+                                        }
+                                    }
+                                )
                             }
                             "mis_citas" -> {
                                 MisCitasScreen(
                                     onNavigateBack = { currentScreen = "vehiculos" },
-                                    onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" },
-                                    onSeguimiento = { id -> seguimientoCitaId = id; currentScreen = "seguimiento" }
+                                    onPresupuesto = { id -> presupuestoCitaId = id; detalleVolverA = "mis_citas"; currentScreen = "presupuesto" },
+                                    onSeguimiento = { id -> seguimientoCitaId = id; detalleVolverA = "mis_citas"; currentScreen = "seguimiento" },
+                                    onPagar = { idCita, placa ->
+                                        pagoOrdenId = 0L
+                                        pagoCitaId = idCita
+                                        pagoPlaca = placa
+                                        pagoVolverA = "mis_citas"
+                                        currentScreen = "pago"
+                                    }
+                                )
+                            }
+                            "pago" -> {
+                                PagoScreen(
+                                    idOrden = pagoOrdenId,
+                                    idCita = pagoCitaId,
+                                    placa = pagoPlaca,
+                                    viewModel = pagoVm,
+                                    onBack = {
+                                        pagoVm.limpiar()
+                                        if (pagoVolverA == "historial_vehiculo") historialVehiculoVm.limpiar()
+                                        currentScreen = pagoVolverA
+                                    }
                                 )
                             }
 
@@ -521,7 +668,7 @@ class MainActivity : ComponentActivity() {
                                 OrdenesMecanicoScreen(
                                     viewModel = ordenesMecanicoVm,
                                     onBack = { currentScreen = "mecanico" },
-                                    onAgenda = { currentScreen = "agenda_mecanico" },
+                                    onAgenda = { agendaVolverA = "ordenes_mecanico"; currentScreen = "agenda_mecanico" },
                                     onChecklist = { id, editable ->
                                         checklistOrdenId = id
                                         checklistEditable = editable
@@ -542,7 +689,7 @@ class MainActivity : ComponentActivity() {
                             "agenda_mecanico" -> {
                                 AgendaMecanicoScreen(
                                     viewModel = agendaMecanicoVm,
-                                    onBack = { currentScreen = "ordenes_mecanico" },
+                                    onBack = { currentScreen = agendaVolverA },
                                     onDetalle = { id ->
                                         selectedCitaMecanicoId = id
                                         detalleMecanicoVm.cargar(id, forzar = true)
@@ -560,18 +707,29 @@ class MainActivity : ComponentActivity() {
                             "mecanico" -> {
                                 MecanicoScreen(
                                     onOrdenesClick = { currentScreen = "ordenes_mecanico" },
-                                    onLogout = cerrarSesion
+                                    onPerfilClick = { currentScreen = "perfil_mecanico" },
+                                    onAgendaClick = { agendaVolverA = "mecanico"; currentScreen = "agenda_mecanico" },
+                                    onLogout = { mecanicoVm.limpiar(); cerrarSesion() },
+                                    viewModel = mecanicoVm
+                                )
+                            }
+                            "perfil_mecanico" -> {
+                                PerfilMecanicoScreen(
+                                    viewModel = mecanicoVm,
+                                    onBack = { currentScreen = "mecanico" },
+                                    onLogout = { mecanicoVm.limpiar(); cerrarSesion() }
                                 )
                             }
 
                             "olvide" -> {
                                 OlvideContrasenaScreen(
                                     vm = recuperacionVm,
+                                    correoInicial = if (recuperacionDesdePerfil) correoRecuperacion else "",
                                     onCodigoEnviado = { correo ->
                                         correoRecuperacion = correo
                                         currentScreen = "nueva_password"
                                     },
-                                    onBack = { currentScreen = "login" }
+                                    onBack = { currentScreen = if (recuperacionDesdePerfil) "perfil" else "login" }
                                 )
                             }
                             "nueva_password" -> {
@@ -579,12 +737,18 @@ class MainActivity : ComponentActivity() {
                                     vm = recuperacionVm,
                                     correo = correoRecuperacion,
                                     onActualizada = {
-                                        Toast.makeText(
-                                            this@MainActivity,
-                                            "Contraseña actualizada. Inicia sesión con tu nueva contraseña",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        currentScreen = "login"
+                                        if (recuperacionDesdePerfil) {
+                                            Toast.makeText(this@MainActivity, "Contraseña actualizada correctamente", Toast.LENGTH_LONG).show()
+                                            recuperacionDesdePerfil = false
+                                            currentScreen = "perfil"
+                                        } else {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Contraseña actualizada. Inicia sesión con tu nueva contraseña",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                            currentScreen = "login"
+                                        }
                                     },
                                     onBack = { currentScreen = "olvide" }
                                 )

@@ -10,6 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,6 +48,7 @@ fun RegisterScreen(
     var nombre by rememberSaveable { mutableStateOf("") }
     var correo by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+    var confirmarPassword by rememberSaveable { mutableStateOf("") }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     val focusManager = LocalFocusManager.current
@@ -66,6 +71,10 @@ fun RegisterScreen(
                 errorMessage = "Ingresa un correo electrónico válido"
             !password.matches(passwordRegex) ->
                 errorMessage = "La contraseña necesita mínimo 8 caracteres, una mayúscula y un número"
+            confirmarPassword.isEmpty() ->
+                errorMessage = "Confirma tu contraseña"
+            confirmarPassword != password ->
+                errorMessage = "Las contraseñas no coinciden"
             else -> {
                 errorMessage = null
                 onRegisterClick(nombre.trim(), correoLimpio, password)
@@ -78,101 +87,26 @@ fun RegisterScreen(
     val encabezado: @Composable () -> Unit = {
         Text(
             text = "AutoSmart",
-            fontSize = if (isLandscape) 30.sp else 34.sp,
+            fontSize = if (isLandscape) 26.sp else 30.sp,
             fontWeight = FontWeight.Bold,
             fontStyle = FontStyle.Italic,
             color = Color.White
         )
         Text(
             text = "Crear cuenta",
-            fontSize = 16.sp,
+            fontSize = if (isLandscape) 14.sp else 15.sp,
             fontWeight = FontWeight.SemiBold,
             color = AuthEstilo.TextoSuave,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
 
-    val campos: @Composable () -> Unit = {
-        OutlinedTextField(
-            value = nombre,
-            onValueChange = { nombre = it; errorMessage = null },
-            label = { Text("Nombre completo") },
-            singleLine = true,
-            isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = registerFieldColors()
-        )
-
-        Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 14.dp))
-
-        OutlinedTextField(
-            value = correo,
-            onValueChange = { correo = it; errorMessage = null },
-            label = { Text("Correo electrónico") },
-            singleLine = true,
-            isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
-            shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-            ),
-            colors = registerFieldColors()
-        )
-
-        Spacer(modifier = Modifier.height(if (isLandscape) 8.dp else 14.dp))
-
-        // Contraseña: se puede pegar o usar una sugerida, pero no copiar ni cortar
-        SinCopiar {
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it; errorMessage = null },
-            label = { Text("Contraseña") },
-            visualTransformation = PasswordVisualTransformation(),
-            // La ayuda solo se muestra en vertical para ahorrar altura en horizontal
-            supportingText = if (isLandscape) null else {
-                { Text("Mínimo 8 caracteres, 1 mayúscula y 1 número") }
-            },
-            singleLine = true,
-            isError = errorMessage != null,
-            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.NewPassword },
-            shape = RoundedCornerShape(14.dp),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(onDone = { intentarRegistro() }),
-            colors = registerFieldColors()
-        )
-        }
-
-        if (!errorMessage.isNullOrEmpty()) {
-            Text(
-                text = errorMessage ?: "",
-                color = AuthEstilo.Error,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(if (isLandscape) 12.dp else 22.dp))
-
+    val botonRegistrarse: @Composable () -> Unit = {
         Button(
             onClick = { intentarRegistro() },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isLandscape) 44.dp else 50.dp),
+                .height(if (isLandscape) 44.dp else 48.dp),
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
@@ -187,6 +121,121 @@ fun RegisterScreen(
         }
     }
 
+    val campos: @Composable () -> Unit = {
+        OutlinedTextField(
+            value = nombre,
+            onValueChange = { nombre = it; errorMessage = null },
+            label = { Text("Nombre completo") },
+            leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = Color(0xFFE2E8F0)) },
+            singleLine = true,
+            isError = errorMessage != null,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            colors = registerFieldColors()
+        )
+
+        Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 10.dp))
+
+        OutlinedTextField(
+            value = correo,
+            onValueChange = { correo = it; errorMessage = null },
+            label = { Text("Correo electrónico") },
+            leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null, tint = Color(0xFFE2E8F0)) },
+            singleLine = true,
+            isError = errorMessage != null,
+            modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.EmailAddress },
+            shape = RoundedCornerShape(14.dp),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            colors = registerFieldColors()
+        )
+
+        Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 10.dp))
+
+        val campoPassword: @Composable (Modifier) -> Unit = { mod ->
+            // Contraseña: se puede pegar o usar una sugerida, pero no copiar ni cortar
+            SinCopiar {
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it; errorMessage = null },
+                label = { Text("Contraseña") },
+                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE2E8F0)) },
+                visualTransformation = PasswordVisualTransformation(),
+                // La ayuda solo se muestra en vertical para ahorrar altura en horizontal
+                supportingText = if (isLandscape) null else {
+                    { Text("Mínimo 8 caracteres, 1 mayúscula y 1 número") }
+                },
+                singleLine = true,
+                isError = errorMessage != null,
+                modifier = mod.semantics { contentType = ContentType.NewPassword },
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                ),
+                colors = registerFieldColors()
+            )
+            }
+        }
+        val campoConfirmar: @Composable (Modifier) -> Unit = { mod ->
+
+            // Confirmar contraseña (tampoco se puede copiar ni cortar)
+            SinCopiar {
+            OutlinedTextField(
+                value = confirmarPassword,
+                onValueChange = { confirmarPassword = it; errorMessage = null },
+                label = { Text("Confirmar contraseña") },
+                leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = Color(0xFFE2E8F0)) },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true,
+                isError = errorMessage != null,
+                modifier = mod.semantics { contentType = ContentType.NewPassword },
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(onDone = { intentarRegistro() }),
+                colors = registerFieldColors()
+            )
+            }
+        }
+
+        campoPassword(Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(6.dp))
+        campoConfirmar(Modifier.fillMaxWidth())
+
+        if (!errorMessage.isNullOrEmpty()) {
+            Text(
+                text = errorMessage ?: "",
+                color = AuthEstilo.Error,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            )
+        }
+
+        // En horizontal el botón va en la columna izquierda para que todo quepa sin deslizar
+        if (!isLandscape) {
+            Spacer(modifier = Modifier.height(18.dp))
+            botonRegistrarse()
+        }
+    }
+
     val yaTienesCuenta: @Composable () -> Unit = {
         Text(
             text = "¿Ya tienes cuenta?",
@@ -194,12 +243,12 @@ fun RegisterScreen(
             fontSize = 13.sp,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         OutlinedButton(
             onClick = onNavigateToLogin,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(if (isLandscape) 44.dp else 50.dp),
+                .height(if (isLandscape) 44.dp else 48.dp),
             shape = RoundedCornerShape(14.dp),
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
             colors = ButtonDefaults.outlinedButtonColors(
@@ -247,11 +296,13 @@ fun RegisterScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         encabezado()
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Column(
-                            modifier = Modifier.fillMaxWidth(0.8f),
+                            modifier = Modifier.fillMaxWidth(0.85f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            botonRegistrarse()
+                            Spacer(modifier = Modifier.height(12.dp))
                             yaTienesCuenta()
                         }
                     }
@@ -268,9 +319,9 @@ fun RegisterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     encabezado()
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     campos()
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     yaTienesCuenta()
                 }
             }

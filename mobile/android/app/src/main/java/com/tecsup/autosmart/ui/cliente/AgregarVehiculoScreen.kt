@@ -1,5 +1,10 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,14 +38,11 @@ fun AgregarVehiculoScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            BarraAutoSmart(
                 title = { Text("Agregar vehículo") },
                 navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        enabled = !guardando
-                    ) {
-                        Text("Volver")
+                    IconButton(onClick = onBack, enabled = !guardando) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )

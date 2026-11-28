@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.mecanico
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,7 +43,7 @@ fun AgendaMecanicoScreen(
         }) { DatePicker(state = selector) }
     }
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Citas asignadas") }, navigationIcon = {
+        BarraAutoSmart(title = { Text("Citas asignadas") }, navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver al panel")
             }

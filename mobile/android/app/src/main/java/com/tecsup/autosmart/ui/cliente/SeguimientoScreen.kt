@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.cliente
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,7 +39,7 @@ fun SeguimientoScreen(idCita: Long, viewModel: SeguimientoViewModel, onBack: () 
     LaunchedEffect(idCita) { viewModel.iniciar(idCita) }
     BackHandler(onBack = onBack)
     Scaffold(topBar = {
-        TopAppBar(
+        BarraAutoSmart(
             title = { Text("Seguimiento de la cita") },
             navigationIcon = {
                 IconButton(onClick = onBack) {

@@ -16,6 +16,12 @@ object RetrofitClient {
 
     var token: String? = null
 
+    /**
+     * Se activa cuando el servidor responde 401 a una petición que sí llevaba token:
+     * la sesión venció (el JWT dura 60 min). MainActivity lo escucha y pide iniciar sesión otra vez.
+     */
+    val sesionExpirada = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     private var tokenManager: TokenManager? = null
 
     fun init(context: Context) {
@@ -27,16 +33,20 @@ object RetrofitClient {
             val original = chain.request()
             val requestBuilder = original.newBuilder()
 
-            if (original.header("Authorization") == null) {
+            var conToken = original.header("Authorization") != null
+            if (!conToken) {
                 val activeToken = token ?: runBlocking {
                     tokenManager?.getToken?.firstOrNull()
                 }
                 if (!activeToken.isNullOrEmpty()) {
                     requestBuilder.header("Authorization", "Bearer $activeToken")
+                    conToken = true
                 }
             }
 
-            chain.proceed(requestBuilder.build())
+            val respuesta = chain.proceed(requestBuilder.build())
+            if (respuesta.code == 401 && conToken) sesionExpirada.value = true
+            respuesta
         }
         .build()
 
@@ -101,6 +111,36 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(PresupuestoApi::class.java)
+    }
+
+    // Sprint 4 · T61.2, T62.2 y T63.2: costo final, métodos de pago y pago en línea
+    val pagoApi: PagoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PagoApi::class.java)
+    }
+
+    // Perfil profesional del mecánico (GET/PUT /mechanics/me)
+    val mecanicoApi: MecanicoApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(MecanicoApi::class.java)
+    }
+
+    // Sprint 4 · T75.2: chatbot del taller (POST /chatbot/messages)
+    val chatbotApi: ChatbotApi by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(ChatbotApi::class.java)
     }
 
     val fotoApi: FotoApi by lazy {

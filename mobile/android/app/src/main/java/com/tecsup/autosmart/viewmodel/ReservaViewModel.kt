@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.CitaRequest
 import com.tecsup.autosmart.model.MecanicoDisponible
+import com.tecsup.autosmart.model.ordenarPorCalificacion
 import com.tecsup.autosmart.model.Turno
 import com.tecsup.autosmart.data.repository.BloqueoTurnoRepository
 import com.tecsup.autosmart.data.repository.CitaRepository
@@ -153,7 +154,7 @@ class ReservaViewModel(
 
             repoMecanicos.mecanicosPorServicio(idServicio)
                 .onSuccess {
-                    _mecanicos.value = MecanicosUiState(lista = it)
+                    _mecanicos.value = MecanicosUiState(lista = it.ordenarPorCalificacion())
                 }
                 .onFailure {
                     _mecanicos.value = MecanicosUiState(

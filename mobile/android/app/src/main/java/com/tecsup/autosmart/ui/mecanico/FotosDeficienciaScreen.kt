@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.mecanico
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -53,7 +54,7 @@ fun FotosDeficienciaScreen(idOrden: Long, idDeficiencia: Long, editable: Boolean
         confirmButton = { TextButton(onClick = { confirmar = false; viewModel.descartarCaptura() }) { Text("Descartar captura") } },
         dismissButton = { TextButton(onClick = { confirmar = false }) { Text("Conservar") } })
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Fotos de la deficiencia") }, navigationIcon = {
+        BarraAutoSmart(title = { Text("Fotos de la deficiencia") }, navigationIcon = {
             IconButton(onClick = volver, enabled = !estado.subiendo && !estado.capturando) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a deficiencias")
             }

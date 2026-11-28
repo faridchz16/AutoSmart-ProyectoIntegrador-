@@ -54,7 +54,16 @@ fun WelcomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(32.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.weight(1f)) { MarcaBienvenida(compacto = true) }
+                Box(Modifier.weight(1.1f)) { MarcaBienvenida(compacto = true) }
+                // Auto en el centro (horizontal)
+                Image(
+                    painter = painterResource(id = R.drawable.img_welcome_auto),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(max = 200.dp)
+                )
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { botones() }
             }
         } else {
@@ -71,7 +80,18 @@ fun WelcomeScreen(
                         .padding(top = if (compacto) 12.dp else altura * 0.14f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) { MarcaBienvenida(compacto) }
-                Spacer(Modifier.height(40.dp))
+                // Auto de la portada (vertical); más pequeño en pantallas chicas
+                Image(
+                    painter = painterResource(id = R.drawable.img_welcome_auto),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .widthIn(max = 420.dp)
+                        .fillMaxWidth()
+                        .heightIn(max = if (compacto) 185.dp else 240.dp)
+                        .padding(top = if (compacto) 12.dp else 24.dp)
+                )
+                Spacer(Modifier.height(if (compacto) 16.dp else 40.dp))
                 Box(Modifier.padding(bottom = 24.dp)) { botones() }
             }
         }
@@ -103,12 +123,12 @@ private fun MarcaBienvenida(compacto: Boolean) {
         Spacer(Modifier.height(16.dp))
         Text(
             text = "Gestiona tus vehículos fácil y rápido",
-            fontSize = if (compacto) 18.sp else 20.sp,
-            lineHeight = if (compacto) 25.sp else 28.sp,
+            fontSize = if (compacto) 16.sp else 20.sp,
+            lineHeight = if (compacto) 22.sp else 28.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFFE2E8F0),
             textAlign = TextAlign.Center,
-            maxLines = 2
+            maxLines = 3
         )
     }
 }

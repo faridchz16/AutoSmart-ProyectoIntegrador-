@@ -2,6 +2,7 @@ package com.tecsup.autosmart.ui.cliente
 
 import android.app.Activity
 import android.content.ContextWrapper
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -12,46 +13,67 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.EventAvailable
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tecsup.autosmart.R
+import com.tecsup.autosmart.data.repository.CitaRepository
 import com.tecsup.autosmart.data.repository.PerfilRepository
+import com.tecsup.autosmart.model.CitaCreadaResponse
 import com.tecsup.autosmart.model.PerfilResponse
 import com.tecsup.autosmart.model.VehiculoResponse
 import com.tecsup.autosmart.ui.auth.fondoAuth
@@ -61,15 +83,21 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
-// Colores del sistema de diseño (página "Sistema de diseño" en Figma)
-private val FondoApp = Color(0xFFF5F8FE)
-private val Superficie = Color.White
-private val Borde = Color(0xFFD5DCEA)
-private val TextoPrincipal = Color(0xFF0B1B3A)
-private val TextoSecundario = Color(0xFF5A677F)
-private val AzulMarca = Color(0xFF1150E8)
-private val AzulSuave = Color(0xFFE9F0FF)
-private val Rojo = Color(0xFFDC2626)
+// Colores del sistema de diseño: cambian solos entre modo claro y oscuro (ColoresCliente.kt)
+private val FondoApp: Color @Composable get() = coloresCliente().fondo
+private val Superficie: Color @Composable get() = coloresCliente().superficie
+private val Borde: Color @Composable get() = coloresCliente().borde
+private val TextoPrincipal: Color @Composable get() = coloresCliente().texto
+private val TextoSecundario: Color @Composable get() = coloresCliente().textoSecundario
+private val AzulMarca: Color @Composable get() = coloresCliente().azul
+private val AzulOscuro: Color @Composable get() = coloresCliente().azulOscuro
+private val AzulSuave: Color @Composable get() = coloresCliente().azulSuave
+private val Rojo: Color @Composable get() = coloresCliente().rojo
+private val RojoSuave: Color @Composable get() = coloresCliente().rojoSuave
+
+// Azules de marca para fondos llenos con texto blanco (iguales en claro y oscuro)
+private val MarcaFuerte = Color(0xFF1150E8)
+private val MarcaProfunda = Color(0xFF0A3AB0)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +108,8 @@ fun VehiculosScreen(
     onNavigateToMisCitas: () -> Unit = {},
     onNavigateToReserva: () -> Unit = {},
     onNavigateToAgregarVehiculo: () -> Unit = {},
+    onNavigateToAsistente: () -> Unit = {},
+    onNavigateToNotificaciones: () -> Unit = {},
     viewModel: VehiculosViewModel = viewModel(),
     onHistorialVehiculo: (Long) -> Unit = {}
 ) {
@@ -96,9 +126,51 @@ fun VehiculosScreen(
     }
     BackHandler(enabled = estado.ocupado) { }
 
-    // Perfil para el saludo y el avatar con la inicial del correo
+    val configuracion = LocalConfiguration.current
+    val horizontal = configuracion.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val angosto = configuracion.screenWidthDp < 400
+
+    // Perfil para el avatar con la inicial del correo
     var perfil by remember { mutableStateOf<PerfilResponse?>(null) }
     LaunchedEffect(Unit) { perfil = PerfilRepository().obtenerPerfil().getOrNull() }
+
+    // Notificaciones (campanita): avisos armados con el estado de las citas del cliente
+    var citasAvisos by remember { mutableStateOf<List<CitaCreadaResponse>>(emptyList()) }
+    var cargandoAvisos by remember { mutableStateOf(false) }
+    var recargarAvisos by remember { mutableIntStateOf(0) }
+    var leidosAvisos by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(recargarAvisos) {
+        cargandoAvisos = true
+        CitaRepository().misCitas().onSuccess { citasAvisos = it }
+        cargandoAvisos = false
+    }
+    LaunchedEffect(perfil?.idUsuario) {
+        perfil?.idUsuario?.let { leidosAvisos = AvisosLeidos.leidos(contexto, it) }
+    }
+    val avisos = remember(citasAvisos) { avisosDe(citasAvisos) }
+    val avisosNuevos = avisos.count { it.clave !in leidosAvisos }
+
+    // Anuncio de ARI: se muestra solo la primera vez que cada cliente entra al inicio
+    var mostrarAnuncioAri by remember { mutableStateOf(false) }
+    LaunchedEffect(perfil?.idUsuario) {
+        val id = perfil?.idUsuario ?: return@LaunchedEffect
+        if (!AnuncioAri.visto(contexto, id)) mostrarAnuncioAri = true
+    }
+    perfil?.idUsuario?.let { id ->
+        if (mostrarAnuncioAri) {
+            AnuncioAriDialog(
+                onProbar = {
+                    AnuncioAri.marcarVisto(contexto, id)
+                    mostrarAnuncioAri = false
+                    onNavigateToAsistente()
+                },
+                onCerrar = {
+                    AnuncioAri.marcarVisto(contexto, id)
+                    mostrarAnuncioAri = false
+                }
+            )
+        }
+    }
 
     // Foto del vehículo elegida desde la galería (se guarda en el celular)
     val scope = rememberCoroutineScope()
@@ -117,6 +189,18 @@ fun VehiculosScreen(
     val pedirFoto: (Long) -> Unit = { id ->
         vehiculoParaFoto = id
         elegirFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+    // Vehículo cuya foto se está viendo a pantalla completa
+    var fotoAbierta by remember { mutableStateOf<VehiculoResponse?>(null) }
+    fotoAbierta?.let { v ->
+        VisorFotoVehiculo(
+            idVehiculo = v.idVehiculo,
+            titulo = "${v.marca} ${v.modelo}",
+            subtitulo = v.placa.uppercase(),
+            version = versionFotos,
+            onCambiar = { pedirFoto(v.idVehiculo) },
+            onCerrar = { fotoAbierta = null }
+        )
     }
 
     estado.seleccionado?.let { vehiculo ->
@@ -139,81 +223,85 @@ fun VehiculosScreen(
         )
     }
 
-    Scaffold(
-        containerColor = FondoApp,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { if (!estado.ocupado) onNavigateToAgregarVehiculo() },
-                containerColor = AzulMarca,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp),
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Agregar vehículo", fontWeight = FontWeight.SemiBold) }
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+    val habilitado = !estado.ocupado
+    // Destinos del menú inferior (vertical) o lateral (horizontal)
+    val destinos = listOf(
+        Destino("Inicio", Icons.Filled.Home, seleccionado = true) {},
+        // El catálogo de servicios sigue en la pestaña "Servicios" de arriba; aquí va el asistente con IA
+        Destino("ARI", Icons.Outlined.SmartToy, imagen = R.drawable.img_ari_figura) { if (habilitado) onNavigateToAsistente() },
+        Destino("Reservar", Icons.Outlined.EventAvailable) { if (habilitado) onNavigateToReserva() },
+        Destino("Perfil", Icons.Outlined.Person) { if (habilitado) onNavigateToPerfil() }
+    )
+
+    val contenido: @Composable (Modifier) -> Unit = { mod ->
+        LazyVerticalGrid(
+            columns = if (horizontal) GridCells.Adaptive(330.dp) else GridCells.Fixed(1),
+            modifier = mod.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            EncabezadoCliente(
-                perfil = perfil,
-                habilitado = !estado.ocupado,
-                onPerfil = onNavigateToPerfil,
-                onReservar = onNavigateToReserva,
-                onMisCitas = onNavigateToMisCitas,
-                onSalir = onLogout
-            )
+            filaCompleta("encabezado") {
+                Column {
+                    EncabezadoCliente(
+                        perfil = perfil,
+                        horizontal = horizontal,
+                        habilitado = habilitado,
+                        onPerfil = onNavigateToPerfil,
+                        onSalir = onLogout,
+                        avisosNuevos = avisosNuevos,
+                        onAvisos = onNavigateToNotificaciones
+                    )
+                    PestanasCliente(
+                        angosto = angosto,
+                        habilitado = habilitado,
+                        onMisCitas = onNavigateToMisCitas,
+                        onServicios = onNavigateToReserva,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .offset(y = (-30).dp)
+                    )
+                }
+            }
 
             when {
-                estado.cargando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AzulMarca)
+                estado.cargando -> filaCompleta("cargando") {
+                    Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AzulMarca)
+                    }
                 }
 
-                estado.errorCarga != null -> MensajeCentro(
-                    titulo = "No pudimos cargar tus vehículos",
-                    detalle = estado.errorCarga.orEmpty(),
-                    textoBoton = "Reintentar",
-                    onBoton = viewModel::cargar
-                )
+                estado.errorCarga != null -> filaCompleta("error") {
+                    MensajeCentro(
+                        titulo = "No pudimos cargar tus vehículos",
+                        detalle = estado.errorCarga.orEmpty(),
+                        textoBoton = "Reintentar",
+                        onBoton = viewModel::cargar
+                    )
+                }
 
-                vehiculos.isEmpty() -> MensajeCentro(
-                    titulo = "Aún no tienes vehículos",
-                    detalle = "Agrega tu vehículo para reservar mantenimientos y ver su historial.",
-                    textoBoton = "Agregar vehículo",
-                    onBoton = onNavigateToAgregarVehiculo
-                )
+                vehiculos.isEmpty() -> filaCompleta("vacio") {
+                    MensajeCentro(
+                        titulo = "Aún no tienes vehículos",
+                        detalle = "Agrega tu vehículo para reservar mantenimientos y ver su historial.",
+                        textoBoton = "Agregar vehículo",
+                        onBoton = onNavigateToAgregarVehiculo
+                    )
+                }
 
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "Mis vehículos",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextoPrincipal,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Surface(shape = CircleShape, color = AzulSuave) {
-                                Text(
-                                    "${vehiculos.size}",
-                                    color = AzulMarca,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
+                else -> {
+                    filaCompleta("titulo") {
+                        TituloSeccion(
+                            cantidad = vehiculos.size,
+                            angosto = angosto,
+                            habilitado = habilitado,
+                            onAgregar = onNavigateToAgregarVehiculo,
+                            modifier = Modifier.padding(horizontal = 16.dp).offset(y = (-14).dp)
+                        )
                     }
                     estado.errorOperacion?.let { mensaje ->
-                        item {
-                            Column {
+                        filaCompleta("errorOperacion") {
+                            Column(Modifier.padding(horizontal = 20.dp)) {
                                 Text(mensaje, color = Rojo, fontSize = 14.sp)
                                 if (estado.pendienteVerificacion != null) {
                                     TextButton(onClick = viewModel::comprobarEstado, enabled = !estado.ocupado) {
@@ -224,112 +312,242 @@ fun VehiculosScreen(
                         }
                     }
                     estado.mensaje?.let { mensaje ->
-                        item { Text(mensaje, color = TextoSecundario, fontSize = 14.sp) }
+                        filaCompleta("mensaje") {
+                            Text(mensaje, color = TextoSecundario, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 20.dp))
+                        }
                     }
                     if (estado.ocupado && estado.seleccionado == null) {
-                        item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = AzulMarca) }
+                        filaCompleta("progreso") {
+                            LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp), color = AzulMarca)
+                        }
                     }
                     items(vehiculos, key = { it.idVehiculo }) { vehiculo ->
                         val accionesActivas = !estado.ocupado && estado.pendienteVerificacion == null
                         TarjetaVehiculo(
                             vehiculo = vehiculo,
                             versionFotos = versionFotos,
+                            angosto = angosto,
                             accionesActivas = accionesActivas,
                             onFoto = { pedirFoto(vehiculo.idVehiculo) },
+                            onVerFoto = { fotoAbierta = vehiculo },
                             onHistorial = { onHistorialVehiculo(vehiculo.idVehiculo) },
                             onEditar = { onEditarVehiculo(vehiculo) },
-                            onEliminar = { viewModel.seleccionar(vehiculo) }
+                            onEliminar = { viewModel.seleccionar(vehiculo) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
                 }
             }
         }
     }
+
+    if (horizontal) {
+        // Horizontal: menú lateral para no robar alto a la lista
+        Row(Modifier.fillMaxSize().background(FondoApp)) {
+            NavigationRail(
+                containerColor = Superficie,
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                modifier = Modifier.fillMaxHeight()
+            ) {
+                Spacer(Modifier.weight(1f))
+                destinos.forEach { d ->
+                    NavigationRailItem(
+                        selected = d.seleccionado,
+                        onClick = d.onClick,
+                        icon = { IconoDestino(d) },
+                        label = { Text(d.texto, fontSize = 12.sp) },
+                        colors = NavigationRailItemDefaults.colors(
+                            selectedIconColor = AzulMarca,
+                            selectedTextColor = AzulMarca,
+                            indicatorColor = AzulSuave,
+                            unselectedIconColor = TextoPrincipal,
+                            unselectedTextColor = TextoPrincipal
+                        )
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+            }
+            contenido(Modifier.weight(1f))
+        }
+    } else {
+        Scaffold(
+            containerColor = FondoApp,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            bottomBar = {
+                NavigationBar(
+                    containerColor = Superficie,
+                    tonalElevation = 0.dp,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    modifier = Modifier
+                        .shadow(12.dp, RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                        .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                ) {
+                    destinos.forEach { d ->
+                        NavigationBarItem(
+                            selected = d.seleccionado,
+                            onClick = d.onClick,
+                            icon = { IconoDestino(d) },
+                            label = { Text(d.texto, fontSize = 12.sp) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = AzulMarca,
+                                selectedTextColor = AzulMarca,
+                                indicatorColor = AzulSuave,
+                                unselectedIconColor = TextoPrincipal,
+                                unselectedTextColor = TextoPrincipal
+                            )
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            contenido(Modifier.padding(innerPadding))
+        }
+    }
 }
 
-/** Encabezado azul con saludo, avatar con inicial y accesos rápidos. */
+private class Destino(
+    val texto: String,
+    val icono: ImageVector,
+    val seleccionado: Boolean = false,
+    val imagen: Int? = null, // si tiene imagen (ARI) se muestra en vez del ícono
+    val onClick: () -> Unit
+)
+
+/** Ícono del menú: la figura de ARI o el ícono normal. */
+@Composable
+private fun IconoDestino(d: Destino) {
+    val imagen = d.imagen
+    if (imagen != null) {
+        // Figura completa de ARI (sin recortar en círculo) para que se reconozca
+        Image(
+            painterResource(imagen),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(width = 46.dp, height = 30.dp)
+        )
+    } else {
+        Icon(d.icono, contentDescription = null)
+    }
+}
+
+/** Ítem que ocupa todo el ancho de la grilla (encabezado, títulos, mensajes). */
+private fun LazyGridScope.filaCompleta(clave: String, contenido: @Composable () -> Unit) {
+    item(key = clave, span = { GridItemSpan(maxLineSpan) }) { contenido() }
+}
+
+/** Encabezado azul con logo, marca, auto de fondo y avatar con la inicial del correo. */
 @Composable
 private fun EncabezadoCliente(
     perfil: PerfilResponse?,
+    horizontal: Boolean,
     habilitado: Boolean,
     onPerfil: () -> Unit,
-    onReservar: () -> Unit,
-    onMisCitas: () -> Unit,
-    onSalir: () -> Unit
+    onSalir: () -> Unit,
+    avisosNuevos: Int = 0,
+    onAvisos: () -> Unit = {}
 ) {
-    val primerNombre = perfil?.nombre?.trim()?.split(" ")?.firstOrNull()?.takeIf { it.isNotBlank() }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
             .fondoAuth()
-            .statusBarsPadding()
-            .padding(start = 20.dp, end = 16.dp, top = 16.dp, bottom = 22.dp)
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        if (primerNombre != null) "Hola, $primerNombre" else "Hola",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        "Tus vehículos y mantenimientos",
-                        color = Color(0xFFDCE6F8),
-                        fontSize = 14.sp
-                    )
-                }
-                IconButton(onClick = onSalir, enabled = habilitado) {
-                    Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión", tint = Color.White)
-                }
-                Spacer(Modifier.width(4.dp))
-                AvatarInicial(
-                    correo = perfil?.correo,
-                    nombre = perfil?.nombre,
-                    habilitado = habilitado,
-                    onClick = onPerfil
+        // Auto de la portada, tenue, al fondo a la derecha
+        Image(
+            painter = painterResource(R.drawable.img_welcome_auto),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = if (horizontal) 80.dp else 0.dp)
+                .height(if (horizontal) 110.dp else 120.dp)
+                .offset(x = if (horizontal) 0.dp else 40.dp, y = 6.dp)
+                .alpha(0.30f)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(
+                start = 18.dp, end = 16.dp,
+                top = if (horizontal) 14.dp else 22.dp,
+                bottom = if (horizontal) 46.dp else 56.dp
+            )
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_autosmart_logo),
+                contentDescription = "AutoSmart",
+                modifier = Modifier.size(if (horizontal) 46.dp else 56.dp)
+            )
+            Box(
+                Modifier
+                    .padding(horizontal = 10.dp)
+                    .width(1.5.dp)
+                    .height(40.dp)
+                    .background(Color.White.copy(alpha = 0.7f))
+            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "AutoSmart",
+                    color = Color.White,
+                    fontSize = if (horizontal) 24.sp else 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontStyle = FontStyle.Italic,
+                    maxLines = 1
+                )
+                Text(
+                    "Gestión de vehículos y servicios",
+                    color = Color(0xFFDCE6F8),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onReservar,
-                    enabled = habilitado,
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = AzulMarca)
-                ) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Reservar cita", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-                OutlinedButton(
-                    onClick = onMisCitas,
-                    enabled = habilitado,
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Mis citas", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-            }
+            // Campanita de notificaciones con el número de avisos nuevos
+            CampanaAvisos(nuevos = avisosNuevos, habilitado = habilitado, onClick = onAvisos)
+            Spacer(Modifier.width(4.dp))
+            MenuAvatar(perfil = perfil, habilitado = habilitado, onPerfil = onPerfil, onSalir = onSalir)
         }
     }
 }
 
-/** Círculo con la inicial del correo, con un color fijo por usuario (como Gmail). */
+/** Avatar con la inicial; al tocarlo muestra el nombre, el correo y "Mi perfil" (cerrar sesión está en Perfil). */
 @Composable
-private fun AvatarInicial(correo: String?, nombre: String?, habilitado: Boolean, onClick: () -> Unit) {
+private fun MenuAvatar(perfil: PerfilResponse?, habilitado: Boolean, onPerfil: () -> Unit, onSalir: () -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    Box {
+        AvatarInicial(
+            idUsuario = perfil?.idUsuario,
+            correo = perfil?.correo,
+            nombre = perfil?.nombre,
+            habilitado = habilitado,
+            onClick = { abierto = true }
+        )
+        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }) {
+            val nombre = perfil?.nombre?.takeIf { it.isNotBlank() }
+            if (nombre != null || perfil?.correo != null) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    nombre?.let { Text(it, fontWeight = FontWeight.Bold, color = TextoPrincipal) }
+                    perfil?.correo?.let { Text(it, fontSize = 12.sp, color = TextoSecundario) }
+                }
+                HorizontalDivider()
+            }
+            DropdownMenuItem(
+                text = { Text("Mi perfil") },
+                leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                onClick = { abierto = false; onPerfil() }
+            )
+        }
+    }
+}
+
+/** Foto de perfil si el usuario la eligió; si no, círculo con la inicial del correo (como Gmail). */
+@Composable
+private fun AvatarInicial(idUsuario: Int?, correo: String?, nombre: String?, habilitado: Boolean, onClick: () -> Unit) {
+    val contexto = LocalContext.current
+    val foto by produceState<ImageBitmap?>(initialValue = null, idUsuario) {
+        value = idUsuario?.let { id ->
+            withContext(Dispatchers.IO) { FotoVehiculoLocal.cargarPerfil(contexto, id)?.asImageBitmap() }
+        }
+    }
     val base = correo?.trim()?.takeIf { it.isNotEmpty() } ?: nombre?.trim()
     val letra = base?.firstOrNull { it.isLetterOrDigit() }?.uppercaseChar()?.toString()
     val paleta = listOf(
@@ -339,18 +557,110 @@ private fun AvatarInicial(correo: String?, nombre: String?, habilitado: Boolean,
     val color = Color(paleta[(base?.lowercase()?.hashCode() ?: 0).mod(paleta.size)])
     Box(
         modifier = Modifier
-            .size(46.dp)
+            .size(48.dp)
             .clip(CircleShape)
             .background(if (letra != null) color else Color.White.copy(alpha = 0.2f))
-            .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+            .border(2.dp, Color.White.copy(alpha = 0.9f), CircleShape)
             .clickable(enabled = habilitado, onClick = onClick)
-            .semantics { contentDescription = "Mi perfil" },
+            .semantics { contentDescription = "Menú de cuenta" },
         contentAlignment = Alignment.Center
     ) {
-        if (letra != null) {
+        val actual = foto
+        if (actual != null) {
+            Image(actual, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+        } else if (letra != null) {
             Text(letra, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         } else {
             Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
+        }
+    }
+}
+
+/** Tarjeta blanca con las tres pestañas, montada sobre el borde del encabezado. */
+@Composable
+private fun PestanasCliente(
+    angosto: Boolean,
+    habilitado: Boolean,
+    onMisCitas: () -> Unit,
+    onServicios: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = Superficie,
+        shadowElevation = 6.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Pestana("Mis vehículos", Icons.Outlined.DirectionsCar, true, angosto, true, Modifier.weight(1.25f)) {}
+            Pestana("Mis citas", Icons.Outlined.EventAvailable, false, angosto, habilitado, Modifier.weight(1f), onMisCitas)
+            Pestana("Servicios", Icons.Outlined.Build, false, angosto, habilitado, Modifier.weight(1f), onServicios)
+        }
+    }
+}
+
+@Composable
+private fun Pestana(
+    texto: String,
+    icono: ImageVector,
+    seleccionada: Boolean,
+    angosto: Boolean,
+    habilitado: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    val fondo = if (seleccionada) Brush.horizontalGradient(listOf(MarcaProfunda, MarcaFuerte))
+    else Brush.horizontalGradient(listOf(AzulSuave, AzulSuave))
+    val color = if (seleccionada) Color.White else TextoPrincipal
+    Box(
+        modifier = modifier
+            .height(if (angosto) 46.dp else 50.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(fondo)
+            .clickable(enabled = habilitado && !seleccionada, onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp)) {
+            Icon(icono, contentDescription = null, tint = color, modifier = Modifier.size(if (angosto) 17.dp else 20.dp))
+            Spacer(Modifier.width(if (angosto) 4.dp else 8.dp))
+            Text(
+                texto,
+                color = color,
+                fontSize = if (angosto) 12.sp else 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                softWrap = false
+            )
+        }
+    }
+}
+
+/** "Mis vehículos registrados (n)" con el botón "Agregar". */
+@Composable
+private fun TituloSeccion(cantidad: Int, angosto: Boolean, habilitado: Boolean, onAgregar: () -> Unit, modifier: Modifier) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier.fillMaxWidth()) {
+        Text(
+            buildAnnotatedString {
+                append("Mis vehículos registrados ")
+                withStyle(SpanStyle(color = AzulMarca)) { append("($cantidad)") }
+            },
+            fontSize = if (angosto) 17.sp else 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextoPrincipal,
+            modifier = Modifier.weight(1f)
+        )
+        Spacer(Modifier.width(8.dp))
+        Button(
+            onClick = onAgregar,
+            enabled = habilitado,
+            shape = RoundedCornerShape(20.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MarcaFuerte, contentColor = Color.White),
+            modifier = Modifier.height(44.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Agregar", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
         }
     }
 }
@@ -359,62 +669,180 @@ private fun AvatarInicial(correo: String?, nombre: String?, habilitado: Boolean,
 private fun TarjetaVehiculo(
     vehiculo: VehiculoResponse,
     versionFotos: Int,
+    angosto: Boolean,
     accionesActivas: Boolean,
     onFoto: () -> Unit,
+    onVerFoto: () -> Unit,
     onHistorial: () -> Unit,
     onEditar: () -> Unit,
-    onEliminar: () -> Unit
+    onEliminar: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    var menu by remember { mutableStateOf(false) }
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Superficie),
         border = BorderStroke(1.dp, Borde),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
-        FotoVehiculo(idVehiculo = vehiculo.idVehiculo, version = versionFotos, onCambiar = onFoto)
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "${vehiculo.marca} ${vehiculo.modelo}",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextoPrincipal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+        Column(Modifier.padding(14.dp)) {
+            Row {
+                FotoVehiculo(
+                    idVehiculo = vehiculo.idVehiculo,
+                    version = versionFotos,
+                    tamano = if (angosto) 112.dp else 128.dp,
+                    onVer = onVerFoto,
+                    onCambiar = onFoto
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.Top) {
+                        Text(
+                            "${vehiculo.marca} ${vehiculo.modelo}",
+                            fontSize = if (angosto) 17.sp else 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextoPrincipal,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(top = 2.dp)
+                        )
+                        Box {
+                            IconButton(onClick = { menu = true }, modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Más opciones", tint = TextoPrincipal)
+                            }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Ver foto") },
+                                    leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                                    onClick = { menu = false; onVerFoto() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Cambiar foto") },
+                                    leadingIcon = { Icon(Icons.Default.PhotoCamera, contentDescription = null) },
+                                    onClick = { menu = false; onFoto() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Ver historial") },
+                                    leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                                    onClick = { menu = false; onHistorial() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Editar") },
+                                    enabled = accionesActivas,
+                                    leadingIcon = { Icon(Icons.Outlined.Edit, contentDescription = null) },
+                                    onClick = { menu = false; onEditar() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Eliminar", color = if (accionesActivas) Rojo else Rojo.copy(alpha = 0.4f)) },
+                                    enabled = accionesActivas,
+                                    leadingIcon = { Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = Rojo) },
+                                    onClick = { menu = false; onEliminar() }
+                                )
+                            }
+                        }
+                    }
+                    Surface(shape = RoundedCornerShape(12.dp), color = AzulSuave) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Filled.DirectionsCar, contentDescription = null, tint = AzulMarca, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                vehiculo.placa.uppercase(),
+                                color = AzulMarca,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    DatoLinea(Icons.Outlined.CalendarToday, "Año: ${vehiculo.anio}")
+                    DatoLinea(
+                        Icons.Outlined.Speed,
+                        (if (angosto) "" else "Kilometraje: ") + String.format(Locale("es", "PE"), "%,d km", vehiculo.kilometraje)
                     )
-                    Text("Modelo ${vehiculo.anio}", fontSize = 13.sp, color = TextoSecundario)
                 }
-                Placa(vehiculo.placa)
             }
+            Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DatoChip(Icons.Default.Speed, String.format(Locale("es", "PE"), "%,d km", vehiculo.kilometraje))
-                DatoChip(Icons.Default.CalendarToday, vehiculo.anio.toString())
+                BotonAccion(
+                    texto = if (angosto) "Historial" else "Ver historial",
+                    icono = Icons.Outlined.Description,
+                    habilitado = true,
+                    peligro = false,
+                    angosto = angosto,
+                    modifier = Modifier.weight(1.15f),
+                    onClick = onHistorial
+                )
+                BotonAccion("Editar", Icons.Outlined.Edit, accionesActivas, false, angosto, Modifier.weight(1f), onEditar)
+                BotonAccion("Eliminar", Icons.Outlined.DeleteOutline, accionesActivas, true, angosto, Modifier.weight(1f), onEliminar)
             }
-            HorizontalDivider(color = Color(0xFFE5EAF3))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AccionTexto(Icons.Default.History, "Historial", AzulMarca, true, onHistorial)
-                AccionTexto(Icons.Default.Edit, "Editar", AzulMarca, accionesActivas, onEditar)
-                Spacer(Modifier.weight(1f))
-                AccionTexto(Icons.Default.DeleteOutline, "Eliminar", Rojo, accionesActivas, onEliminar)
-            }
+        }
+    }
+}
+
+@Composable
+private fun DatoLinea(icono: ImageVector, texto: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icono, contentDescription = null, tint = TextoPrincipal, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(texto, fontSize = 14.sp, color = TextoPrincipal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun BotonAccion(
+    texto: String,
+    icono: ImageVector,
+    habilitado: Boolean,
+    peligro: Boolean,
+    angosto: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    val color = if (peligro) Rojo else AzulOscuro
+    Surface(
+        onClick = onClick,
+        enabled = habilitado,
+        shape = RoundedCornerShape(14.dp),
+        color = if (peligro) RojoSuave else AzulSuave,
+        border = if (peligro) BorderStroke(1.dp, Rojo.copy(alpha = 0.45f)) else null,
+        modifier = modifier.height(44.dp).alpha(if (habilitado) 1f else 0.45f)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        ) {
+            Icon(icono, contentDescription = null, tint = color, modifier = Modifier.size(if (angosto) 16.dp else 18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                texto,
+                color = color,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = if (angosto) 12.sp else 14.sp,
+                maxLines = 1,
+                softWrap = false
+            )
         }
     }
 }
 
 /** Foto del vehículo (guardada en el celular) o un dibujo si aún no tiene. */
 @Composable
-private fun FotoVehiculo(idVehiculo: Long, version: Int, onCambiar: () -> Unit) {
+private fun FotoVehiculo(idVehiculo: Long, version: Int, tamano: Dp, onVer: () -> Unit, onCambiar: () -> Unit) {
     val contexto = LocalContext.current
     val foto by produceState<ImageBitmap?>(initialValue = null, idVehiculo, version) {
         value = withContext(Dispatchers.IO) { FotoVehiculoLocal.cargar(contexto, idVehiculo)?.asImageBitmap() }
     }
     Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(170.dp)
-            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+            .size(tamano)
+            .clip(RoundedCornerShape(18.dp))
+            // Con foto: se abre para verla; sin foto: se elige una
+            .clickable { if (foto != null) onVer() else onCambiar() }
     ) {
         val actual = foto
         if (actual != null) {
@@ -428,83 +856,39 @@ private fun FotoVehiculo(idVehiculo: Long, version: Int, onCambiar: () -> Unit) 
             Column(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(Brush.linearGradient(listOf(AzulSuave, Color(0xFFDBE7FF))))
-                    .clickable(onClick = onCambiar),
+                    .background(Brush.linearGradient(listOf(AzulSuave, Borde))),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    Icons.Default.DirectionsCar,
+                    Icons.Filled.DirectionsCar,
                     contentDescription = null,
                     tint = AzulMarca.copy(alpha = 0.55f),
-                    modifier = Modifier.size(64.dp)
+                    modifier = Modifier.size(44.dp)
                 )
-                Spacer(Modifier.height(6.dp))
-                Text("Agrega una foto de tu vehículo", color = TextoSecundario, fontSize = 13.sp)
+                Text("Agregar foto", color = TextoSecundario, fontSize = 12.sp)
             }
         }
         Surface(
-            onClick = onCambiar,
             shape = CircleShape,
             color = Color.White,
             shadowElevation = 2.dp,
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(10.dp)
-                .size(40.dp)
+                .align(Alignment.BottomEnd)
+                .padding(6.dp)
+                .size(30.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onCambiar)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Default.PhotoCamera,
                     contentDescription = if (actual != null) "Cambiar foto" else "Agregar foto",
                     tint = AzulMarca,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
-    }
-}
-
-/** Placa con estilo de placa de auto. */
-@Composable
-private fun Placa(placa: String) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = Color.White,
-        border = BorderStroke(1.5.dp, TextoPrincipal)
-    ) {
-        Text(
-            placa.uppercase(),
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
-            letterSpacing = 1.sp,
-            color = TextoPrincipal,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-        )
-    }
-}
-
-@Composable
-private fun DatoChip(icono: ImageVector, texto: String) {
-    Surface(shape = RoundedCornerShape(10.dp), color = FondoApp, border = BorderStroke(1.dp, Borde)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-        ) {
-            Icon(icono, contentDescription = null, tint = TextoSecundario, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(texto, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextoPrincipal)
-        }
-    }
-}
-
-@Composable
-private fun AccionTexto(icono: ImageVector, texto: String, color: Color, habilitado: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = onClick, enabled = habilitado, contentPadding = PaddingValues(horizontal = 10.dp)) {
-        Icon(icono, contentDescription = null, tint = if (habilitado) color else color.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(texto, color = if (habilitado) color else color.copy(alpha = 0.4f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
     }
 }
 
@@ -513,16 +897,15 @@ private fun AccionTexto(icono: ImageVector, texto: String, color: Color, habilit
 private fun MensajeCentro(titulo: String, detalle: String, textoBoton: String, onBoton: () -> Unit) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(96.dp).clip(CircleShape).background(AzulSuave),
+            modifier = Modifier.size(88.dp).clip(CircleShape).background(AzulSuave),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = AzulMarca, modifier = Modifier.size(44.dp))
+            Icon(Icons.Filled.DirectionsCar, contentDescription = null, tint = AzulMarca, modifier = Modifier.size(40.dp))
         }
         Spacer(Modifier.height(16.dp))
         Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextoPrincipal, textAlign = TextAlign.Center)
@@ -532,7 +915,7 @@ private fun MensajeCentro(titulo: String, detalle: String, textoBoton: String, o
         Button(
             onClick = onBoton,
             shape = RoundedCornerShape(14.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = AzulMarca)
+            colors = ButtonDefaults.buttonColors(containerColor = MarcaFuerte, contentColor = Color.White)
         ) { Text(textoBoton, fontWeight = FontWeight.SemiBold) }
     }
 }

@@ -1,5 +1,6 @@
 package com.tecsup.autosmart.ui.mecanico
 
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +32,7 @@ fun ChecklistScreen(idOrden: Long, editable: Boolean, viewModel: ChecklistViewMo
         dismissButton = { TextButton(onClick = { confirmarSalida = false }) { Text("Continuar editando") } })
     val habilitado = estado.editable && estado.cargado && !estado.cargando && !estado.guardando
     Scaffold(topBar = {
-        TopAppBar(title = { Text("Checklist de recepción") }, navigationIcon = {
+        BarraAutoSmart(title = { Text("Checklist de recepción") }, navigationIcon = {
             IconButton(onClick = volver, enabled = !estado.guardando) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver a la orden")
             }

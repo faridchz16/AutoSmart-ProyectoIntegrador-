@@ -6,7 +6,9 @@ data class MecanicoDto(
     val idMecanico: Int,
     val nombre: String,
     val aniosExperiencia: Int?,
-    val especialidades: List<String>?
+    val especialidades: List<String>?,
+    val calificacionPromedio: Double? = null,
+    val totalResenas: Long? = null
 )
 
 data class TurnoDto(

@@ -34,7 +34,9 @@ class ReservaRepositoryRetrofit : ReservaRepository {
                         idMecanico = mecanicoDto.idMecanico,
                         nombre = mecanicoDto.nombre,
                         aniosExperiencia = mecanicoDto.aniosExperiencia ?: 0,
-                        especialidades = mecanicoDto.especialidades.orEmpty()
+                        especialidades = mecanicoDto.especialidades.orEmpty(),
+                        calificacionPromedio = mecanicoDto.calificacionPromedio,
+                        totalResenas = mecanicoDto.totalResenas ?: 0
                     )
                 }
             )
