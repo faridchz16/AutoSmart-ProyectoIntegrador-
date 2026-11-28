@@ -323,7 +323,7 @@ function OrdenTrabajo() {
   const clave = `${idCita}|${recarga}`;
   const cargando = resultado.clave !== clave;
   const datos = resultado.datosDe === idCita ? resultado : null;
-  const abierta = !!datos?.orden && !datos.orden.fechaFin && datos.orden.estado !== "FINALIZADA";
+  const abierta = !!datos?.orden && !datos.orden.fechaFin && !["FINALIZADA", "PAGADO"].includes(datos.orden.estado);
 
   useEffect(() => {
     let vigente = true;
@@ -429,10 +429,12 @@ function OrdenTrabajo() {
   const recargar = () => setRecarga((n) => n + 1);
   const cambiar = (campo) => (valor) => setResultado((r) => ({ ...r, [campo]: valor }));
   const estado = orden?.estado ?? cita.estado;
+  // Una orden pagada (Sprint 4) se muestra igual que una finalizada: cerrada y en solo lectura
+  const estadoOrden = estado === "PAGADO" ? "FINALIZADA" : estado;
 
   /* ----- La cita aún no tiene orden (o no se encontró) ----- */
   if (!orden) {
-    const iniciada = ["EN_PROCESO", "ESPERA_APROBACION", "FINALIZADA"].includes(cita.estado);
+    const iniciada = ["EN_PROCESO", "ESPERA_APROBACION", "FINALIZADA", "PAGADO"].includes(cita.estado);
     return (
       <section className="gestion ot">
         {botonVolver}
@@ -661,7 +663,7 @@ function OrdenTrabajo() {
             idOrden={orden.idOrden}
             diagnostico={diagnostico}
             editable={estado === "EN_PROCESO"}
-            estado={estado}
+            estado={estadoOrden}
             deficiencias={deficiencias}
             momento={momento}
             alGuardar={cambiar("diagnostico")}
@@ -678,7 +680,7 @@ function OrdenTrabajo() {
             idOrden={orden.idOrden}
             resumen={tareas}
             editable={estado === "EN_PROCESO"}
-            estado={estado}
+            estado={estadoOrden}
             momento={momento}
             alCambiar={cambiar("tareas")}
             alConflicto={recargar}
@@ -698,7 +700,7 @@ function OrdenTrabajo() {
           diagnostico={diagnostico}
           cita={cita}
           editable={estado === "EN_PROCESO"}
-          estado={estado}
+          estado={estadoOrden}
           momento={momento}
           alEnviado={(p) => {
             cambiar("presupuesto")(p);
@@ -721,7 +723,7 @@ function OrdenTrabajo() {
               idOrden={orden.idOrden}
               solicitudes={solicitudes}
               editable={estado === "EN_PROCESO"}
-              estado={estado}
+              estado={estadoOrden}
               momento={momento}
               alCambiar={cambiar("solicitudes")}
               alConflicto={recargar}
@@ -733,7 +735,7 @@ function OrdenTrabajo() {
               idOrden={orden.idOrden}
               resumen={consumos}
               editable={estado === "EN_PROCESO"}
-              estado={estado}
+              estado={estadoOrden}
               momento={momento}
               alCambiar={cambiar("consumos")}
               alConflicto={recargar}
@@ -751,7 +753,7 @@ function OrdenTrabajo() {
           </header>
           <CompletarOrden
             idOrden={orden.idOrden}
-            estado={estado}
+            estado={estadoOrden}
             diagnostico={diagnostico}
             tareas={tareas}
             solicitudes={solicitudes}

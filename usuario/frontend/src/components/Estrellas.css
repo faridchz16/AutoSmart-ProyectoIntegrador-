@@ -1,0 +1,15 @@
+/* Estrellas de calificación (componente compartido) */
+.estrellas { display: inline-flex; align-items: center; gap: 2px; line-height: 0; vertical-align: middle; }
+
+.estrella {
+  position: relative;
+  display: inline-block;
+  width: var(--tam, 16px);
+  height: var(--tam, 16px);
+}
+
+.estrella svg { display: block; width: var(--tam, 16px); height: var(--tam, 16px); }
+.estrella-fondo path { fill: #e3e9f5; }
+
+.estrella-lleno { position: absolute; inset: 0 auto 0 0; overflow: hidden; }
+.estrella-lleno path { fill: #f59e0b; }

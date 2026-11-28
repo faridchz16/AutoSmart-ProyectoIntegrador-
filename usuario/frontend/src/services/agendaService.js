@@ -18,6 +18,7 @@ export const ESTADOS_CITA = {
   EN_PROCESO: "En proceso",
   ESPERA_APROBACION: "Espera aprobación",
   FINALIZADA: "Finalizada",
+  PAGADO: "Pagado",
 };
 
 // Por defecto la agenda oculta las citas que no se atenderán

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import PanelLayout, { Icono } from "./PanelLayout";
 import { contarAlertasStock, EVENTO_STOCK } from "../services/inventarioService";
+import { contarDerivacionesPendientes, EVENTO_DERIVACIONES } from "../services/chatbotAdminService";
 
 /* Panel del administrador: usa la estructura común de PanelLayout. */
 
@@ -20,6 +21,15 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/indicadores",
+    texto: "Indicadores",
+    icono: (
+      <Icono>
+        <path d="M4 20V10M10 20V4M16 20v-7M21 20H3" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/reservas",
     texto: "Reservas",
     icono: (
@@ -27,6 +37,26 @@ const ENLACES = [
         <rect x="3.5" y="5" width="17" height="15" rx="2" />
         <path d="M3.5 9.5h17M8 3v4M16 3v4" />
         <path d="m9 14.5 2 2 4-4" />
+      </Icono>
+    ),
+  },
+  {
+    to: "/admin/pagos",
+    texto: "Pagos",
+    icono: (
+      <Icono>
+        <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+        <path d="M2.5 10h19M6.5 14.5h4" />
+      </Icono>
+    ),
+  },
+  {
+    to: "/admin/historial-placa",
+    texto: "Historial por placa",
+    icono: (
+      <Icono>
+        <rect x="3" y="7" width="18" height="10" rx="2" />
+        <path d="M7 12h3M13 12h4" />
       </Icono>
     ),
   },
@@ -52,6 +82,15 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/calificaciones",
+    texto: "Calificaciones",
+    icono: (
+      <Icono>
+        <path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/inventario",
     texto: "Inventario",
     icono: (
@@ -72,6 +111,27 @@ const ENLACES = [
     ),
   },
   {
+    to: "/admin/derivaciones",
+    texto: "Derivaciones",
+    icono: (
+      <Icono>
+        <path d="M4.5 5.5h15v10h-9l-4 3.5v-3.5h-2Z" />
+        <circle cx="12" cy="10.5" r="0.6" />
+        <path d="M9 10.5h.01M15 10.5h.01" />
+      </Icono>
+    ),
+  },
+  {
+    to: "/admin/preguntas-chatbot",
+    texto: "Preguntas del chatbot",
+    icono: (
+      <Icono>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M12 16.6h.01" />
+      </Icono>
+    ),
+  },
+  {
     to: "/admin/taller",
     texto: "Horario del taller",
     icono: (
@@ -86,13 +146,18 @@ const ENLACES = [
 function AdminLayout() {
   const { pathname } = useLocation();
   const [alertas, setAlertas] = useState(0);
+  const [derivaciones, setDerivaciones] = useState(0);
   const [cambios, setCambios] = useState(0);
 
   // T60.1: materiales en stock mínimo; se recuentan al cambiar de pantalla y cuando cambia el stock
   useEffect(() => {
     const alCambiar = () => setCambios((n) => n + 1);
     window.addEventListener(EVENTO_STOCK, alCambiar);
-    return () => window.removeEventListener(EVENTO_STOCK, alCambiar);
+    window.addEventListener(EVENTO_DERIVACIONES, alCambiar);
+    return () => {
+      window.removeEventListener(EVENTO_STOCK, alCambiar);
+      window.removeEventListener(EVENTO_DERIVACIONES, alCambiar);
+    };
   }, []);
 
   useEffect(() => {
@@ -100,16 +165,24 @@ function AdminLayout() {
     contarAlertasStock()
       .then((n) => vigente && setAlertas(n))
       .catch(() => vigente && setAlertas(0));
+    // T79.3: derivaciones del chatbot que esperan a un asesor
+    contarDerivacionesPendientes()
+      .then((n) => vigente && setDerivaciones(n))
+      .catch(() => vigente && setDerivaciones(0));
     return () => {
       vigente = false;
     };
   }, [pathname, cambios]);
 
-  const enlaces = ENLACES.map((e) =>
-    e.to === "/admin/inventario"
-      ? { ...e, contador: alertas, etiquetaContador: `${alertas} ${alertas === 1 ? "material" : "materiales"} en stock mínimo` }
-      : e
-  );
+  const enlaces = ENLACES.map((e) => {
+    if (e.to === "/admin/inventario") {
+      return { ...e, contador: alertas, etiquetaContador: `${alertas} ${alertas === 1 ? "material" : "materiales"} en stock mínimo` };
+    }
+    if (e.to === "/admin/derivaciones") {
+      return { ...e, contador: derivaciones, etiquetaContador: `${derivaciones} ${derivaciones === 1 ? "derivación pendiente" : "derivaciones pendientes"}` };
+    }
+    return e;
+  });
 
   return <PanelLayout enlaces={enlaces} seccion="Administración" inicio="/admin" avisoPrueba />;
 }

@@ -1120,3 +1120,844 @@ export async function editarMaterial(id, datos) {
   Object.assign(material, datos, { codigo: datos.codigo.trim().toUpperCase(), unidad: datos.unidad.trim().toLowerCase() });
   return copiaMaterial(material);
 }
+
+/* ---------- Calificaciones del mecánico (T67.2, contrato de T67.1) ---------- */
+
+const RESENAS_PRUEBA = [
+  [5, "Lucía F.", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!"],
+  [4, "José H.", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto."],
+  [5, "Andrea S.", null],
+  [3, "Diego M.", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo."],
+  [5, "Camila F.", "Excelente atención, el auto quedó como nuevo."],
+  [5, "Rosa P.", null],
+  [2, "Jorge R.", null],
+  [4, "Paola M.", "Amable y ordenado. Volvería."],
+];
+
+const calificacionesMecanico = RESENAS_PRUEBA.map(([estrellas, cliente, comentario], i) => ({
+  idCalificacion: 40 - i,
+  ticket: `AS-${fechaRelativa(-(i * 4 + 1)).replaceAll("-", "").slice(2)}-${String(14 + i * 3).padStart(4, "0")}`,
+  cliente,
+  estrellas,
+  comentario,
+  fecha: `${fechaRelativa(-(i * 4 + 1))}T${dosCifras(9 + (i % 8))}:${dosCifras((i * 13) % 60)}:00`,
+}));
+
+export async function obtenerMisCalificaciones() {
+  await esperar();
+  const total = calificacionesMecanico.length;
+  const suma = calificacionesMecanico.reduce((s, c) => s + c.estrellas, 0);
+  return {
+    promedio: total ? Math.round((suma / total) * 10) / 10 : null,
+    total,
+    calificaciones: copia(calificacionesMecanico),
+  };
+}
+
+/* ---------- Historial de servicios del mecánico (T68.2, contrato de T68.1) ---------- */
+
+// La primera es la orden 2 (cita 12, finalizada ayer): se puede abrir en solo lectura
+const historialMecanico = [
+  [2, 12, "AS-2026-00112", "Cambio de aceite y filtro", "MNP-934", "Ricardo Paredes", -1, "10:02", 56, "FINALIZADA", null],
+  [31, 131, "AS-2026-00091", "Revisión de frenos", "BCD-456", "José Huamán", -6, "09:00", 80, "PAGADO", 4],
+  [29, 129, "AS-2026-00087", "Afinamiento de motor", "CDE-789", "Andrea Salazar", -12, "14:00", 140, "PAGADO", 5],
+  [27, 127, "AS-2026-00085", "Revisión de suspensión", "DEF-321", "Camila Flores", -25, "11:00", 95, "PAGADO", 3],
+  [24, 124, "AS-2026-00080", "Cambio de aceite y filtro", "ABC-123", "Lucía Fernández", -48, "08:30", 45, "PAGADO", 5],
+  [20, 120, "AS-2026-00072", "Alineamiento y balanceo", "JKL-482", "Daniela Vargas", -95, "15:00", 70, "PAGADO", null],
+].map(([idOrden, idCita, ticket, servicio, placa, cliente, dias, hora, minutos, estado, estrellas]) => {
+  const [h, m] = hora.split(":").map(Number);
+  const fin = h * 60 + m + minutos;
+  return {
+    idOrden,
+    idCita,
+    ticket,
+    servicio,
+    placa,
+    cliente,
+    fechaInicio: enHora(dias, hora),
+    fechaFin: enHora(dias, `${dosCifras(Math.floor(fin / 60))}:${dosCifras(fin % 60)}`),
+    estado,
+    estrellas,
+  };
+});
+
+export async function listarHistorialMecanico({ desde, hasta }) {
+  await esperar();
+  if (desde && hasta && desde > hasta) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const fin = hasta || fechaRelativa(0);
+  return copia(historialMecanico.filter((o) => (!desde || o.fechaFin.slice(0, 10) >= desde) && o.fechaFin.slice(0, 10) <= fin));
+}
+
+/* ---------- Indicadores del taller (T73.2, contrato de T73.1) ---------- */
+
+export async function obtenerMetricas(mes) {
+  await esperar(250);
+  const actual = fechaRelativa(0).slice(0, 7);
+  const vacio = mes > actual || mes < "2026-08";
+  const k = vacio ? 0 : mes === actual ? 1 : 0.55 + ((Number(mes.slice(5)) * 37) % 40) / 100;
+  const n = (x) => Math.round(x * k);
+  const s = (x) => Math.round(x * k * 100) / 100;
+  return {
+    mes,
+    totalCitas: n(42),
+    citasPorEstado: {
+      PENDIENTE: n(4),
+      CONFIRMADA: n(6),
+      RECHAZADA: n(1),
+      CANCELADA: n(3),
+      EN_PROCESO: n(2),
+      ESPERA_APROBACION: n(1),
+      FINALIZADA: n(5),
+      PAGADO: n(20),
+    },
+    ingresos: s(1820) + s(1090.5) + s(540),
+    ingresosPorMetodo: { TARJETA: s(1820), YAPE_PLIN: s(1090.5), EFECTIVO: s(540) },
+    tiempoPromedioMinutos: n(84),
+    calificacionPromedio: vacio ? null : mes === actual ? 4.3 : 4.1,
+    totalCalificaciones: vacio ? 0 : n(6),
+  };
+}
+
+/* ---------- Pagos del taller (T70.2, contrato de T70.1) ---------- */
+
+const pagosPrueba = [
+  [12, 0, "11:20", "Lucía Fernández", "ABC-123", "AS-2026-00112", "TARJETA", "APROBADO", 185.5, null],
+  [11, -1, "17:05", "Rosa Paredes", "GHI-246", "AS-2026-00108", "YAPE_PLIN", "APROBADO", 120, null],
+  [10, -2, "09:40", "Diego Mendoza", "DEF-321", "AS-2026-00104", "TARJETA", "RECHAZADO", 240, null],
+  [9, -2, "10:02", "Diego Mendoza", "DEF-321", "AS-2026-00104", "YAPE_PLIN", "APROBADO", 240, null],
+  [8, -4, "16:30", "Andrea Salazar", "CDE-789", "AS-2026-00099", "EFECTIVO", "APROBADO", 140, "admin@autosmart.com"],
+  [7, -6, "12:15", "Camila Flores", "HIJ-135", "AS-2026-00095", "TARJETA", "APROBADO", 95, null],
+  [6, -9, "15:45", "José Huamán", "BCD-456", "AS-2026-00090", "EFECTIVO", "APROBADO", 230, "admin@autosmart.com"],
+  [5, -12, "10:10", "Paola Medina", "GHI-246", "AS-2026-00086", "YAPE_PLIN", "APROBADO", 70, null],
+  [4, -26, "14:00", "Jorge Ramírez", "FGH-987", "AS-2026-00078", "TARJETA", "APROBADO", 310, null],
+  [3, -33, "09:30", "Daniela Vargas", "JKL-482", "AS-2026-00071", "TARJETA", "APROBADO", 150, null],
+].map(([idPago, dias, hora, cliente, placa, ticket, metodo, estado, monto, registradoPor]) => ({
+  idPago,
+  codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+  fecha: enHora(dias, hora),
+  ticket,
+  cliente,
+  placa,
+  metodo,
+  estado,
+  monto,
+  registradoPor,
+}));
+
+export async function listarPagosAdmin({ desde, hasta, metodo, estado }) {
+  await esperar();
+  const hoy = fechaRelativa(0);
+  const inicio = desde || `${hoy.slice(0, 8)}01`;
+  const fin = hasta || hoy;
+  if (inicio > fin) throw conEstado("La fecha 'desde' no puede ser posterior a 'hasta'", 400);
+  const lista = pagosPrueba
+    .filter((p) => p.fecha.slice(0, 10) >= inicio && p.fecha.slice(0, 10) <= fin)
+    .filter((p) => (!metodo || p.metodo === metodo) && (!estado || p.estado === estado))
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const total = lista.filter((p) => p.estado === "APROBADO").reduce((s, p) => s + p.monto, 0);
+  return { desde: inicio, hasta: fin, cantidad: lista.length, totalAprobado: Math.round(total * 100) / 100, pagos: copia(lista) };
+}
+
+// PDF de una página con una línea de texto (para los archivos de ejemplo)
+function pdfDeTexto(texto) {
+  const limpio = texto.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[()\\]/g, "");
+  const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 520 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${limpio.length + 30}>>stream\nBT /F1 11 Tf 20 100 Td (${limpio}) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF`;
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+// Comprobante de ejemplo con el código del pago
+export async function comprobantePrueba(pago) {
+  await esperar(250);
+  return pdfDeTexto(`Comprobante ${pago.codigo} - ${pago.cliente} - S/ ${pago.monto.toFixed(2)} (datos de prueba)`);
+}
+
+/* ---------- Historial por placa (T72.2) y cobro en efectivo (T69.2), contratos de T72.1 y T69.1 ---------- */
+
+const vehiculosAdmin = {
+  "MNP-934": {
+    idVehiculo: 12, placa: "MNP-934", marca: "Nissan", modelo: "Sentra", anio: 2018, kilometraje: 87400,
+    propietario: { nombre: "Ricardo Paredes", correo: "ricardo.paredes@correo.com" },
+    mantenimientos: [
+      { idOrden: 2, idCita: 12, ticket: "AS-2026-00112", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", mecanico: "Carlos Quispe", fechaInicio: enHora(-1, "10:02"), fechaFin: enHora(-1, "10:58"), diagnostico: "Aceite degradado y filtro saturado; se reemplazaron.", costoRepuestos: 114.5 },
+      { idOrden: 14, idCita: 64, ticket: "AS-2026-00064", estado: "PAGADO", servicio: "Revisión de frenos", mecanico: "Miguel Rojas", fechaInicio: enHora(-75, "09:00"), fechaFin: enHora(-75, "10:15"), diagnostico: "Pastillas delanteras al 30 %; se recomienda cambio en 5000 km.", costoRepuestos: 0 },
+    ],
+  },
+  "BCD-456": {
+    idVehiculo: 7, placa: "BCD-456", marca: "Hyundai", modelo: "Accent", anio: 2017, kilometraje: 91200,
+    propietario: { nombre: "José Huamán", correo: "jose.huaman@correo.com" },
+    mantenimientos: [
+      { idOrden: 31, idCita: 131, ticket: "AS-2026-00091", estado: "FINALIZADA", servicio: "Revisión de frenos", mecanico: "Carlos Quispe", fechaInicio: enHora(-6, "09:00"), fechaFin: enHora(-6, "10:20"), diagnostico: "Pastillas delanteras gastadas y disco rayado.", costoRepuestos: 150 },
+    ],
+  },
+  "ABC-123": {
+    idVehiculo: 3, placa: "ABC-123", marca: "Toyota", modelo: "Yaris", anio: 2019, kilometraje: 58200,
+    propietario: { nombre: "Lucía Fernández", correo: "lucia.fernandez@correo.com" },
+    mantenimientos: [],
+  },
+};
+
+// Total que calcula el backend para cada orden (servicio + adicionales aprobados + repuestos)
+const totalesOrden = { 2: 204.5, 31: 230 };
+
+const porCobrarPrueba = [
+  { idCita: 12, ticket: "AS-2026-00112", fecha: fechaRelativa(-1), horaInicio: "10:00", horaFin: "11:00", estado: "FINALIZADA", servicio: "Cambio de aceite y filtro", precio: 90, cliente: "Ricardo Paredes", placa: "MNP-934", idMecanico: 2, mecanico: "Carlos Quispe" },
+  { idCita: 131, ticket: "AS-2026-00091", fecha: fechaRelativa(-6), horaInicio: "09:00", horaFin: "10:00", estado: "FINALIZADA", servicio: "Revisión de frenos", precio: 80, cliente: "José Huamán", placa: "BCD-456", idMecanico: 2, mecanico: "Carlos Quispe" },
+];
+
+export async function obtenerHistorialPlaca(placa) {
+  await esperar();
+  const v = vehiculosAdmin[placa.trim().toUpperCase()];
+  if (!v) throw conEstado(`No existe un vehiculo con la placa ${placa.trim().toUpperCase()}`, 404);
+  return { ...copia(v), totalMantenimientos: v.mantenimientos.length };
+}
+
+export async function listarPorCobrar() {
+  await esperar();
+  return porCobrarPrueba
+    .filter((c) => c.estado === "FINALIZADA")
+    .map((c) => ({ ...c, id: c.idCita }));
+}
+
+export async function registrarCobroEfectivo({ idOrden, monto, fecha, observacion }) {
+  await esperar(450);
+  const vehiculo = Object.values(vehiculosAdmin).find((v) => v.mantenimientos.some((m) => m.idOrden === idOrden));
+  const mant = vehiculo?.mantenimientos.find((m) => m.idOrden === idOrden);
+  if (!mant) throw conEstado("Orden de trabajo no encontrada", 404);
+  if (mant.estado === "PAGADO") throw conEstado("La orden ya fue pagada", 409);
+  const total = totalesOrden[idOrden] ?? 0;
+  if (monto < total) throw conEstado(`El monto recibido es menor al total de la orden (S/ ${total.toFixed(2)})`, 400);
+  mant.estado = "PAGADO";
+  const cita = porCobrarPrueba.find((c) => c.idCita === mant.idCita);
+  if (cita) cita.estado = "PAGADO";
+  const idPago = Math.max(...pagosPrueba.map((p) => p.idPago)) + 1;
+  const pago = {
+    idPago,
+    codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`,
+    fecha: fecha || enHora(0, "12:00"),
+    ticket: mant.ticket,
+    cliente: vehiculo.propietario.nombre,
+    placa: vehiculo.placa,
+    metodo: "EFECTIVO",
+    estado: "APROBADO",
+    monto: total,
+    registradoPor: "admin@autosmart.com",
+    observacion,
+  };
+  pagosPrueba.unshift(pago);
+  return { ...pago, idOrden, motivoRechazo: null, comprobanteUrl: `/payments/${idPago}/receipt` };
+}
+
+/* ---------- Reportes en Excel y PDF (T74.2, contrato de T74.1) ---------- */
+
+// Sin backend no se puede armar un .xlsx real: el "Excel" de prueba es un CSV que Excel abre igual
+export async function reportePrueba(tipo, formato, filtros) {
+  await esperar(400);
+  const periodo = filtros.mes || `${filtros.desde || "inicio"}_${filtros.hasta || "hoy"}`;
+  let filas;
+  if (tipo === "pagos") {
+    const { pagos } = await listarPagosAdmin(filtros);
+    filas = [["Codigo", "Fecha", "Ticket", "Cliente", "Placa", "Metodo", "Estado", "Monto"], ...pagos.map((p) => [p.codigo, p.fecha, p.ticket, p.cliente, p.placa, p.metodo, p.estado, p.monto])];
+  } else if (tipo === "metricas") {
+    const m = await obtenerMetricas(filtros.mes || fechaRelativa(0).slice(0, 7));
+    filas = [["Indicador", "Valor"], ["Citas", m.totalCitas], ["Ingresos (S/)", m.ingresos], ["Tiempo promedio (min)", m.tiempoPromedioMinutos], ["Calificacion promedio", m.calificacionPromedio ?? "-"]];
+  } else {
+    filas = [["Ticket", "Fecha", "Estado", "Cliente", "Placa"], ...reservasPrueba.filter((r) => (!filtros.desde || r.fecha >= filtros.desde) && (!filtros.hasta || r.fecha <= filtros.hasta) && (!filtros.estado || r.estado === filtros.estado)).map((r) => [r.ticket, r.fecha, r.estado, r.cliente, r.placa])];
+  }
+  if (formato === "pdf") {
+    return { blob: pdfDeTexto(`Reporte de ${tipo} ${periodo}: ${filas.length - 1} filas (datos de prueba)`), nombre: `reporte-${tipo}-${periodo}.pdf` };
+  }
+  const csv = "\ufeff" + filas.map((f) => f.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(";")).join("\r\n");
+  return { blob: new Blob([csv], { type: "text/csv;charset=utf-8" }), nombre: `reporte-${tipo}-${periodo}.csv` };
+}
+
+/* ---------- Moderación de calificaciones (T71.2, contrato de T71.1) ---------- */
+
+const calificacionesAdmin = [
+  [41, 5, "Lucía Fernández", "Carlos Quispe", "Muy puntual y me explicó todo lo que le hizo al auto. ¡Recomendado!", -1],
+  [40, 1, "Diego Mendoza", "Miguel Rojas", "Un idiota me atendió, son unos estafadores. No vuelvo más.", -2],
+  [39, 4, "José Huamán", "Carlos Quispe", "Buen trabajo con los frenos, solo demoró un poco más de lo previsto.", -4],
+  [38, 2, "Jorge Ramírez", "Luis Chávez", "Llámenme al 987 654 321 para reclamar, el auto sigue sonando.", -6],
+  [37, 5, "Andrea Salazar", "Carlos Quispe", null, -8],
+  [36, 3, "Camila Flores", "Miguel Rojas", "El servicio estuvo bien, pero no me avisaron cuando el auto estuvo listo.", -11],
+  [35, 1, "Paola Medina", "Luis Chávez", "Visiten mitallerbarato.com, ahí sí atienden bien.", -15],
+].map(([idCalificacion, estrellas, cliente, mecanico, comentario, dias], i) => ({
+  idCalificacion,
+  ticket: `AS-2026-${String(160 - i).padStart(5, "0")}`,
+  cliente,
+  mecanico,
+  estrellas,
+  comentario,
+  fecha: enHora(dias, `${dosCifras(10 + i)}:${dosCifras((i * 17) % 60)}`),
+  oculto: idCalificacion === 35,
+  motivoOcultado: idCalificacion === 35 ? "Publicidad o spam" : null,
+  ocultadoPor: idCalificacion === 35 ? "admin@autosmart.com" : null,
+  fechaOcultado: idCalificacion === 35 ? enHora(-14, "09:30") : null,
+}));
+
+export async function listarCalificacionesAdmin(oculto) {
+  await esperar();
+  return copia(calificacionesAdmin.filter((c) => !oculto || String(c.oculto) === oculto));
+}
+
+export async function ocultarComentario(id, { motivo }) {
+  await esperar(400);
+  const c = calificacionesAdmin.find((x) => x.idCalificacion === Number(id));
+  if (!c) throw conEstado("Calificación no encontrada", 404);
+  if (c.oculto) throw conEstado("La calificación ya está oculta", 409);
+  if (!motivo) throw conEstado("El motivo es obligatorio", 400);
+  Object.assign(c, { oculto: true, motivoOcultado: motivo, ocultadoPor: "admin@autosmart.com", fechaOcultado: enHora(0, "12:00") });
+  return copia(c);
+}
+
+/* ---------- Derivaciones del chatbot (T79.3, contrato de T79.1) ---------- */
+
+const derivacionesPrueba = [
+  { idDerivacion: 4, idConversacion: "c-4", fecha: enHora(0, "09:12"), usuario: "Lucía Fernández", contacto: "lucia.fernandez@correo.com", resumen: "USUARIO: ¿puedo cambiar la fecha de mi cita?\nBOT: Puedes reprogramarla desde Mis citas en la app.\nUSUARIO: y si es para hoy mismo?\nBOT: No entendí tu consulta. Puedo ayudarte con estas opciones:\nUSUARIO: quiero hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 3, idConversacion: "c-3", fecha: enHora(0, "08:40"), usuario: "Visitante sin cuenta", contacto: "987 654 321", resumen: "USUARIO: hacen planchado y pintura?\nBOT: Estos son nuestros servicios:\n• Cambio de aceite – desde S/ 50.00\n• Revisión de frenos – desde S/ 80.00\nUSUARIO: hablar con un asesor", estado: "PENDIENTE", nota: null, atendidoPor: null, fechaAtencion: null },
+  { idDerivacion: 2, idConversacion: "c-2", fecha: enHora(-2, "16:40"), usuario: "Visitante sin cuenta", contacto: null, resumen: "USUARIO: tienen servicio de grúa?\nBOT: No entendí tu consulta.\nUSUARIO: hablar con asesor", estado: "ATENDIDA", nota: "Volvió a escribir; se le indicó que no contamos con grúa.", atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(-2, "17:05") },
+];
+
+export async function listarDerivaciones(estado) {
+  await esperar();
+  return copia(derivacionesPrueba.filter((d) => !estado || d.estado === estado));
+}
+
+export async function atenderDerivacion(id, { nota }) {
+  await esperar(400);
+  const d = derivacionesPrueba.find((x) => x.idDerivacion === Number(id));
+  if (!d) throw conEstado("Derivación no encontrada", 404);
+  if (d.estado === "ATENDIDA") throw conEstado("La derivación ya fue atendida", 409);
+  Object.assign(d, { estado: "ATENDIDA", nota, atendidoPor: "admin@autosmart.com", fechaAtencion: enHora(0, "12:00") });
+  return copia(d);
+}
+
+/* ---------- Base de conocimiento y respuestas del chatbot (T80.2, TEC4.1; contratos de T80.1 y T75.1) ---------- */
+
+let faqPrueba = [
+  [1, "¿Aceptan Yape o Plin?", "Sí. Puedes pagar con Yape o Plin desde la app, además de tarjeta o en efectivo en el taller.", "yape, plin, pago, pagar", true],
+  [2, "¿Los trabajos tienen garantía?", "Sí. Todos nuestros servicios tienen 30 días de garantía en mano de obra.", "garantia, garantía, reclamo", true],
+  [3, "¿Me avisan antes de hacer un trabajo adicional?", "Sí. Si el mecánico encuentra algo más, te enviamos un presupuesto a la app y solo se hace si lo apruebas.", "adicional, presupuesto, aprobar", true],
+  [4, "¿Dónde están ubicados?", "Estamos en Av. Cascanueces 2221, Santa Anita, Lima.", "ubicacion, ubicación, direccion, dirección, donde", false],
+].map(([idFaq, pregunta, respuesta, palabrasClave, activa]) => ({
+  idFaq, pregunta, respuesta, palabrasClave, activa, fechaCreacion: enHora(-30, "10:00"), fechaActualizacion: activa ? null : enHora(-3, "16:20"),
+}));
+let siguienteFaq = 5;
+
+export async function listarFaq() {
+  await esperar();
+  return copia(faqPrueba);
+}
+
+export async function crearFaq(datos) {
+  await esperar(400);
+  const faq = { idFaq: siguienteFaq++, ...datos, activa: true, fechaCreacion: enHora(0, "12:00"), fechaActualizacion: null };
+  faqPrueba = [...faqPrueba, faq];
+  return copia(faq);
+}
+
+export async function editarFaq(id, datos) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  Object.assign(faq, datos, { fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+export async function desactivarFaq(id) {
+  await esperar(400);
+  const faq = faqPrueba.find((f) => f.idFaq === Number(id));
+  if (!faq) throw conEstado("Pregunta frecuente no encontrada", 404);
+  if (!faq.activa) throw conEstado("La pregunta frecuente ya está desactivada", 409);
+  Object.assign(faq, { activa: false, fechaActualizacion: enHora(0, "12:00") });
+  return copia(faq);
+}
+
+const OPCIONES_CHAT = ["Ver servicios", "Horario de atención", "Cotizar un servicio", "Preguntas frecuentes", "Hablar con un asesor"];
+
+// Respuestas de ejemplo con las mismas intenciones que el chatbot real
+export async function mensajeChatbot({ mensaje, idConversacion }) {
+  await esperar(450);
+  const texto = sinTildes(String(mensaje).toLowerCase());
+  const id = idConversacion || `prueba-${Date.now()}`;
+  const r = (intencion, respuesta, opciones = [], datos = null, requiereLogin = false) => ({ idConversacion: id, intencion, respuesta, opciones, datos, requiereLogin });
+  if (/(hola|buen(os|as)|saludos)/.test(texto)) return r("saludo", "¡Hola! Soy el asistente de AutoSmart. ¿En qué te ayudo?", OPCIONES_CHAT);
+  if (/preguntas frecuentes|faq/.test(texto)) return r("faq", "Estas son las preguntas más frecuentes. Toca una para ver la respuesta.", faqPrueba.filter((f) => f.activa).map((f) => f.pregunta));
+  const faq = faqPrueba
+    .filter((f) => f.activa)
+    .map((f) => ({ f, puntos: sinTildes(f.pregunta.toLowerCase()) === texto ? 100 : String(f.palabrasClave ?? "").split(",").filter((p) => p.trim() && texto.includes(sinTildes(p.trim()))).length }))
+    .filter((x) => x.puntos > 0)
+    .sort((a, b) => b.puntos - a.puntos)[0];
+  if (faq) return r("faq", faq.f.respuesta, ["Preguntas frecuentes", "Ver servicios"], { idFaq: faq.f.idFaq });
+  if (/horario|hora|abren|atienden/.test(texto)) return r("horario", "Nuestro horario de atención:\nLunes a viernes: 08:00 a 18:00\nSábado: 08:00 a 13:00\nDomingo: cerrado", ["Agendar una cita"]);
+  if (/precio|cotiz|cuanto (cuesta|sale|vale)|costo/.test(texto)) return r("cotizar", "Cambio de aceite y filtro cuesta entre S/ 90.00 y S/ 103.50. Es un precio referencial: el monto final depende del diagnóstico.", ["Agendar una cita", "Ver servicios"], { servicio: "Cambio de aceite y filtro", precioDesde: 90, precioHasta: 103.5, referencial: true });
+  if (/servicio/.test(texto)) return r("servicios", "Estos son nuestros servicios:\n• Cambio de aceite y filtro – desde S/ 90.00 (45 min)\n• Revisión de frenos – desde S/ 80.00 (60 min)\n• Alineamiento y balanceo – desde S/ 70.00 (60 min)", ["Cotizar un servicio", "Agendar una cita"]);
+  if (/estado|mi (auto|carro|vehiculo)|como va/.test(texto)) return r("consultar_estado", "Para consultar el estado de tu vehículo necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/agendar|reservar|cita/.test(texto)) return r("agendar", "Para agendar una cita necesitas iniciar sesión.", ["Iniciar sesión"], null, true);
+  if (/asesor|humano|persona/.test(texto)) return r("hablar_asesor", "Listo, registré tu solicitud. Un asesor te contactará en horario de atención.", [], { idDerivacion: 9 });
+  return r("no_entendido", "No entendí tu consulta. Puedo ayudarte con estas opciones:", OPCIONES_CHAT);
+}
+
+/* ---------- Panel del cliente: perfil (CLI-01, contrato de T05.1) ---------- */
+
+let perfilCliente = { idUsuario: 3, nombre: "Lucía Fernández", correo: "lucia.fernandez@correo.com", telefono: null, rol: "CLIENTE" };
+
+export async function obtenerPerfilCliente() {
+  await esperar();
+  return { ...perfilCliente, telefono: perfilCliente.telefono ?? "" };
+}
+
+export async function guardarPerfilCliente({ nombre, telefono }) {
+  await esperar(400);
+  if (telefono && !/^\+?[0-9]{7,15}$/.test(telefono)) throw conEstado("El telefono debe tener entre 7 y 15 digitos", 400);
+  perfilCliente = { ...perfilCliente, nombre, telefono: telefono || null };
+  return { ...perfilCliente, telefono: perfilCliente.telefono ?? "" };
+}
+
+/* ---------- Vehículos del cliente (CLI-02) ---------- */
+
+// Placas de otros clientes: registrarlas responde 409, igual que el backend
+const PLACAS_OTROS_CLIENTES = ["BCD-456", "MNP-934", "DEF-321", "JKL-482", "GHI-246", "CDE-789", "HIJ-135", "FGH-987"];
+let vehiculosCliente = [
+  { idVehiculo: 1, placa: "ABC-123", marca: "Toyota", modelo: "Yaris", anio: 2019, kilometraje: 58200, idCliente: 3, nombreCliente: "Lucía Fernández", activo: true },
+  { idVehiculo: 2, placa: "BKR-482", marca: "Hyundai", modelo: "Accent", anio: 2021, kilometraje: 31500, idCliente: 3, nombreCliente: "Lucía Fernández", activo: true },
+];
+const sinActivo = ({ activo, ...v }) => (void activo, { ...v });
+const vehiculoDelCliente = (id) => {
+  const v = vehiculosCliente.find((x) => x.idVehiculo === Number(id) && x.activo);
+  if (!v) throw conEstado("Vehiculo no encontrado", 404);
+  return v;
+};
+
+export async function listarVehiculosCliente() {
+  await esperar();
+  return vehiculosCliente.filter((v) => v.activo).map(sinActivo);
+}
+
+export async function registrarVehiculoCliente({ placa, marca, modelo, anio, kilometraje }) {
+  await esperar(400);
+  const p = String(placa ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9]{3}-[0-9]{3}$/.test(p)) throw conEstado("Formato de placa inválido. Usa el formato ABC-123", 400);
+  // Como en el backend, una placa eliminada sigue registrada en el sistema
+  if (PLACAS_OTROS_CLIENTES.includes(p) || vehiculosCliente.some((v) => v.placa === p)) {
+    throw conEstado("La placa ya se encuentra registrada en el sistema", 409);
+  }
+  const v = {
+    idVehiculo: Math.max(0, ...vehiculosCliente.map((x) => x.idVehiculo)) + 1,
+    placa: p, marca, modelo, anio, kilometraje: kilometraje ?? 0,
+    idCliente: 3, nombreCliente: perfilCliente.nombre, activo: true,
+  };
+  vehiculosCliente = [...vehiculosCliente, v];
+  return sinActivo(v);
+}
+
+export async function editarVehiculoCliente(id, { marca, modelo, anio, kilometraje }) {
+  await esperar(400);
+  const v = vehiculoDelCliente(id);
+  if (!marca?.trim()) throw conEstado("La marca es obligatoria", 400);
+  if (!modelo?.trim()) throw conEstado("El modelo es obligatorio", 400);
+  if (anio == null) throw conEstado("El año es obligatorio", 400);
+  const nuevo = kilometraje ?? v.kilometraje;
+  if (nuevo < 0) throw conEstado("El kilometraje no puede ser negativo", 400);
+  if (nuevo < v.kilometraje) throw conEstado(`El kilometraje no puede ser menor al registrado (${v.kilometraje} km)`, 400);
+  Object.assign(v, { marca: marca.trim(), modelo: modelo.trim(), anio, kilometraje: nuevo });
+  return sinActivo(v);
+}
+
+export async function eliminarVehiculoCliente(id) {
+  await esperar(400);
+  vehiculoDelCliente(id).activo = false;
+}
+
+/* ---------- Reserva de citas del cliente (CLI-03) ---------- */
+
+// Mecánicos que atienden reservas: horario por día de la semana (1 = lunes ... 7 = domingo; el taller cierra domingo)
+const MECANICOS_RESERVA = [
+  { idMecanico: 2, nombre: "Carlos Quispe", aniosExperiencia: 8, especialidades: ["Frenos", "Mecánica general", "Suspensión"], calificacionPromedio: 4.7, totalResenas: 23, dias: [1, 2, 3, 4, 5, 6], tramos: [["08:00", "13:00"], ["14:00", "18:00"]] },
+  { idMecanico: 6, nombre: "Miguel Rojas", aniosExperiencia: 5, especialidades: ["Electricidad automotriz", "Mecánica general", "Motor"], calificacionPromedio: 4.4, totalResenas: 11, dias: [1, 2, 3, 4, 5], tramos: [["09:00", "13:00"], ["14:00", "17:00"]] },
+  { idMecanico: 10, nombre: "Luis Chávez", aniosExperiencia: 12, especialidades: ["Frenos", "Motor"], calificacionPromedio: null, totalResenas: 0, dias: [2, 4, 6], tramos: [["08:00", "14:00"]] },
+];
+const ESPECIALIDAD_SERVICIO = (nombre) => (/fren/i.test(nombre) ? "Frenos" : /motor|afinamiento/i.test(nombre) ? "Motor" : null);
+const momentoLima = () => {
+  const t = ahoraLima();
+  return { fecha: t.slice(0, 10), hora: t.slice(11, 16) };
+};
+const aMinutos = (h) => Number(h.slice(0, 2)) * 60 + Number(h.slice(3, 5));
+const aHora = (m) => `${dosCifras(Math.floor(m / 60))}:${dosCifras(m % 60)}`;
+// Citas del cliente de la demo (las nuevas reservas se agregan aquí). Las PENDIENTE y CONFIRMADA ocupan su turno.
+let citasReservadas = [
+  [131, 3, "09:00", 60, "CONFIRMADA", 2, 2, "ABC-123", "AS-2026-00131"],
+  [133, 1, "10:00", 45, "PENDIENTE", 1, 6, "BKR-482", "AS-2026-00133"],
+  [128, 0, "08:00", 60, "ESPERA_APROBACION", 3, 2, "BKR-482", "AS-2026-00128"],
+  [125, -1, "15:00", 40, "FINALIZADA", 4, 6, "ABC-123", "AS-2026-00125"],
+  [124, -48, "08:30", 45, "PAGADO", 1, 2, "ABC-123", "AS-2026-00080"],
+  [110, -20, "11:00", 60, "CANCELADA", 2, 6, "ABC-123", "AS-2026-00110"],
+  [105, -12, "16:00", 60, "RECHAZADA", 3, 2, "BKR-482", "AS-2026-00105"],
+  [90, -170, "09:00", 120, "PAGADO", 7, 6, "ABC-123", "AS-2026-00042"],
+  [70, -330, "10:00", 45, "PAGADO", 1, 2, "ABC-123", "AS-2025-00318"],
+  [72, -300, "15:00", 60, "PAGADO", 2, 6, "BKR-482", "AS-2025-00351"],
+].map(([idCita, dias, horaInicio, duracion, estado, idServicio, idMecanico, placa, ticket]) => {
+  const s = servicios.find((x) => x.id === idServicio);
+  const fin = Number(horaInicio.slice(0, 2)) * 60 + Number(horaInicio.slice(3, 5)) + duracion;
+  return {
+    idCita, ticket, estado, fecha: fechaRelativa(dias), horaInicio, horaFin: `${dosCifras(Math.floor(fin / 60))}:${dosCifras(fin % 60)}`,
+    precio: s.precioBase, servicio: s.nombre, mecanico: ["", "", "Carlos Quispe", "", "", "", "Miguel Rojas"][idMecanico], placa, idMecanico, idServicio,
+  };
+});
+const OCUPAN_TURNO = ["PENDIENTE", "CONFIRMADA"];
+let bloqueoReserva = null;
+let siguienteCitaReserva = 140;
+
+function servicioReserva(id) {
+  const s = servicios.find((x) => x.id === Number(id) && x.activo);
+  if (!s) throw conEstado("Servicio no encontrado", 404);
+  return s;
+}
+
+export async function catalogoReserva() {
+  await esperar();
+  return servicios
+    .filter((s) => s.activo)
+    .map((s) => ({ idServicio: s.id, nombre: s.nombre, descripcion: s.descripcion, precioBase: s.precioBase, duracionMinutos: s.duracionMinutos, categoria: s.categoria, especialidad: ESPECIALIDAD_SERVICIO(s.nombre) }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
+export async function mecanicosReserva(idServicio) {
+  await esperar();
+  const requerida = ESPECIALIDAD_SERVICIO(servicioReserva(idServicio).nombre);
+  return MECANICOS_RESERVA.filter((m) => !requerida || m.especialidades.includes(requerida)).map(({ dias, tramos, ...m }) => (void dias, void tramos, { ...m }));
+}
+
+// Mismo cálculo que TurnoService: tramos del mecánico cortados por la duración del servicio, sin los ocupados
+function turnosLibresReserva(idServicio, idMecanico, fecha, conBloqueoPropio) {
+  const s = servicioReserva(idServicio);
+  const m = MECANICOS_RESERVA.find((x) => x.idMecanico === Number(idMecanico));
+  if (!m) throw conEstado("Mecanico no encontrado", 404);
+  const ahora = momentoLima();
+  if (fecha < ahora.fecha) throw conEstado("La fecha no puede ser pasada", 400);
+  const dia = new Date(`${fecha}T12:00:00Z`).getUTCDay() || 7;
+  if (!m.dias.includes(dia)) return [];
+  const libres = [];
+  m.tramos.forEach(([ini, fin]) => {
+    for (let t = aMinutos(ini); t + s.duracionMinutos <= aMinutos(fin); t += s.duracionMinutos) {
+      const inicio = aHora(t);
+      const final = aHora(t + s.duracionMinutos);
+      const cruza = (a, b) => inicio < b && final > a;
+      // Agenda de ejemplo: algunos turnos ya ocupados por otros clientes
+      const ocupadoDemo = (Number(fecha.slice(8, 10)) + m.idMecanico + t / 15) % 5 === 0;
+      const ocupado = citasReservadas.some((c) => OCUPAN_TURNO.includes(c.estado) && c.idMecanico === m.idMecanico && c.fecha === fecha && cruza(c.horaInicio, c.horaFin));
+      const bloqueado = !conBloqueoPropio && bloqueoReserva && bloqueoReserva.idMecanico === m.idMecanico && bloqueoReserva.fecha === fecha && cruza(bloqueoReserva.horaInicio, bloqueoReserva.horaFin);
+      const yaPaso = fecha === ahora.fecha && inicio <= ahora.hora;
+      if (!ocupadoDemo && !ocupado && !bloqueado && !yaPaso) libres.push({ horaInicio: inicio, horaFin: final });
+    }
+  });
+  return libres;
+}
+
+export async function turnosReserva(idServicio, idMecanico, fecha) {
+  await esperar();
+  return turnosLibresReserva(idServicio, idMecanico, fecha, false);
+}
+
+export async function bloquearTurnoReserva({ idServicio, idMecanico, fecha, horaInicio }) {
+  await esperar(250);
+  const s = servicioReserva(idServicio);
+  if (!turnosLibresReserva(idServicio, idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El turno no esta disponible", 409);
+  bloqueoReserva = { idBloqueo: Date.now(), idMecanico: Number(idMecanico), fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos) };
+  return { ...bloqueoReserva, expiraEn: null, segundosRestantes: 600 };
+}
+
+export async function liberarTurnoReserva(id) {
+  if (bloqueoReserva?.idBloqueo === id) bloqueoReserva = null;
+}
+
+export async function reservarCitaCliente({ idServicio, idMecanico, idVehiculo, fecha, horaInicio }) {
+  await esperar(500);
+  const s = servicioReserva(idServicio);
+  const m = MECANICOS_RESERVA.find((x) => x.idMecanico === Number(idMecanico));
+  const v = vehiculoDelCliente(idVehiculo);
+  if (!turnosLibresReserva(idServicio, idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El turno ya no esta disponible", 409);
+  const c = {
+    idCita: siguienteCitaReserva++, estado: "PENDIENTE", fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos),
+    precio: s.precioBase, servicio: s.nombre, mecanico: m.nombre, placa: v.placa, idMecanico: m.idMecanico, idServicio: s.id,
+  };
+  c.ticket = `AS-${fecha.slice(0, 4)}-${String(c.idCita).padStart(5, "0")}`;
+  citasReservadas = [...citasReservadas, c];
+  bloqueoReserva = null;
+  return citaParaCliente(c);
+}
+
+/* ---------- Mis citas del cliente (CLI-04) ---------- */
+
+const citaParaCliente = ({ idMecanico, idServicio, ...c }) => (void idMecanico, void idServicio, { ...c });
+const inicioCita = (c) => new Date(`${c.fecha}T${c.horaInicio}:00-05:00`).getTime();
+function citaDelCliente(id) {
+  const c = citasReservadas.find((x) => x.idCita === Number(id));
+  if (!c) throw conEstado("Cita no encontrada", 404);
+  return c;
+}
+
+export async function listarMisCitas(futuras) {
+  await esperar();
+  const hoy = momentoLima().fecha;
+  return citasReservadas
+    .filter((c) => !futuras || (c.fecha >= hoy && OCUPAN_TURNO.includes(c.estado)))
+    .sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`))
+    .map(citaParaCliente);
+}
+
+export async function cancelarMiCita(id) {
+  await esperar(400);
+  const c = citaDelCliente(id);
+  if (!OCUPAN_TURNO.includes(c.estado)) throw conEstado(`La cita ya no esta activa (estado: ${c.estado})`, 409);
+  if (inicioCita(c) - Date.now() < 2 * 3600 * 1000) throw conEstado("Solo se puede cancelar con al menos 2 horas de anticipacion", 400);
+  c.estado = "CANCELADA";
+  return citaParaCliente(c);
+}
+
+export async function reprogramarMiCita(id, { fecha, horaInicio }) {
+  await esperar(400);
+  const c = citaDelCliente(id);
+  if (!OCUPAN_TURNO.includes(c.estado)) throw conEstado(`La cita ya no esta activa (estado: ${c.estado})`, 409);
+  if (inicioCita(c) - Date.now() < 24 * 3600 * 1000) throw conEstado("Solo se puede reprogramar con al menos 24 horas de anticipacion", 400);
+  if (c.fecha === fecha && c.horaInicio === horaInicio) throw conEstado("La cita ya esta en ese turno", 409);
+  if (!turnosLibresReserva(c.idServicio, c.idMecanico, fecha, true).some((t) => t.horaInicio === horaInicio)) throw conEstado("El nuevo turno no esta disponible", 409);
+  const s = servicioReserva(c.idServicio);
+  Object.assign(c, { fecha, horaInicio, horaFin: aHora(aMinutos(horaInicio) + s.duracionMinutos), estado: "PENDIENTE" });
+  return citaParaCliente(c);
+}
+
+/* ---------- Seguimiento y presupuesto del cliente (CLI-05) ---------- */
+
+// Orden de trabajo de las citas de la demo que ya se atendieron o se están atendiendo
+const ordenesCliente = {
+  128: { idOrden: 98, inicio: enHora(0, "08:05"), diagnostico: enHora(0, "08:40"), fin: null, avance: 40 },
+  125: { idOrden: 95, inicio: enHora(-1, "15:02"), diagnostico: enHora(-1, "15:15"), fin: enHora(-1, "15:52"), avance: 100 },
+  124: { idOrden: 80, inicio: enHora(-48, "08:31"), diagnostico: enHora(-48, "08:45"), fin: enHora(-48, "09:20"), avance: 100 },
+  90: { idOrden: 60, inicio: enHora(-170, "09:05"), diagnostico: enHora(-170, "09:30"), fin: enHora(-170, "11:10"), avance: 100 },
+  70: { idOrden: 45, inicio: enHora(-330, "10:02"), diagnostico: enHora(-330, "10:10"), fin: enHora(-330, "10:50"), avance: 100 },
+  72: { idOrden: 47, inicio: enHora(-300, "15:04"), diagnostico: enHora(-300, "15:15"), fin: enHora(-300, "16:00"), avance: 100 },
+};
+const presupuestosCliente = {
+  98: {
+    idPresupuesto: 31, idOrden: 98, idCita: 128, estado: "PENDIENTE", fechaCreacion: enHora(0, "09:10"), fechaDecision: null,
+    descripcion: "Al revisar los frenos encontramos las pastillas delanteras casi gastadas y los discos con rayas. Recomendamos cambiarlas hoy para que frene con seguridad.",
+    items: [
+      { tipo: "REPUESTO", descripcion: "Pastillas de freno delanteras (juego)", cantidad: 1, precioUnitario: 145, subtotal: 145 },
+      { tipo: "MANO_OBRA", descripcion: "Rectificado de discos delanteros", cantidad: 2, precioUnitario: 30, subtotal: 60 },
+      { tipo: "REPUESTO", descripcion: "Líquido de frenos DOT 4 (500 ml)", cantidad: 1, precioUnitario: 35, subtotal: 35 },
+    ],
+    total: 240,
+    deficiencias: [
+      { idDeficiencia: 61, idOrden: 98, categoria: "FRENOS", severidad: "CRITICA", descripcion: "Pastillas delanteras con 10 % de vida útil; rozan el disco al frenar.", fechaRegistro: enHora(0, "08:35"), fotos: [{ idFoto: 91, src: fotoEjemplo("Pastillas delanteras", ["#7c2d12", "#ea580c"]) }, { idFoto: 92, src: fotoEjemplo("Disco con rayas", ["#1e293b", "#64748b"]) }] },
+      { idDeficiencia: 62, idOrden: 98, categoria: "FLUIDOS", severidad: "MODERADA", descripcion: "Líquido de frenos oscuro; le toca cambio.", fechaRegistro: enHora(0, "08:38"), fotos: [] },
+    ],
+  },
+  95: {
+    idPresupuesto: 29, idOrden: 95, idCita: 125, estado: "APROBADO", fechaCreacion: enHora(-1, "15:20"), fechaDecision: enHora(-1, "15:24"),
+    descripcion: "El escáner marcó una falla en el sensor de oxígeno. Se reemplazó para corregir el consumo de combustible.",
+    items: [
+      { tipo: "REPUESTO", descripcion: "Sensor de oxígeno", cantidad: 1, precioUnitario: 180, subtotal: 180 },
+      { tipo: "MANO_OBRA", descripcion: "Cambio del sensor", cantidad: 1, precioUnitario: 40, subtotal: 40 },
+    ],
+    total: 220,
+    deficiencias: [{ idDeficiencia: 55, idOrden: 95, categoria: "MOTOR", severidad: "MODERADA", descripcion: "Código P0134: sensor de oxígeno sin respuesta.", fechaRegistro: enHora(-1, "15:14"), fotos: [] }],
+  },
+};
+
+
+export async function seguimientoCita(idCita) {
+  await esperar();
+  const c = citaDelCliente(idCita);
+  const o = ordenesCliente[c.idCita] ?? null;
+  const p = o ? presupuestosCliente[o.idOrden] : null;
+  const linea = [{ clave: "RESERVADA", titulo: "Cita reservada", completado: true, fecha: null, detalle: `Turno del ${c.fecha} a las ${c.horaInicio}` }];
+  if (c.estado === "CANCELADA" || c.estado === "RECHAZADA") {
+    linea.push({ clave: c.estado, titulo: c.estado === "RECHAZADA" ? "Cita rechazada" : "Cita cancelada", completado: true, fecha: null, detalle: c.estado === "RECHAZADA" ? "El mecánico tiene una capacitación ese día." : null });
+  } else {
+    const terminada = c.estado === "FINALIZADA" || c.estado === "PAGADO";
+    linea.push({ clave: "CONFIRMADA", titulo: "Cita confirmada por el mecánico", completado: c.estado !== "PENDIENTE", fecha: null, detalle: null });
+    linea.push({ clave: "RECIBIDO", titulo: "Vehículo recibido en el taller", completado: !!o, fecha: o?.inicio ?? null, detalle: null });
+    linea.push({ clave: "DIAGNOSTICO", titulo: "Diagnóstico registrado", completado: !!o?.diagnostico, fecha: o?.diagnostico ?? null, detalle: null });
+    if (p) {
+      const decidido = !!p.fechaDecision;
+      linea.push({ clave: "PRESUPUESTO", titulo: decidido ? "Presupuesto respondido" : "Presupuesto enviado (espera tu aprobación)", completado: decidido, fecha: decidido ? p.fechaDecision : p.fechaCreacion, detalle: `Total S/ ${p.total.toFixed(2)} - ${p.estado}` });
+    }
+    linea.push({ clave: "EN_REPARACION", titulo: "Reparación en curso", completado: terminada, fecha: null, detalle: o ? `Avance: ${o.avance} %` : null });
+    linea.push({ clave: "FINALIZADA", titulo: "Vehículo listo para recoger", completado: terminada, fecha: o?.fin ?? null, detalle: null });
+    linea.push({ clave: "PAGADO", titulo: "Servicio pagado", completado: c.estado === "PAGADO", fecha: null, detalle: null });
+  }
+
+  return { idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, placa: c.placa, mecanico: c.mecanico, fecha: c.fecha, horaInicio: c.horaInicio, porcentajeAvance: o?.avance ?? 0, lineaDeTiempo: linea };
+}
+
+export async function presupuestoCita(idCita) {
+  await esperar();
+  const c = citaDelCliente(idCita);
+  const o = ordenesCliente[c.idCita];
+  if (!o) throw conEstado("La cita aun no tiene presupuesto", 404);
+  const p = presupuestosCliente[o.idOrden];
+  if (!p) throw conEstado("La orden aun no tiene presupuesto", 404);
+  return copia(p);
+}
+
+export async function decidirPresupuesto(idPresupuesto, { decision }) {
+  await esperar(450);
+  const p = Object.values(presupuestosCliente).find((x) => x.idPresupuesto === Number(idPresupuesto));
+  if (!p) throw conEstado("Presupuesto no encontrado", 404);
+  if (p.estado !== "PENDIENTE") throw conEstado(`El presupuesto ya fue ${p.estado}`, 409);
+  Object.assign(p, { estado: decision, fechaDecision: ahoraLima() });
+  citaDelCliente(p.idCita).estado = "EN_PROCESO";
+  return copia(p);
+}
+
+/* ---------- Pago del cliente (CLI-06) ---------- */
+
+const repuestosCliente = {
+  95: [{ material: "Sensor de oxígeno", cantidad: 1, unidad: "unidad" }],
+  80: [{ material: "Aceite de motor 10W-30", cantidad: 4, unidad: "litros" }, { material: "Filtro de aceite", cantidad: 1, unidad: "unidad" }],
+};
+const pagosCliente = {
+  80: { idPago: 77, codigo: "PAG-2026-00077", metodo: "TARJETA", fecha: enHora(-48, "09:35"), monto: 120 },
+  60: { idPago: 41, codigo: "PAG-2026-00041", metodo: "YAPE_PLIN", fecha: enHora(-170, "11:20"), monto: 220 },
+  45: { idPago: 12, codigo: "PAG-2025-00012", metodo: "EFECTIVO", fecha: enHora(-330, "11:00"), monto: 120 },
+  47: { idPago: 15, codigo: "PAG-2025-00015", metodo: "TARJETA", fecha: enHora(-300, "16:10"), monto: 90 },
+};
+let siguientePagoCliente = 150;
+const TOKENS_TARJETA = {
+  pm_card_visa: null, pm_card_mastercard: null, pm_card_chargeDeclined: "La tarjeta fue rechazada",
+  pm_card_chargeDeclinedInsufficientFunds: "Fondos insuficientes", pm_card_chargeDeclinedExpiredCard: "La tarjeta esta vencida",
+};
+
+export async function historialVehiculoCliente(idVehiculo) {
+  await esperar();
+  const v = vehiculoDelCliente(idVehiculo);
+  const mantenimientos = Object.entries(ordenesCliente)
+    .map(([idCita, o]) => ({ c: citaDelCliente(idCita), o }))
+    .filter(({ c }) => c.placa === v.placa)
+    .sort((a, b) => b.o.inicio.localeCompare(a.o.inicio))
+    .map(({ c, o }) => ({
+      idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, mecanico: c.mecanico,
+      fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: o.diagnostico ? trabajoCliente[o.idOrden]?.diagnostico ?? null : null, costoRepuestos: (repuestosCliente[o.idOrden] ?? []).length ? 45 : 0,
+    }));
+  return { idVehiculo: v.idVehiculo, placa: v.placa, marca: v.marca, modelo: v.modelo, anio: v.anio, kilometraje: v.kilometraje, totalMantenimientos: mantenimientos.length, mantenimientos };
+}
+
+function ordenClientePorId(idOrden) {
+  const par = Object.entries(ordenesCliente).find(([, o]) => o.idOrden === Number(idOrden));
+  if (!par) throw conEstado("Orden de trabajo no encontrada", 404);
+  return { c: citaDelCliente(par[0]), o: par[1] };
+}
+
+export async function costoOrdenCliente(idOrden) {
+  await esperar();
+  const { c, o } = ordenClientePorId(idOrden);
+  const p = presupuestosCliente[o.idOrden];
+  const adicionales = p?.estado === "APROBADO" ? copia(p.items) : [];
+  const totalAdicionales = adicionales.reduce((s, a) => s + a.subtotal, 0);
+  const pago = pagosCliente[o.idOrden] ?? null;
+  return {
+    idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estadoCita: c.estado, servicio: { nombre: c.servicio, precio: c.precio },
+    adicionales, totalAdicionales, repuestosUtilizados: copia(repuestosCliente[o.idOrden] ?? []), total: c.precio + totalAdicionales, moneda: "PEN",
+    puedePagar: c.estado === "FINALIZADA" && !pago, pago: pago && { idPago: pago.idPago, codigo: pago.codigo, metodo: pago.metodo, fecha: pago.fecha },
+  };
+}
+
+export async function metodosPagoCliente() {
+  await esperar(150);
+  return [
+    { codigo: "TARJETA", nombre: "Tarjeta de crédito o débito", enLinea: true },
+    { codigo: "YAPE_PLIN", nombre: "Yape / Plin", enLinea: true },
+    { codigo: "EFECTIVO", nombre: "Efectivo en el taller", enLinea: false },
+  ];
+}
+
+export async function pagarOrdenCliente({ idOrden, metodo, tokenPago }) {
+  await esperar(900);
+  const { c, o } = ordenClientePorId(idOrden);
+  if (metodo === "EFECTIVO") throw conEstado("El pago en efectivo se registra en el taller", 400);
+  let motivo;
+  if (metodo === "TARJETA") {
+    if (!(tokenPago in TOKENS_TARJETA)) throw conEstado("El tokenPago no es valido para la pasarela", 400);
+    motivo = TOKENS_TARJETA[tokenPago];
+  } else motivo = tokenPago === "123456" ? null : "Codigo de aprobacion invalido";
+  if (pagosCliente[o.idOrden]) throw conEstado("La orden ya fue pagada", 409);
+  if (c.estado !== "FINALIZADA") throw conEstado(`Solo se puede pagar una orden FINALIZADA (estado: ${c.estado})`, 409);
+  const { total } = await costoOrdenCliente(idOrden);
+  const idPago = siguientePagoCliente++;
+  const pago = { idPago, codigo: `PAG-2026-${String(idPago).padStart(5, "0")}`, idOrden: o.idOrden, ticket: c.ticket, metodo, estado: motivo ? "RECHAZADO" : "APROBADO", monto: total, fecha: ahoraLima(), motivoRechazo: motivo, comprobanteUrl: motivo ? null : `/payments/${idPago}/receipt`, registradoPor: null };
+  if (!motivo) {
+    pagosCliente[o.idOrden] = pago;
+    c.estado = "PAGADO";
+  }
+  return pago;
+}
+
+/* ---------- Detalle del mantenimiento y calificación del cliente (CLI-07) ---------- */
+
+const trabajoCliente = {
+  98: {
+    diagnostico: "Pastillas delanteras al límite y discos con rayas leves. Líquido de frenos oscuro.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OBSERVADO", "Pastillas delanteras al 10 %"], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OBSERVADO", "Líquido de frenos oscuro"], ["CARROCERIA", "OK", ""]],
+    tareas: [["Revisar sistema de frenos", true], ["Cambiar pastillas delanteras", false], ["Rectificar discos", false], ["Purgar líquido de frenos", false], ["Prueba de manejo", false]],
+  },
+  95: {
+    diagnostico: "El escáner marcó P0134 (sensor de oxígeno sin respuesta). Se reemplazó el sensor y se borraron los códigos.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OBSERVADO", "Presión baja en la llanta trasera derecha; se calibró"], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Lectura de códigos con escáner", true], ["Cambio del sensor de oxígeno", true], ["Borrado de códigos y prueba de manejo", true]],
+  },
+  60: {
+    diagnostico: "Motor con fallas de encendido en frío. Bujías gastadas e inyectores sucios.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OBSERVADO", "Rayón en la puerta trasera izquierda (ya existía)"]],
+    tareas: [["Cambio de bujías", true], ["Cambio de filtros de aire y combustible", true], ["Limpieza de inyectores", true]],
+  },
+  45: {
+    diagnostico: "Mantenimiento de los 50 000 km: cambio de aceite y filtro.",
+    checklist: [["LUCES", "OBSERVADO", "Luz de placa quemada; se cambió"], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Drenar aceite usado", true], ["Cambiar filtro de aceite", true], ["Llenar con aceite 10W-30", true]],
+  },
+  47: {
+    diagnostico: "Desgaste irregular en las llantas delanteras por desalineación.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OBSERVADO", "Desgaste irregular adelante"], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Alineamiento", true], ["Balanceo de las cuatro ruedas", true]],
+  },
+  80: {
+    diagnostico: "Aceite con 5 000 km de uso. Cambio de aceite y filtro según el plan de mantenimiento.",
+    checklist: [["LUCES", "OK", ""], ["FRENOS", "OK", ""], ["NEUMATICOS", "OK", ""], ["FLUIDOS", "OK", ""], ["CARROCERIA", "OK", ""]],
+    tareas: [["Drenar aceite usado", true], ["Cambiar filtro de aceite", true], ["Llenar con aceite 10W-30", true]],
+  },
+};
+const calificadasCliente = {
+  80: { estrellas: 5, comentario: "Muy puntual y me explicó todo lo que le hizo al auto.", fecha: enHora(-47, "10:00") },
+  60: { estrellas: 4, comentario: null, fecha: enHora(-169, "09:00") },
+  45: { estrellas: 5, comentario: null, fecha: enHora(-329, "09:00") },
+  47: { estrellas: 4, comentario: null, fecha: enHora(-299, "09:00") },
+};
+
+export async function detalleMantenimientoCliente(idOrden) {
+  await esperar();
+  const { c, o } = ordenClientePorId(idOrden);
+  const t = trabajoCliente[o.idOrden];
+  const p = presupuestosCliente[o.idOrden];
+  const v = vehiculosCliente.find((x) => x.placa === c.placa);
+  const hechas = t.tareas.filter(([, h]) => h).length;
+  return {
+    idOrden: o.idOrden, idCita: c.idCita, ticket: c.ticket, estado: c.estado, servicio: c.servicio, precioServicio: c.precio, placa: c.placa,
+    vehiculo: v ? `${v.marca} ${v.modelo}` : "", mecanico: c.mecanico, fechaInicio: o.inicio, fechaFin: o.fin, diagnostico: t.diagnostico,
+    checklist: t.checklist.map(([elemento, estado, observacion]) => ({ elemento, estado, observacion })),
+    deficiencias: copia(p?.deficiencias ?? []),
+    tareas: { idOrden: o.idOrden, totalTareas: t.tareas.length, completadas: hechas, porcentajeAvance: Math.round((hechas * 100) / t.tareas.length), tareas: t.tareas.map(([descripcion, completada], i) => ({ idTarea: i + 1, descripcion, completada, fechaCompletada: completada ? o.inicio : null })) },
+    presupuesto: p ? { idPresupuesto: p.idPresupuesto, estado: p.estado, descripcion: p.descripcion, total: p.total, items: copia(p.items) } : null,
+    repuestosConsumidos: (repuestosCliente[o.idOrden] ?? []).map((r, i) => ({ idMovimiento: i + 1, codigoMaterial: r.material, tipo: "SALIDA", cantidad: r.cantidad, referencia: null })),
+    costoRepuestos: 0, totalEstimado: c.precio,
+  };
+}
+
+export async function calificarServicio(idOrden, { estrellas, comentario }) {
+  await esperar(400);
+  const { c, o } = ordenClientePorId(idOrden);
+  if (!(c.estado === "FINALIZADA" || c.estado === "PAGADO")) throw conEstado("Solo puedes calificar un servicio finalizado", 409);
+  if (calificadasCliente[o.idOrden]) throw conEstado("Este servicio ya fue calificado", 409);
+  if (!(estrellas >= 1 && estrellas <= 5)) throw conEstado("Las estrellas deben estar entre 1 y 5", 400);
+  calificadasCliente[o.idOrden] = { estrellas, comentario, fecha: ahoraLima() };
+  return { idCalificacion: Date.now(), idOrden: o.idOrden, mecanico: c.mecanico, estrellas, comentario, fecha: calificadasCliente[o.idOrden].fecha };
+}

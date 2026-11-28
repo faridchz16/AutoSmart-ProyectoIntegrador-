@@ -74,3 +74,52 @@ export async function apiArchivo(ruta) {
 
   return respuesta.blob();
 }
+
+// Descarga un archivo generado por el backend (comprobante PDF, reporte Excel o PDF) y lo guarda en el equipo.
+// El nombre sale de la cabecera Content-Disposition; si no llega, se usa "nombrePorDefecto".
+export async function descargarArchivo(ruta, nombrePorDefecto = "archivo") {
+  const token = obtenerToken();
+  let respuesta;
+
+  try {
+    respuesta = await fetch(`${API_URL}${ruta}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    throw new Error("No hay conexión con el servidor.");
+  }
+
+  if (respuesta.status === 401) {
+    cerrarSesion();
+    window.location.assign("/login");
+    throw new Error("Tu sesión venció. Inicia sesión de nuevo.");
+  }
+
+  if (!respuesta.ok) {
+    const datos = await respuesta.json().catch(() => ({}));
+    const error = new Error(
+      respuesta.status >= 500 ? "El servidor tuvo un problema. Inténtalo de nuevo." : datos.error || "No se pudo descargar el archivo."
+    );
+    error.status = respuesta.status;
+    throw error;
+  }
+
+  const disposicion = respuesta.headers.get("Content-Disposition") ?? "";
+  const nombre = decodeURIComponent(
+    disposicion.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ?? disposicion.match(/filename="?([^";]+)"?/i)?.[1] ?? nombrePorDefecto
+  );
+  guardarBlob(await respuesta.blob(), nombre);
+  return nombre;
+}
+
+// Ofrece un Blob al navegador como descarga
+export function guardarBlob(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombre;
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

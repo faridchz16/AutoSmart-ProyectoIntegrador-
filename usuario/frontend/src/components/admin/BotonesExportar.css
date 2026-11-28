@@ -1,0 +1,12 @@
+/* ===== Botones de exportación a Excel y PDF (T74.2) ===== */
+.exportar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.exportar-titulo { margin-right: 2px; color: #7a8aa6; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.exportar .btn { gap: 6px; padding-inline: 12px; }
+.exportar .exportar-xlsx svg { color: #047857; }
+.exportar .exportar-pdf svg { color: #be123c; }
+.exportar .btn-spinner { border-color: rgba(11, 27, 58, 0.2); border-top-color: #0b1b3a; }
+
+@media (max-width: 520px) {
+  .exportar { width: 100%; }
+  .exportar .btn { flex: 1; justify-content: center; }
+}

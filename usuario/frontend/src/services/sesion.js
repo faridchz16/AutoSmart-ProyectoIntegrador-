@@ -59,8 +59,8 @@ export function sesionActiva() {
   return true;
 }
 
-// Panel web de cada rol (null = el rol no tiene panel web; el cliente usa la app móvil)
-const PANEL_POR_ROL = { ADMIN: "/admin", MECANICO: "/mecanico" };
+// Panel web de cada rol (el cliente también tiene el suyo desde el Sprint 4, además de la app móvil)
+const PANEL_POR_ROL = { ADMIN: "/admin", MECANICO: "/mecanico", CLIENTE: "/cliente" };
 
 export function panelDeRol(rol) {
   return PANEL_POR_ROL[normalizarRol(rol)] ?? null;
