@@ -266,11 +266,6 @@ private fun MenuCuenta(estado: MecanicoUiState, onPerfil: (() -> Unit)?, onSalir
                     onClick = { abierto = false; abrir() }
                 )
             }
-            DropdownMenuItem(
-                text = { Text("Cerrar sesión", color = coloresCliente().rojo) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = coloresCliente().rojo) },
-                onClick = { abierto = false; onSalir() }
-            )
         }
     }
 }

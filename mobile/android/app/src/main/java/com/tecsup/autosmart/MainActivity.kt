@@ -38,6 +38,7 @@ import com.tecsup.autosmart.ui.cliente.AgregarVehiculoScreen
 import com.tecsup.autosmart.ui.cliente.EditarVehiculoScreen
 import com.tecsup.autosmart.viewmodel.EditarVehiculoViewModel
 import com.tecsup.autosmart.ui.cliente.HistorialVehiculoScreen
+import com.tecsup.autosmart.ui.cliente.NotificacionesScreen
 import com.tecsup.autosmart.viewmodel.HistorialVehiculoViewModel
 import com.tecsup.autosmart.ui.auth.LoginScreen
 import com.tecsup.autosmart.ui.mecanico.FotosDeficienciaScreen
@@ -205,6 +206,8 @@ class MainActivity : ComponentActivity() {
                 var pagoCitaId by rememberSaveable { mutableStateOf(0L) }
                 var pagoPlaca by rememberSaveable { mutableStateOf("") }
                 var pagoVolverA by rememberSaveable { mutableStateOf("mis_citas") }
+                // A dónde vuelven Presupuesto y Seguimiento (Mis citas o Notificaciones)
+                var detalleVolverA by rememberSaveable { mutableStateOf("mis_citas") }
                 val mantenimientoVm: DetalleMantenimientoViewModel = viewModel()
                 LaunchedEffect(currentScreen) {
                     if (currentScreen != "detalle_mantenimiento") mantenimientoVm.limpiar()
@@ -471,7 +474,8 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToAgregarVehiculo = {
                                         currentScreen = "agregar_vehiculo"
                                     },
-                                    onNavigateToAsistente = { currentScreen = "asistente" }
+                                    onNavigateToAsistente = { currentScreen = "asistente" },
+                                    onNavigateToNotificaciones = { currentScreen = "notificaciones" }
                                 )
                             }
                             "asistente" -> {
@@ -551,17 +555,45 @@ class MainActivity : ComponentActivity() {
 
                             "presupuesto" -> {
                                 PresupuestoScreen(presupuestoCitaId, presupuestoVm,
-                                    onBack = { currentScreen = "mis_citas" })
+                                    onBack = { currentScreen = detalleVolverA })
                             }
                             "seguimiento" -> {
                                 SeguimientoScreen(seguimientoCitaId, seguimientoVm,
-                                    onBack = { currentScreen = "mis_citas" })
+                                    onBack = { currentScreen = detalleVolverA })
+                            }
+                            // Notificaciones del cliente: cada aviso abre su pantalla y al volver regresa aquí
+                            "notificaciones" -> {
+                                NotificacionesScreen(
+                                    onBack = { currentScreen = "vehiculos" },
+                                    onAbrir = { aviso ->
+                                        when (aviso.estado) {
+                                            "FINALIZADA", "PAGADO" -> {
+                                                pagoOrdenId = 0L
+                                                pagoCitaId = aviso.idCita
+                                                pagoPlaca = aviso.placa
+                                                pagoVolverA = "notificaciones"
+                                                currentScreen = "pago"
+                                            }
+                                            "ESPERA_APROBACION" -> {
+                                                presupuestoCitaId = aviso.idCita
+                                                detalleVolverA = "notificaciones"
+                                                currentScreen = "presupuesto"
+                                            }
+                                            "EN_PROCESO" -> {
+                                                seguimientoCitaId = aviso.idCita
+                                                detalleVolverA = "notificaciones"
+                                                currentScreen = "seguimiento"
+                                            }
+                                            else -> currentScreen = "mis_citas"
+                                        }
+                                    }
+                                )
                             }
                             "mis_citas" -> {
                                 MisCitasScreen(
                                     onNavigateBack = { currentScreen = "vehiculos" },
-                                    onPresupuesto = { id -> presupuestoCitaId = id; currentScreen = "presupuesto" },
-                                    onSeguimiento = { id -> seguimientoCitaId = id; currentScreen = "seguimiento" },
+                                    onPresupuesto = { id -> presupuestoCitaId = id; detalleVolverA = "mis_citas"; currentScreen = "presupuesto" },
+                                    onSeguimiento = { id -> seguimientoCitaId = id; detalleVolverA = "mis_citas"; currentScreen = "seguimiento" },
                                     onPagar = { idCita, placa ->
                                         pagoOrdenId = 0L
                                         pagoCitaId = idCita
@@ -684,7 +716,8 @@ class MainActivity : ComponentActivity() {
                             "perfil_mecanico" -> {
                                 PerfilMecanicoScreen(
                                     viewModel = mecanicoVm,
-                                    onBack = { currentScreen = "mecanico" }
+                                    onBack = { currentScreen = "mecanico" },
+                                    onLogout = { mecanicoVm.limpiar(); cerrarSesion() }
                                 )
                             }
 

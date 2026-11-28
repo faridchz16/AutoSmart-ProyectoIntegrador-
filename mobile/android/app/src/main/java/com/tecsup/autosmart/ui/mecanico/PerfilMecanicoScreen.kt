@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
@@ -53,10 +54,11 @@ private fun textoAnios(n: Int) = if (n == 1) "1 año de experiencia" else "$n a�
 /** Perfil profesional del mecánico: años de experiencia y especialidades (GET/PUT /mechanics/me). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PerfilMecanicoScreen(viewModel: MecanicoViewModel, onBack: () -> Unit) {
+fun PerfilMecanicoScreen(viewModel: MecanicoViewModel, onBack: () -> Unit, onLogout: () -> Unit = {}) {
     val estado by viewModel.estado.collectAsState()
     LaunchedEffect(viewModel) { viewModel.cargarSiNecesario() }
     var confirmarSalir by remember { mutableStateOf(false) }
+    var confirmarCerrarSesion by remember { mutableStateOf(false) }
     val volver: () -> Unit = {
         if (estado.hayCambios) { confirmarSalir = true } else { onBack() }
         Unit
@@ -77,6 +79,20 @@ fun PerfilMecanicoScreen(viewModel: MecanicoViewModel, onBack: () -> Unit) {
             dismissButton = {
                 TextButton(onClick = { confirmarSalir = false; viewModel.descartar(); onBack() }) { Text("Descartar") }
             }
+        )
+    }
+
+    if (confirmarCerrarSesion) {
+        AlertDialog(
+            onDismissRequest = { confirmarCerrarSesion = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Seguro que quieres salir de tu cuenta?") },
+            confirmButton = {
+                TextButton(onClick = { confirmarCerrarSesion = false; onLogout() }) {
+                    Text("Cerrar sesión", color = c.rojo)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmarCerrarSesion = false }) { Text("Cancelar") } }
         )
     }
 
@@ -143,6 +159,34 @@ fun PerfilMecanicoScreen(viewModel: MecanicoViewModel, onBack: () -> Unit) {
                 VistaPrevia(estado, Modifier)
                 Edicion(estado, viewModel, Modifier)
             }
+        }
+        // Cerrar sesión (igual que en el perfil del cliente)
+        Box(
+            Modifier
+                .padding(horizontal = 16.dp)
+                .offset(y = if (horizontal) (-24).dp else (-36).dp)
+                .padding(bottom = 8.dp)
+        ) {
+            BotonCerrarSesionMecanico(enabled = !estado.guardando) { confirmarCerrarSesion = true }
+        }
+    }
+}
+
+@Composable
+private fun BotonCerrarSesionMecanico(enabled: Boolean, onClick: () -> Unit) {
+    val c = coloresCliente()
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(18.dp),
+        color = c.rojoSuave,
+        border = BorderStroke(1.5.dp, c.rojo.copy(alpha = 0.6f)),
+        modifier = Modifier.fillMaxWidth().height(56.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, tint = c.rojo)
+            Spacer(Modifier.width(10.dp))
+            Text("Cerrar sesión", color = c.rojo, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }

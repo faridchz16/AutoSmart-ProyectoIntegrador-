@@ -109,6 +109,7 @@ fun VehiculosScreen(
     onNavigateToReserva: () -> Unit = {},
     onNavigateToAgregarVehiculo: () -> Unit = {},
     onNavigateToAsistente: () -> Unit = {},
+    onNavigateToNotificaciones: () -> Unit = {},
     viewModel: VehiculosViewModel = viewModel(),
     onHistorialVehiculo: (Long) -> Unit = {}
 ) {
@@ -137,7 +138,6 @@ fun VehiculosScreen(
     var citasAvisos by remember { mutableStateOf<List<CitaCreadaResponse>>(emptyList()) }
     var cargandoAvisos by remember { mutableStateOf(false) }
     var recargarAvisos by remember { mutableIntStateOf(0) }
-    var verAvisos by remember { mutableStateOf(false) }
     var leidosAvisos by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(recargarAvisos) {
         cargandoAvisos = true
@@ -149,21 +149,6 @@ fun VehiculosScreen(
     }
     val avisos = remember(citasAvisos) { avisosDe(citasAvisos) }
     val avisosNuevos = avisos.count { it.clave !in leidosAvisos }
-    val marcarAvisosLeidos = {
-        perfil?.idUsuario?.let { id ->
-            AvisosLeidos.marcar(contexto, id, avisos.map { it.clave })
-            leidosAvisos = AvisosLeidos.leidos(contexto, id)
-        }
-    }
-    if (verAvisos) {
-        PanelAvisos(
-            avisos = avisos,
-            leidos = leidosAvisos,
-            cargando = cargandoAvisos,
-            onAbrir = { marcarAvisosLeidos(); verAvisos = false; onNavigateToMisCitas() },
-            onCerrar = { marcarAvisosLeidos(); verAvisos = false }
-        )
-    }
 
     // Anuncio de ARI: se muestra solo la primera vez que cada cliente entra al inicio
     var mostrarAnuncioAri by remember { mutableStateOf(false) }
@@ -265,7 +250,7 @@ fun VehiculosScreen(
                         onPerfil = onNavigateToPerfil,
                         onSalir = onLogout,
                         avisosNuevos = avisosNuevos,
-                        onAvisos = { recargarAvisos++; verAvisos = true }
+                        onAvisos = onNavigateToNotificaciones
                     )
                     PestanasCliente(
                         angosto = angosto,
@@ -524,7 +509,7 @@ private fun EncabezadoCliente(
     }
 }
 
-/** Avatar con la inicial; al tocarlo muestra "Mi perfil" y "Cerrar sesión". */
+/** Avatar con la inicial; al tocarlo muestra el nombre, el correo y "Mi perfil" (cerrar sesión está en Perfil). */
 @Composable
 private fun MenuAvatar(perfil: PerfilResponse?, habilitado: Boolean, onPerfil: () -> Unit, onSalir: () -> Unit) {
     var abierto by remember { mutableStateOf(false) }
@@ -549,11 +534,6 @@ private fun MenuAvatar(perfil: PerfilResponse?, habilitado: Boolean, onPerfil: (
                 text = { Text("Mi perfil") },
                 leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
                 onClick = { abierto = false; onPerfil() }
-            )
-            DropdownMenuItem(
-                text = { Text("Cerrar sesión", color = Rojo) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = Rojo) },
-                onClick = { abierto = false; onSalir() }
             )
         }
     }

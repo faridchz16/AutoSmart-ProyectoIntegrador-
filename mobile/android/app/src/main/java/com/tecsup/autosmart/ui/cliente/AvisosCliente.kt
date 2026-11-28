@@ -1,6 +1,7 @@
 package com.tecsup.autosmart.ui.cliente
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,27 +11,33 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tecsup.autosmart.data.repository.CitaRepository
+import com.tecsup.autosmart.data.repository.PerfilRepository
 import com.tecsup.autosmart.model.CitaCreadaResponse
+import com.tecsup.autosmart.ui.components.BarraAutoSmart
 
 /** Un aviso para el cliente, armado a partir del estado de sus citas. */
 data class AvisoCliente(
@@ -38,7 +45,10 @@ data class AvisoCliente(
     val titulo: String,
     val detalle: String,
     val fecha: String,
-    val tipo: TipoAviso
+    val tipo: TipoAviso,
+    val idCita: Long = 0L,
+    val placa: String = "",
+    val estado: String = ""
 )
 
 enum class TipoAviso { INFO, EXITO, ALERTA, ERROR }
@@ -48,7 +58,8 @@ fun avisosDe(citas: List<CitaCreadaResponse>): List<AvisoCliente> = citas
     .sortedWith(compareByDescending<CitaCreadaResponse> { it.fecha }.thenByDescending { it.horaInicio })
     .mapNotNull { c ->
         val hora = c.horaInicio.take(5)
-        val (titulo, detalle, tipo) = when (c.estado.uppercase()) {
+        val estado = c.estado.uppercase()
+        val (titulo, detalle, tipo) = when (estado) {
             "PENDIENTE" -> Triple("Cita registrada",
                 "Tu cita ${c.ticket} de ${c.servicio} espera la confirmación del mecánico.", TipoAviso.INFO)
             "CONFIRMADA" -> Triple("Cita confirmada",
@@ -58,16 +69,16 @@ fun avisosDe(citas: List<CitaCreadaResponse>): List<AvisoCliente> = citas
             "CANCELADA" -> Triple("Cita cancelada",
                 "La cita ${c.ticket} de ${c.servicio} fue cancelada.", TipoAviso.ERROR)
             "EN_PROCESO" -> Triple("Tu vehículo está en el taller",
-                "Sigue el avance de ${c.servicio} (${c.placa}) en Mis citas.", TipoAviso.INFO)
+                "Toca para ver el avance de ${c.servicio} (${c.placa}).", TipoAviso.INFO)
             "ESPERA_APROBACION" -> Triple("Presupuesto por aprobar",
-                "El mecánico envió un presupuesto para ${c.placa}. Revísalo y apruébalo.", TipoAviso.ALERTA)
+                "El mecánico envió un presupuesto para ${c.placa}. Toca para revisarlo.", TipoAviso.ALERTA)
             "FINALIZADA" -> Triple("¡Tu vehículo está listo!",
-                "${c.servicio} de ${c.placa} terminó. Paga el servicio para recogerlo.", TipoAviso.ALERTA)
+                "${c.servicio} de ${c.placa} terminó. Toca para pagar el servicio.", TipoAviso.ALERTA)
             "PAGADO" -> Triple("Pago confirmado",
                 "Gracias. Descarga tu comprobante y califica a ${c.mecanico}.", TipoAviso.EXITO)
             else -> return@mapNotNull null
         }
-        AvisoCliente("${c.idCita}:${c.estado.uppercase()}", titulo, detalle, "${c.fecha} · $hora", tipo)
+        AvisoCliente("${c.idCita}:$estado", titulo, detalle, "${c.fecha} · $hora", tipo, c.idCita, c.placa, estado)
     }
 
 /** Guarda en el celular qué avisos ya vio cada cliente (para el número rojo de la campanita). */
@@ -105,49 +116,122 @@ fun CampanaAvisos(nuevos: Int, habilitado: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Panel inferior con la lista de notificaciones. Cada aviso lleva a Mis citas. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Pantalla de notificaciones del cliente: avisos nuevos arriba y anteriores abajo.
+ * Al tocar un aviso se marca como leído y [onAbrir] lleva a su pantalla (pago, presupuesto, seguimiento o Mis citas).
+ */
 @Composable
-fun PanelAvisos(
-    avisos: List<AvisoCliente>,
-    leidos: Set<String>,
-    cargando: Boolean,
-    onAbrir: () -> Unit,
-    onCerrar: () -> Unit
-) {
+fun NotificacionesScreen(onBack: () -> Unit, onAbrir: (AvisoCliente) -> Unit) {
+    val contexto = LocalContext.current
     val c = coloresCliente()
-    ModalBottomSheet(onDismissRequest = onCerrar, containerColor = c.fondo) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Notifications, null, tint = c.azul)
-                Spacer(Modifier.width(8.dp))
-                Text("Notificaciones", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = c.texto)
-            }
-            Spacer(Modifier.height(12.dp))
-            when {
-                cargando && avisos.isEmpty() -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = c.azul)
+    var idUsuario by remember { mutableStateOf<Int?>(null) }
+    var avisos by remember { mutableStateOf<List<AvisoCliente>>(emptyList()) }
+    var leidos by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var cargando by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var recargar by remember { mutableIntStateOf(0) }
+
+    BackHandler(onBack = onBack)
+    LaunchedEffect(recargar) {
+        cargando = true
+        error = null
+        val id = idUsuario ?: PerfilRepository().obtenerPerfil().getOrNull()?.idUsuario
+        idUsuario = id
+        if (id != null) leidos = AvisosLeidos.leidos(contexto, id)
+        CitaRepository().misCitas()
+            .onSuccess { avisos = avisosDe(it) }
+            .onFailure { error = it.message ?: "No se pudieron cargar las notificaciones. Revisa tu conexión." }
+        cargando = false
+    }
+    val marcar: (Collection<String>) -> Unit = { claves ->
+        idUsuario?.let { id ->
+            AvisosLeidos.marcar(contexto, id, claves)
+            leidos = AvisosLeidos.leidos(contexto, id)
+        }
+    }
+    val nuevos = avisos.filter { it.clave !in leidos }
+    val anteriores = avisos.filter { it.clave in leidos }
+
+    Scaffold(
+        containerColor = c.fondo,
+        topBar = {
+            BarraAutoSmart(
+                title = { Text("Notificaciones") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+                actions = {
+                    if (nuevos.isNotEmpty()) {
+                        IconButton(onClick = { marcar(nuevos.map { it.clave }) }) {
+                            Icon(Icons.Outlined.DoneAll, contentDescription = "Marcar todas como leídas")
+                        }
+                    }
                 }
-                avisos.isEmpty() -> Column(
-                    Modifier.fillMaxWidth().padding(vertical = 32.dp),
+            )
+        }
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            when {
+                cargando && avisos.isEmpty() -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = c.azul)
+                error != null && avisos.isEmpty() -> Column(
+                    Modifier.align(Alignment.Center).padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(Icons.Outlined.NotificationsNone, null, tint = c.textoSecundario, modifier = Modifier.size(48.dp))
-                    Spacer(Modifier.height(8.dp))
-                    Text("No tienes notificaciones", fontWeight = FontWeight.Bold, color = c.texto)
+                    Text(error.orEmpty(), color = c.textoSecundario)
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { recargar++ }, colors = ButtonDefaults.buttonColors(containerColor = c.azul)) {
+                        Text("Reintentar")
+                    }
+                }
+                avisos.isEmpty() -> Column(
+                    Modifier.align(Alignment.Center).padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        Modifier.size(72.dp).clip(CircleShape).background(c.azulSuave),
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Outlined.NotificationsNone, null, tint = c.azul, modifier = Modifier.size(36.dp)) }
+                    Spacer(Modifier.height(12.dp))
+                    Text("No tienes notificaciones", fontWeight = FontWeight.Bold, color = c.texto, fontSize = 17.sp)
+                    Spacer(Modifier.height(4.dp))
                     Text("Aquí verás cuando confirmen tu cita o tu vehículo esté listo.",
                         color = c.textoSecundario, fontSize = 13.sp)
                 }
                 else -> LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = 24.dp),
-                    modifier = Modifier.heightIn(max = 520.dp)
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(avisos, key = { it.clave }) { aviso ->
-                        FilaAviso(aviso, nuevo = aviso.clave !in leidos, onClick = onAbrir)
+                    if (nuevos.isNotEmpty()) {
+                        item(key = "t_nuevas") { TituloGrupo("Nuevas", nuevos.size) }
+                        items(nuevos, key = { it.clave }) { aviso ->
+                            FilaAviso(aviso, nuevo = true) { marcar(listOf(aviso.clave)); onAbrir(aviso) }
+                        }
+                    }
+                    if (anteriores.isNotEmpty()) {
+                        item(key = "t_anteriores") { TituloGrupo("Anteriores", null) }
+                        items(anteriores, key = { it.clave }) { aviso ->
+                            FilaAviso(aviso, nuevo = false) { onAbrir(aviso) }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TituloGrupo(texto: String, cantidad: Int?) {
+    val c = coloresCliente()
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)) {
+        Text(texto, fontWeight = FontWeight.ExtraBold, color = c.texto, fontSize = 16.sp)
+        if (cantidad != null) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(Color(0xFFDC2626)).padding(horizontal = 8.dp, vertical = 1.dp)
+            ) { Text("$cantidad", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
         }
     }
 }
@@ -164,7 +248,7 @@ private fun FilaAviso(aviso: AvisoCliente, nuevo: Boolean, onClick: () -> Unit) 
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(42.dp).clip(CircleShape).background(color.copy(alpha = 0.14f)),
+                Modifier.size(44.dp).clip(CircleShape).background(color.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) { Icon(icono, null, tint = color, modifier = Modifier.size(22.dp)) }
             Spacer(Modifier.width(12.dp))
@@ -186,10 +270,10 @@ private fun FilaAviso(aviso: AvisoCliente, nuevo: Boolean, onClick: () -> Unit) 
 }
 
 private fun estiloDe(aviso: AvisoCliente): Pair<Color, ImageVector> = when {
-    aviso.clave.endsWith(":FINALIZADA") -> Color(0xFF16A34A) to Icons.Outlined.TaskAlt
-    aviso.clave.endsWith(":PAGADO") -> Color(0xFF16A34A) to Icons.Outlined.Payments
-    aviso.clave.endsWith(":ESPERA_APROBACION") -> Color(0xFFEA580C) to Icons.Outlined.ReceiptLong
-    aviso.clave.endsWith(":EN_PROCESO") -> Color(0xFF1150E8) to Icons.Outlined.Build
+    aviso.estado == "FINALIZADA" -> Color(0xFF16A34A) to Icons.Outlined.TaskAlt
+    aviso.estado == "PAGADO" -> Color(0xFF16A34A) to Icons.Outlined.Payments
+    aviso.estado == "ESPERA_APROBACION" -> Color(0xFFEA580C) to Icons.Outlined.ReceiptLong
+    aviso.estado == "EN_PROCESO" -> Color(0xFF1150E8) to Icons.Outlined.Build
     aviso.tipo == TipoAviso.EXITO -> Color(0xFF16A34A) to Icons.Outlined.CheckCircle
     aviso.tipo == TipoAviso.ERROR -> Color(0xFFDC2626) to Icons.Outlined.Cancel
     else -> Color(0xFF1150E8) to Icons.Outlined.Schedule
